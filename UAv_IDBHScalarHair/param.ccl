@@ -1,0 +1,92 @@
+# Parameter definitions for thorn UAv_IDBHScalarHair
+
+SHARES: ScalarBase
+USES CCTK_REAL mu
+
+SHARES: ADMBase
+
+EXTENDS KEYWORD initial_data
+{
+  "HairyBH" :: "HairyBH initial lapse profile"
+}
+
+EXTENDS KEYWORD initial_lapse
+{
+  "HairyBH" :: "HairyBH initial lapse profile"
+  "psi^n"   :: "psi^n initial lapse profile"
+}
+
+EXTENDS KEYWORD initial_shift
+{
+  "HairyBH" :: "HairyBH initial lapse profile"
+}
+
+
+PRIVATE:
+
+STRING infilename "file to read the input data from"
+{
+  ".*"  ::  "any valid file name"
+} ""
+
+REAL C0 "parameter for R to X coordinate transformation"
+{
+  0:* :: "greater than zero"
+} 1.0
+
+INT mm "azimuthal number of the solution. mm=0 for solutions with spherical symmetry, and mm=1,2,3 for current rotating solutions"
+{
+  0:3 :: "0, 1, 2 or 3"
+} 0
+
+INT maxNF "maximum number of lines allowed in the input file"
+{
+ 100:* :: "any large enough integer"
+} 100000
+
+
+REAL rH "Horizon radius parameter"
+{
+  0:* :: "non-negative"
+} 0.0
+
+REAL x0 "x coordinate of central point"
+{
+  *:* :: "any real number"
+} 0.0
+
+REAL y0 "y coordinate of central point"
+{
+  *:* :: "any real number"
+} 0.0
+
+REAL z0 "z coordinate of central point"
+{
+  *:* :: "any real number"
+} 0.0
+
+REAL pert_A "maximum amplitude for perturbation"
+{
+  0:* :: "non-negative"
+} 0.0
+
+REAL pert_Rmax "maximum radius for perturbation"
+{
+  0:* :: "positive"
+} 4.0
+
+REAL pert_lambda "perturbation wavelength"
+{
+  0:* :: "positive"
+} 1.0
+
+REAL omega "scalar field frequency"
+{
+  *:* :: "any real number"
+} 0.0
+
+
+REAL initial_lapse_psi_exponent "Exponent n for psi^n initial lapse profile"
+{
+  (*:*) :: "Should be negative"
+} -2.0

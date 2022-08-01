@@ -1,0 +1,10 @@
+# Interface definition for thorn UAv_IDBHScalarHair
+
+implements: UAv_IDBHScalarHair
+inherits: ADMBase grid ScalarBase
+
+CCTK_INT FUNCTION                         \
+    ExtrapolateGammas                     \
+        (CCTK_POINTER_TO_CONST IN cctkGH, \
+         CCTK_REAL ARRAY INOUT var)
+USES FUNCTION ExtrapolateGammas

@@ -1,0 +1,11 @@
+# Schedule definitions for thorn UAv_IDBHScalarHair
+
+if (CCTK_Equals(initial_data, "HairyBH"))
+{
+  SCHEDULE UAv_IDBHScalarHair IN ADMBase_InitialData
+  {
+    LANG: C
+    OPTIONS: Local
+    SYNC: ADMBase::curv
+  } "read data from the specified file, assumed to have an equidistant grid in the X coordinate"
+}
