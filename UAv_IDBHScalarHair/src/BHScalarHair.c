@@ -349,13 +349,13 @@ void UAv_IDBHScalarHair(CCTK_ARGUMENTS)
         phi0_l *= 1. + pert_A * exp( -0.5*RR2/(pert_Rmax*pert_Rmax) )
                               * sin(2.*M_PI * RR / pert_lambda);
 
+        const CCTK_REAL omega = mm * OmegaH;
+
         // scalar fields
         phi1[ind]  = phi0_l * (cos(omega * tt) * cosmph + sin(omega * tt) * sinmph);
         phi2[ind]  = phi0_l * (cos(omega * tt) * sinmph - sin(omega * tt) * cosmph);
-
-        // TODO
-        Kphi1[ind] = 0.5 * (mm * W[ind] - omega) / alph * phi2[ind];
-        Kphi2[ind] = 0.5 * (omega - mm * W[ind]) / alph * phi1[ind];
+        Kphi1[ind] = 0.5 * mm * (W[ind] - OmegaH) / alph * phi2[ind];
+        Kphi2[ind] = 0.5 * mm * (OmegaH - W[ind]) / alph * phi1[ind];
 
       } /* for i */
     }   /* for j */

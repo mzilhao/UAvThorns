@@ -50,6 +50,12 @@ REAL rH "Horizon radius parameter"
   0:* :: "non-negative"
 } 0.0
 
+REAL OmegaH "Horizon angular velocity"
+{
+  0:* :: "non-negative"
+} 0.0
+
+
 REAL x0 "x coordinate of central point"
 {
   *:* :: "any real number"
@@ -79,12 +85,6 @@ REAL pert_lambda "perturbation wavelength"
 {
   0:* :: "positive"
 } 1.0
-
-REAL omega "scalar field frequency"
-{
-  *:* :: "any real number"
-} 0.0
-
 
 REAL initial_lapse_psi_exponent "Exponent n for psi^n initial lapse profile"
 {
