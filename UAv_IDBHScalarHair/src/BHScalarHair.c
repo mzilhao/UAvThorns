@@ -310,23 +310,25 @@ void UAv_IDBHScalarHair(CCTK_ARGUMENTS)
                      "mm = %d not implemented yet! Aborting.", mm);
         }
 
-        // TODO: change here
-        CCTK_REAL psi4 = exp(2. * F1[ind]);
-        CCTK_REAL psi2 = sqrt(psi4);
-        CCTK_REAL psi1 = sqrt(psi2);
+        const CCTK_REAL aux  = 1. + 0.25 * rH/RR;
+        const CCTK_REAL aux4 = aux * aux * aux * aux;
+        const CCTK_REAL psi4 = exp(2. * F1[ind]) * aux4;
+        const CCTK_REAL psi2 = sqrt(psi4);
+        const CCTK_REAL psi1 = sqrt(psi2);
 
-        CCTK_REAL hh   = exp(2. * (F2[ind] - F1[ind])) - 1.;
+        const CCTK_REAL h_rho2 = exp(2. * (F2[ind] - F1[ind])) - 1.;
 
         // 3-metric
-        gxx[ind] = psi4 * (1. + hh * sinph * sinph);
-        gxy[ind] = -psi4 * hh * sinph * cosph;
+        gxx[ind] = psi4 * (1. + h_rho2 * sinph * sinph);
+        gxy[ind] = -psi4 * h_rho2 * sinph * cosph;
         gxz[ind] = 0;
-        gyy[ind] = psi4 * (1. + hh * cosph * cosph);
+        gyy[ind] = psi4 * (1. + h_rho2 * cosph * cosph);
         gyz[ind] = 0;
         gzz[ind] = psi4;
 
-        // TODO: change here
-        CCTK_REAL alph = exp(F0[ind]);
+        CCTK_REAL alph = exp(F0[ind]) * (RR - 0.25*rH) / (RR + 0.25*rH);
+        if (alph < SMALL)
+          alph = SMALL;
 
         // lapse
         if (CCTK_EQUALS(initial_lapse, "psi^n"))
@@ -350,6 +352,8 @@ void UAv_IDBHScalarHair(CCTK_ARGUMENTS)
         // scalar fields
         phi1[ind]  = phi0_l * (cos(omega * tt) * cosmph + sin(omega * tt) * sinmph);
         phi2[ind]  = phi0_l * (cos(omega * tt) * sinmph - sin(omega * tt) * cosmph);
+
+        // TODO
         Kphi1[ind] = 0.5 * (mm * W[ind] - omega) / alph * phi2[ind];
         Kphi2[ind] = 0.5 * (omega - mm * W[ind]) / alph * phi1[ind];
 
