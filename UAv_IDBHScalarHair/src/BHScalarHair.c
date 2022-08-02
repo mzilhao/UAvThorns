@@ -468,13 +468,17 @@ void UAv_IDBHScalarHair(CCTK_ARGUMENTS)
         const CCTK_REAL sinthth_y  = z1*y1/(RR*RR2); // sin(th) dth/dy
         const CCTK_REAL sinthth_z  = -sinth2/RR;     // sin(th) dth/dz
 
+        CCTK_REAL alph = exp(F0[ind]) * (RR - 0.25*rH) / (RR + 0.25*rH);
+        if (alph < SMALL)
+          alph = SMALL;
 
-        // TODO
+        const CCTK_REAL aux  = 1. + 0.25 * rH/RR;
+        const CCTK_REAL aux4 = aux * aux * aux * aux;
 
-        // KRph/sin(th)^2 = - 1/2 R^2 exp(2F2-F0) dW/dR
-        // Kthph/sin(th)  = - 1/2 R^2 exp(2F2-F0) sin(th) dW/dth
-        CCTK_REAL KRph_o_sinth2 = -0.5 * RR * exp(2. * F2[ind] - F0[ind]) * RdWdR;
-        CCTK_REAL Kthph_o_sinth = -0.5 * RR * exp(2. * F2[ind] - F0[ind]) * RsinthdWdth;
+        // KRph/sin(th)^2 = - 1/2 R^2 exp(2F2) (1 + rH/(4R))^4 / alpha  dW/dR
+        // Kthph/sin(th)  = - 1/2 R^2 exp(2F2) (1 + rH/(4R))^4 / alpha sin(th) dW/dth
+        CCTK_REAL KRph_o_sinth2 = -0.5 * RR * exp(2. * F2[ind]) * aux4 / alph * RdWdR;
+        CCTK_REAL Kthph_o_sinth = -0.5 * RR * exp(2. * F2[ind]) * aux4 / alph * RsinthdWdth;
 
         kxx[ind] = 2.*KRph_o_sinth2 *  R_x * sinth2ph_x                     +  2.*Kthph_o_sinth *  sinthth_x * ph_x;
         kxy[ind] =    KRph_o_sinth2 * (R_x * sinth2ph_y + R_y * sinth2ph_x) +     Kthph_o_sinth * (sinthth_x * ph_y + sinthth_y * ph_x);
