@@ -136,21 +136,22 @@ void UAv_IDBHScalarHair(CCTK_ARGUMENTS)
         const CCTK_REAL z1  = z[ind] - z0;
 
         const CCTK_REAL RR2 = x1*x1 + y1*y1 + z1*z1;
-        const CCTK_REAL RR  = sqrt(RR2);
 
-        // TODO: change here the radial coordinate definition:
+        CCTK_REAL RR  = sqrt(RR2);
+        // prevent divisions from 0
+        if (RR < SMALL)
+          RR = SMALL;
 
-        // Rtor;
+        // from (quasi-)isotropic coordinate R to the metric coordinate r
+        const CCTK_REAL rr = RR * (1. + 0.25 * rH / RR) * (1. + 0.25 * rH / RR);
 
-        // rtorx;
-        /* rx=sqrt(rr^2-rH*rH); */
-        const CCTK_REAL rx = 1; //TODO!
+        // from the metric coordinate r to the x coordinate
+        const CCTK_REAL rx = sqrt(rr*rr - rH*rH);
 
-        // rx to X
-        // X radial coordinate (used in input files) as function of rx coordinate
-        CCTK_REAL lX = rx / (C0 + rx);
+        // and finally to the X radial coordinate (used in input files)
+        const CCTK_REAL lX = rx / (C0 + rx);
 
-        CCTK_REAL ltheta = acos( z1/(RR + SMALL) );
+        CCTK_REAL ltheta = acos( z1/RR );
         if (ltheta > 0.5*M_PI)    // symmetry along the equatorial plane
           ltheta = M_PI - ltheta;
 
