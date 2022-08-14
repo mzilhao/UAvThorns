@@ -260,7 +260,7 @@ void UAv_IDBHScalarHair(CCTK_ARGUMENTS)
   /* printf("F1 = %g\n", F1[0]); */
   /* printf("F2 = %g\n", F2[0]); */
   /* printf("F0 = %g\n", F0[0]); */
-  /* printf("phi0 = %g\n", phi[0]); */
+  /* printf("phi0 = %g\n", phi0[0]); */
   /* printf("W = %g\n", W[0]); */
 
   /* now we finally write the metric and all 3+1 quantities. first we write the
