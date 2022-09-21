@@ -58,6 +58,11 @@ REAL OmegaH "Horizon angular velocity"
   0:* :: "non-negative"
 } 0.0
 
+REAL ct "ct parameter used for Kerr_test data"
+{
+  *:0 :: "negative"
+} -1.0
+
 
 REAL x0 "x coordinate of central point"
 {

@@ -91,24 +91,19 @@ void UAv_Kerr_test(CCTK_ARGUMENTS)
           RR = SMALL;
 
         // from (quasi-)isotropic coordinate R to the metric coordinate r
-        const CCTK_REAL rr = RR * (1. + 0.25 * rH / RR) * (1. + 0.25 * rH / RR);
+        /* const CCTK_REAL rr = RR * (1. + 0.25 * rH / RR) * (1. + 0.25 * rH / RR); */
 
-        // from the metric coordinate r to the x coordinate
-        /* const CCTK_REAL rx = sqrt(rr*rr - rH*rH); */
+        const CCTK_REAL th = acos( z1/RR );
 
-        // and finally to the X radial coordinate (used in input files)
-        /* const CCTK_REAL lX = rx / (C0 + rx); */
+        F1[ind] = (1.0/2.0)*log(pow(-1 + 16*ct/(RR*pow(4 + rH/RR, 2)), 2) + 256*ct*(ct - rH)*pow(cos(th), 2)/(pow(RR, 2)*pow(4 + rH/RR, 4)));
 
-        CCTK_REAL ltheta = acos( z1/RR );
-        /* if (ltheta > 0.5*M_PI)    // symmetry along the equatorial plane */
-          /* ltheta = M_PI - ltheta; */
+        F2[ind] = -F1[ind] + (1.0/2.0)*log(pow(pow(-1 + 16*ct/(RR*pow(4 + rH/RR, 2)), 2) + 256*ct*(ct - rH)/(pow(RR, 2)*pow(4 + rH/RR, 4)), 2) - 256*ct*pow(4*RR - rH, 2)*(ct - rH)*pow(sin(th), 2)/(pow(RR, 2)*pow(4 + rH/RR, 4)*pow(4*RR + rH, 2)));
 
-        // TODO
-        F1[ind] = 0;
-        F2[ind] = 0;
-        F0[ind] = 0;
-        phi0[ind] = 0;
-        W[ind] = 0;
+        F0[ind] = -F2[ind];
+
+        W[ind] = 4096*sqrt(ct*(ct - rH))*(-1 + 16*ct/(RR*pow(4 + rH/RR, 2)))*(2*ct - rH)*exp(-2*F1[ind] - 2*F2[ind])/(pow(RR, 3)*pow(4 + rH/RR, 6));
+
+        phi0[ind] = 0.;
 
       }
     }
