@@ -1,5 +1,15 @@
 # Schedule definitions for thorn UAv_IDBHScalarHair
 
+if (CCTK_Equals(initial_data, "Kerr_test"))
+{
+  SCHEDULE UAv_Kerr_test IN ADMBase_InitialData
+  {
+    LANG: C
+    OPTIONS: Local
+    SYNC: ADMBase::curv
+  } "Test with (exact) Kerr data"
+}
+
 if (CCTK_Equals(initial_data, "HairyBH"))
 {
   SCHEDULE UAv_IDBHScalarHair IN ADMBase_InitialData

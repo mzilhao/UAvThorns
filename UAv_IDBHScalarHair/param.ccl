@@ -7,18 +7,21 @@ SHARES: ADMBase
 
 EXTENDS KEYWORD initial_data
 {
-  "HairyBH" :: "HairyBH initial lapse profile"
+  "Kerr_test" :: "test with Kerr data"
+  "HairyBH"   :: "HairyBH initial lapse profile"
 }
 
 EXTENDS KEYWORD initial_lapse
 {
-  "HairyBH" :: "HairyBH initial lapse profile"
-  "psi^n"   :: "psi^n initial lapse profile"
+  "Kerr_test" :: "test with Kerr data"
+  "HairyBH"   :: "HairyBH initial lapse profile"
+  "psi^n"     :: "psi^n initial lapse profile"
 }
 
 EXTENDS KEYWORD initial_shift
 {
-  "HairyBH" :: "HairyBH initial lapse profile"
+  "Kerr_test" :: "test with Kerr data"
+  "HairyBH"   :: "HairyBH initial lapse profile"
 }
 
 
