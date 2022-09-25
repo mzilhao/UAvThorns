@@ -185,11 +185,11 @@ void UAv_Kerr_test(CCTK_ARGUMENTS)
         // lapse
         if (CCTK_EQUALS(initial_lapse, "psi^n"))
           alp[ind] = pow(psi1, initial_lapse_psi_exponent);
-        else if (CCTK_EQUALS(initial_lapse, "HairyBH"))
+        else if (CCTK_EQUALS(initial_lapse, "Kerr_test"))
           alp[ind] = alph;
 
         // shift
-        if (CCTK_EQUALS(initial_shift, "HairyBH")) {
+        if (CCTK_EQUALS(initial_shift, "Kerr_test")) {
           betax[ind] =  W[ind] * y1;
           betay[ind] = -W[ind] * x1;
           betaz[ind] =  0.;
