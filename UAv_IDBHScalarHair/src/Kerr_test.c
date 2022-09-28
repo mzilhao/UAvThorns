@@ -83,21 +83,18 @@ void UAv_Kerr_test(CCTK_ARGUMENTS)
         const CCTK_REAL y1  = y[ind] - y0;
         const CCTK_REAL z1  = z[ind] - z0;
 
+        const CCTK_REAL rho2 = x1*x1 + y1*y1;
+
         const CCTK_REAL RR2 = x1*x1 + y1*y1 + z1*z1;
+        const CCTK_REAL RR  = sqrt(RR2);
 
-        CCTK_REAL RR  = sqrt(RR2);
-        // prevent divisions from 0
-        if (RR < SMALL)
-          RR = SMALL;
+        /* note that there are divisions by RR in the following expressions.
+           those should be avoided by choosing a non-zero value for z0 (for
+           instance) */
 
-        // from (quasi-)isotropic coordinate R to the metric coordinate r
-        /* const CCTK_REAL rr = RR * (1. + 0.25 * rH / RR) * (1. + 0.25 * rH / RR); */
+        F1[ind] = (1.0/2.0)*log(pow(-1 + 16*ct/(RR*pow(4 + rH/RR, 2)), 2) + 256*ct*(ct - rH)*pow(z1, 2)/(pow(RR, 4)*pow(4 + rH/RR, 4)));
 
-        const CCTK_REAL th = acos( z1/RR );
-
-        F1[ind] = (1.0/2.0)*log(pow(-1 + 16*ct/(RR*pow(4 + rH/RR, 2)), 2) + 256*ct*(ct - rH)*pow(cos(th), 2)/(pow(RR, 2)*pow(4 + rH/RR, 4)));
-
-        F2[ind] = -F1[ind] + (1.0/2.0)*log(pow(pow(-1 + 16*ct/(RR*pow(4 + rH/RR, 2)), 2) + 256*ct*(ct - rH)/(pow(RR, 2)*pow(4 + rH/RR, 4)), 2) - 256*ct*pow(4*RR - rH, 2)*(ct - rH)*pow(sin(th), 2)/(pow(RR, 2)*pow(4 + rH/RR, 4)*pow(4*RR + rH, 2)));
+        F2[ind] = -F1[ind] + (1.0/2.0)*log(pow(pow(-1 + 16*ct/(RR*pow(4 + rH/RR, 2)), 2) + 256*ct*(ct - rH)/(pow(RR, 2)*pow(4 + rH/RR, 4)), 2) - 256*ct*pow(4*RR - rH, 2)*(ct - rH)*rho2/(pow(RR, 4)*pow(4 + rH/RR, 4)*pow(4*RR + rH, 2)));
 
         F0[ind] = -F2[ind];
 
@@ -130,38 +127,19 @@ void UAv_Kerr_test(CCTK_ARGUMENTS)
         const CCTK_REAL y1  = y[ind] - y0;
         const CCTK_REAL z1  = z[ind] - z0;
 
-        CCTK_REAL RR2 = x1*x1 + y1*y1 + z1*z1;
-        if (RR2 < pow(SMALL, 2))
-          RR2 = pow(SMALL, 2);
+        const CCTK_REAL RR2 = x1*x1 + y1*y1 + z1*z1;
         const CCTK_REAL RR  = sqrt(RR2);
 
-        CCTK_REAL rho2 = x1*x1 + y1*y1;
-        if (rho2 < pow(SMALL, 2))
-          rho2 = pow(SMALL, 2);
-        const CCTK_REAL rho  = sqrt(rho2);
+        const CCTK_REAL ph = atan2(y1, x1);
 
-        const CCTK_REAL cosph  = x1/rho;
-        const CCTK_REAL sinph  = y1/rho;
+        const CCTK_REAL cosph  = cos(ph);
+        const CCTK_REAL sinph  = sin(ph);
 
-        CCTK_REAL cosmph = 0.;
-        CCTK_REAL sinmph = 0.;
-        if (mm == 0) {
-          cosmph = 1.;
-          sinmph = 0.;
-        } else if (mm == 1) {
-          cosmph = cosph;
-          sinmph = sinph;
-        } else if (mm == 2) {
-          cosmph = cosph * cosph - sinph * sinph;
-          sinmph = 2. * cosph * sinph;
-        } else if (mm == 3) {
-          cosmph = cosph * cosph * cosph - 3. * cosph * sinph * sinph;
-          sinmph = 3. * cosph * cosph * sinph - sinph * sinph * sinph;
-        } else {
-          CCTK_VWarn(0, __LINE__, __FILE__, CCTK_THORNSTRING,
-                     "mm = %d not implemented yet! Aborting.", mm);
-        }
+        const CCTK_REAL cosmph = cos(mm*ph);
+        const CCTK_REAL sinmph = sin(mm*ph);
 
+        /* note the division by RR in the following. this should be avoided by
+           choosing a non-zero value for z0 (for instance) */
         const CCTK_REAL aux  = 1. + 0.25 * rH/RR;
         const CCTK_REAL aux4 = aux * aux * aux * aux;
         const CCTK_REAL psi4 = exp(2. * F1[ind]) * aux4;
