@@ -283,32 +283,13 @@ void UAv_IDBHScalarHair(CCTK_ARGUMENTS)
           RR2 = pow(SMALL, 2);
         const CCTK_REAL RR  = sqrt(RR2);
 
-        CCTK_REAL rho2 = x1*x1 + y1*y1;
-        if (rho2 < pow(SMALL, 2))
-          rho2 = pow(SMALL, 2);
-        const CCTK_REAL rho  = sqrt(rho2);
+        const CCTK_REAL ph = atan2(y1, x1);
 
-        const CCTK_REAL cosph  = x1/rho;
-        const CCTK_REAL sinph  = y1/rho;
+        const CCTK_REAL cosph  = cos(ph);
+        const CCTK_REAL sinph  = sin(ph);
 
-        CCTK_REAL cosmph = 0.;
-        CCTK_REAL sinmph = 0.;
-        if (mm == 0) {
-          cosmph = 1.;
-          sinmph = 0.;
-        } else if (mm == 1) {
-          cosmph = cosph;
-          sinmph = sinph;
-        } else if (mm == 2) {
-          cosmph = cosph * cosph - sinph * sinph;
-          sinmph = 2. * cosph * sinph;
-        } else if (mm == 3) {
-          cosmph = cosph * cosph * cosph - 3. * cosph * sinph * sinph;
-          sinmph = 3. * cosph * cosph * sinph - sinph * sinph * sinph;
-        } else {
-          CCTK_VWarn(0, __LINE__, __FILE__, CCTK_THORNSTRING,
-                     "mm = %d not implemented yet! Aborting.", mm);
-        }
+        const CCTK_REAL cosmph = cos(mm*ph);
+        const CCTK_REAL sinmph = sin(mm*ph);
 
         const CCTK_REAL aux  = 1. + 0.25 * rH/RR;
         const CCTK_REAL aux4 = aux * aux * aux * aux;
