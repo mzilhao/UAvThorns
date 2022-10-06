@@ -34,9 +34,13 @@ void UAv_Kerr_test(CCTK_ARGUMENTS)
   DECLARE_CCTK_ARGUMENTS;
   DECLARE_CCTK_PARAMETERS;
 
-  CCTK_REAL dx12 = 12 * CCTK_DELTA_SPACE(0);
-  CCTK_REAL dy12 = 12 * CCTK_DELTA_SPACE(1);
-  CCTK_REAL dz12 = 12 * CCTK_DELTA_SPACE(2);
+  const CCTK_REAL dx12 = 12 * CCTK_DELTA_SPACE(0);
+  const CCTK_REAL dy12 = 12 * CCTK_DELTA_SPACE(1);
+  const CCTK_REAL dz12 = 12 * CCTK_DELTA_SPACE(2);
+
+  const CCTK_REAL dxsq12 = 12 * CCTK_DELTA_SPACE(0)*CCTK_DELTA_SPACE(0);
+  const CCTK_REAL dysq12 = 12 * CCTK_DELTA_SPACE(1)*CCTK_DELTA_SPACE(1);
+  const CCTK_REAL dzsq12 = 12 * CCTK_DELTA_SPACE(2)*CCTK_DELTA_SPACE(2);
 
   bool use_jacobian = false;
   if (CCTK_IsFunctionAliased("MultiPatch_GetDomainSpecification"))
@@ -89,8 +93,8 @@ void UAv_Kerr_test(CCTK_ARGUMENTS)
         const CCTK_REAL RR  = sqrt(RR2);
 
         /* note that there are divisions by RR in the following expressions.
-           those should be avoided by choosing a non-zero value for z0 (for
-           instance) */
+           divisions by zero should be avoided by choosing a non-zero value for
+           z0 (for instance) */
 
         F1[ind] = (1.0/2.0)*log(pow(-1 + 16*ct/(RR*pow(4 + rH/RR, 2)), 2) + 256*ct*(ct - rH)*pow(z1, 2)/(pow(RR, 4)*pow(4 + rH/RR, 4)));
 
@@ -138,8 +142,8 @@ void UAv_Kerr_test(CCTK_ARGUMENTS)
         const CCTK_REAL cosmph = cos(mm*ph);
         const CCTK_REAL sinmph = sin(mm*ph);
 
-        /* note the division by RR in the following. this should be avoided by
-           choosing a non-zero value for z0 (for instance) */
+        /* note the division by RR in the following. divisions by zero should be
+           avoided by choosing a non-zero value for z0 (for instance) */
         const CCTK_REAL aux  = 1. + 0.25 * rH/RR;
         const CCTK_REAL aux4 = aux * aux * aux * aux;
         const CCTK_REAL psi4 = exp(2. * F1[ind]) * aux4;
@@ -157,6 +161,7 @@ void UAv_Kerr_test(CCTK_ARGUMENTS)
         gzz[ind] = psi4;
 
         CCTK_REAL alph = exp(F0[ind]) * (RR - 0.25*rH) / (RR + 0.25*rH);
+        // FIXME
         if (alph < SMALL)
           alph = SMALL;
 
@@ -269,6 +274,25 @@ void UAv_Kerr_test(CCTK_ARGUMENTS)
         d1_W[2] = (   -W[indkp2] + 8*W[indkp1]
                    - 8*W[indkm1] +   W[indkm2] ) / dz12;
 
+        // 4th-order accurate second derivatives of the W function (for
+        // regularization at the rho=0 axis)
+        CCTK_REAL d2_W[3];
+
+        // d2W/dx2
+        d2_W[0] = (    -W[indip2] + 16*W[indip1] - 30*W[ind]
+                   + 16*W[indim1] -    W[indim2] ) / dxsq12;
+
+        // d2W/dy2
+        d2_W[1] = (    -W[indjp2] + 16*W[indjp1] - 30*W[ind]
+                   + 16*W[indjm1] -    W[indjm2] ) / dysq12;
+
+        // d2W/dz2
+        d2_W[2] = (    -W[indkp2] + 16*W[indkp1] - 30*W[ind]
+                   + 16*W[indkm1] -    W[indkm2] ) / dzsq12;
+
+
+
+        // TODO! hes and 2nd derivs...
         if (use_jacobian) {
           apply_jacobian(d1_W, jac);
         }
