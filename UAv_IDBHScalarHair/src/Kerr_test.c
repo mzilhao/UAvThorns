@@ -29,6 +29,45 @@ static void apply_jacobian(CCTK_REAL dvar[3], CCTK_REAL jac[3][3])
   return;
 }
 
+static void apply_jacobian2(CCTK_REAL dvar[3], CCTK_REAL ddvar[3][3],
+                            CCTK_REAL jac[3][3],  CCTK_REAL hes[3][3][3])
+{
+  CCTK_REAL xdvar[3];
+  CCTK_REAL xddvar[3][3];
+
+  for (int a = 0; a < 3; a++)
+    xdvar[a] = 0.0;
+
+  for (int a = 0; a < 3; a++)
+    for (int b = 0; b < 3; b++)
+      xddvar[a][b] = 0.0;
+
+  for (int a = 0; a < 3; a++)
+    for (int b = 0; b < 3; b++)
+      xdvar[a] += dvar[b] * jac[b][a];
+
+  for (int a = 0; a < 3; a++) {
+    for (int b = 0; b < 3; b++) {
+      for (int c = 0; c < 3; c++) {
+        xddvar[a][b] += dvar[c] * hes[c][a][b];
+        for (int d = 0; d < 3; d++) {
+          xddvar[a][b] += ddvar[c][d] * jac[c][a] * jac[d][b];
+        }
+      }
+    }
+  }
+
+  for (int a = 0; a < 3; a++)
+    dvar[a] = xdvar[a];
+
+  for (int a = 0; a < 3; a++)
+    for (int b = 0; b < 3; b++)
+      ddvar[a][b] = xddvar[a][b];
+
+  return;
+}
+
+
 void UAv_Kerr_test(CCTK_ARGUMENTS)
 {
   DECLARE_CCTK_ARGUMENTS;
@@ -64,6 +103,45 @@ void UAv_Kerr_test(CCTK_ARGUMENTS)
     use_jacobian ? CCTK_VarDataPtr(cctkGH, 0, "Coordinates::J32") : NULL;
   const CCTK_REAL *lJ33 =
     use_jacobian ? CCTK_VarDataPtr(cctkGH, 0, "Coordinates::J33") : NULL;
+
+  const CCTK_REAL *ldJ111 =
+    use_jacobian ? CCTK_VarDataPtr(cctkGH, 0, "Coordinates::dJ111") : NULL;
+  const CCTK_REAL *ldJ112 =
+    use_jacobian ? CCTK_VarDataPtr(cctkGH, 0, "Coordinates::dJ112") : NULL;
+  const CCTK_REAL *ldJ113 =
+    use_jacobian ? CCTK_VarDataPtr(cctkGH, 0, "Coordinates::dJ113") : NULL;
+  const CCTK_REAL *ldJ122 =
+    use_jacobian ? CCTK_VarDataPtr(cctkGH, 0, "Coordinates::dJ122") : NULL;
+  const CCTK_REAL *ldJ123 =
+    use_jacobian ? CCTK_VarDataPtr(cctkGH, 0, "Coordinates::dJ123") : NULL;
+  const CCTK_REAL *ldJ133 =
+    use_jacobian ? CCTK_VarDataPtr(cctkGH, 0, "Coordinates::dJ133") : NULL;
+
+  const CCTK_REAL *ldJ211 =
+    use_jacobian ? CCTK_VarDataPtr(cctkGH, 0, "Coordinates::dJ211") : NULL;
+  const CCTK_REAL *ldJ212 =
+    use_jacobian ? CCTK_VarDataPtr(cctkGH, 0, "Coordinates::dJ212") : NULL;
+  const CCTK_REAL *ldJ213 =
+    use_jacobian ? CCTK_VarDataPtr(cctkGH, 0, "Coordinates::dJ213") : NULL;
+  const CCTK_REAL *ldJ222 =
+    use_jacobian ? CCTK_VarDataPtr(cctkGH, 0, "Coordinates::dJ222") : NULL;
+  const CCTK_REAL *ldJ223 =
+    use_jacobian ? CCTK_VarDataPtr(cctkGH, 0, "Coordinates::dJ223") : NULL;
+  const CCTK_REAL *ldJ233 =
+    use_jacobian ? CCTK_VarDataPtr(cctkGH, 0, "Coordinates::dJ233") : NULL;
+
+  const CCTK_REAL *ldJ311 =
+    use_jacobian ? CCTK_VarDataPtr(cctkGH, 0, "Coordinates::dJ311") : NULL;
+  const CCTK_REAL *ldJ312 =
+    use_jacobian ? CCTK_VarDataPtr(cctkGH, 0, "Coordinates::dJ312") : NULL;
+  const CCTK_REAL *ldJ313 =
+    use_jacobian ? CCTK_VarDataPtr(cctkGH, 0, "Coordinates::dJ313") : NULL;
+  const CCTK_REAL *ldJ322 =
+    use_jacobian ? CCTK_VarDataPtr(cctkGH, 0, "Coordinates::dJ322") : NULL;
+  const CCTK_REAL *ldJ323 =
+    use_jacobian ? CCTK_VarDataPtr(cctkGH, 0, "Coordinates::dJ323") : NULL;
+  const CCTK_REAL *ldJ333 =
+    use_jacobian ? CCTK_VarDataPtr(cctkGH, 0, "Coordinates::dJ333") : NULL;
 
 
   /* let's create arrays for the F1, F2, F0, phi0, W functions */
@@ -235,8 +313,9 @@ void UAv_Kerr_test(CCTK_ARGUMENTS)
           rho2 = pow(SMALL, 2);
         /* const CCTK_REAL rho  = sqrt(rho2); */
 
-        /* get the jacobian to take derivatives. 0 is x, 1 is y and 2 is z */
+        /* get the jacobian and hessian to take derivatives. 0 is x, 1 is y and 2 is z */
         CCTK_REAL jac[3][3];
+        CCTK_REAL hes[3][3][3];
         if (use_jacobian) {
           jac[0][0] = lJ11[ind];
           jac[0][1] = lJ12[ind];
@@ -247,6 +326,28 @@ void UAv_Kerr_test(CCTK_ARGUMENTS)
           jac[2][0] = lJ31[ind];
           jac[2][1] = lJ32[ind];
           jac[2][2] = lJ33[ind];
+
+          hes[0][0][0]                = ldJ111[ind];
+          hes[0][0][1] = hes[0][1][0] = ldJ112[ind];
+          hes[0][0][2] = hes[0][2][0] = ldJ113[ind];
+          hes[0][1][1]                = ldJ122[ind];
+          hes[0][1][2] = hes[0][2][1] = ldJ123[ind];
+          hes[0][2][2]                = ldJ133[ind];
+
+          hes[1][0][0]                = ldJ211[ind];
+          hes[1][0][1] = hes[1][1][0] = ldJ212[ind];
+          hes[1][0][2] = hes[1][2][0] = ldJ213[ind];
+          hes[1][1][1]                = ldJ222[ind];
+          hes[1][1][2] = hes[1][2][1] = ldJ223[ind];
+          hes[1][2][2]                = ldJ233[ind];
+
+          hes[2][0][0]                = ldJ311[ind];
+          hes[2][0][1] = hes[2][1][0] = ldJ312[ind];
+          hes[2][0][2] = hes[2][2][0] = ldJ313[ind];
+          hes[2][1][1]                = ldJ322[ind];
+          hes[2][1][2] = hes[2][2][1] = ldJ323[ind];
+          hes[2][2][2]                = ldJ333[ind];
+
         } else {
           jac[0][0] = 1.0;
           jac[1][1] = 1.0;
@@ -257,6 +358,11 @@ void UAv_Kerr_test(CCTK_ARGUMENTS)
           jac[1][2] = 0.0;
           jac[2][0] = 0.0;
           jac[2][1] = 0.0;
+
+          for (int a = 0; a < 3; a++)
+            for (int b = 0; b < 3; b++)
+              for (int c = 0; c < 3; c++)
+                hes[a][b][c] = 0.0;
         }
 
         // 4th-order accurate first derivatives of the W function
@@ -291,8 +397,7 @@ void UAv_Kerr_test(CCTK_ARGUMENTS)
                    + 16*W[indkm1] -    W[indkm2] ) / dzsq12;
 
 
-
-        // TODO! hes and 2nd derivs...
+        // TODO! transform 2nd derivatives as well
         if (use_jacobian) {
           apply_jacobian(d1_W, jac);
         }
