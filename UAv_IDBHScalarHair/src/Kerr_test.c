@@ -77,6 +77,9 @@ void UAv_Kerr_test(CCTK_ARGUMENTS)
   const CCTK_REAL dy12 = 12 * CCTK_DELTA_SPACE(1);
   const CCTK_REAL dz12 = 12 * CCTK_DELTA_SPACE(2);
 
+  const CCTK_REAL dxsq = CCTK_DELTA_SPACE(0)*CCTK_DELTA_SPACE(0);
+  const CCTK_REAL dysq = CCTK_DELTA_SPACE(1)*CCTK_DELTA_SPACE(1);
+
   const CCTK_REAL dxsq12 = 12 * CCTK_DELTA_SPACE(0)*CCTK_DELTA_SPACE(0);
   const CCTK_REAL dysq12 = 12 * CCTK_DELTA_SPACE(1)*CCTK_DELTA_SPACE(1);
   const CCTK_REAL dzsq12 = 12 * CCTK_DELTA_SPACE(2)*CCTK_DELTA_SPACE(2);
@@ -303,15 +306,11 @@ void UAv_Kerr_test(CCTK_ARGUMENTS)
         const CCTK_REAL y1  = y[ind] - y0;
         const CCTK_REAL z1  = z[ind] - z0;
 
-        CCTK_REAL RR2 = x1*x1 + y1*y1 + z1*z1;
-        if (RR2 < pow(SMALL, 2))
-          RR2 = pow(SMALL, 2);
+        const CCTK_REAL RR2 = x1*x1 + y1*y1 + z1*z1;
         const CCTK_REAL RR  = sqrt(RR2);
 
-        CCTK_REAL rho2 = x1*x1 + y1*y1;
-        if (rho2 < pow(SMALL, 2))
-          rho2 = pow(SMALL, 2);
-        /* const CCTK_REAL rho  = sqrt(rho2); */
+        const CCTK_REAL rho2 = x1*x1 + y1*y1;
+        const CCTK_REAL rho  = sqrt(rho2);
 
         /* get the jacobian and hessian to take derivatives. 0 is x, 1 is y and 2 is z */
         CCTK_REAL jac[3][3];
@@ -409,41 +408,60 @@ void UAv_Kerr_test(CCTK_ARGUMENTS)
         CCTK_REAL RsinthdWdth = x1 * z1 * d1_W[0] + y1 * z1 * d1_W[1]
                               - (x1 * x1 + y1 * y1) * d1_W[2];
 
+        /*
         const CCTK_REAL R_x = x1/RR;   // dR/dx
         const CCTK_REAL R_y = y1/RR;   // dR/dy
         const CCTK_REAL R_z = z1/RR;   // dR/dz
+        */
 
         const CCTK_REAL costh  = z1/RR;
         const CCTK_REAL costh2 = costh*costh;
         const CCTK_REAL sinth2 = 1. - costh2;
 
-        const CCTK_REAL ph_x = -y1/rho2; // dphi/dx
-        const CCTK_REAL ph_y =  x1/rho2; // dphi/dy
-
         const CCTK_REAL sinth2ph_x = -y1/RR2; // sin(th)^2 dphi/dx
         const CCTK_REAL sinth2ph_y =  x1/RR2; // sin(th)^2 dphi/dy
 
-        const CCTK_REAL sinthth_x  = z1*x1/(RR*RR2); // sin(th) dth/dx
-        const CCTK_REAL sinthth_y  = z1*y1/(RR*RR2); // sin(th) dth/dy
-        const CCTK_REAL sinthth_z  = -sinth2/RR;     // sin(th) dth/dz
+        const CCTK_REAL Rsinthth_x  = z1*x1/RR2; // R sin(th) dth/dx
+        const CCTK_REAL Rsinthth_y  = z1*y1/RR2; // R sin(th) dth/dy
+        const CCTK_REAL Rsinthth_z  = -sinth2;   // R sin(th) dth/dz
 
         CCTK_REAL alph = exp(F0[ind]) * (RR - 0.25*rH) / (RR + 0.25*rH);
+        // FIXME
         if (alph < SMALL)
           alph = SMALL;
 
         const CCTK_REAL aux  = 1. + 0.25 * rH/RR;
         const CCTK_REAL aux4 = aux * aux * aux * aux;
 
-        // KRph/sin(th)^2 = - 1/2 R^2 exp(2F2) (1 + rH/(4R))^4 / alpha  dW/dR
-        // Kthph/sin(th)  = - 1/2 R^2 exp(2F2) (1 + rH/(4R))^4 / alpha sin(th) dW/dth
-        CCTK_REAL KRph_o_sinth2 = -0.5 * RR * exp(2. * F2[ind]) * aux4 / alph * RdWdR;
-        CCTK_REAL Kthph_o_sinth = -0.5 * RR * exp(2. * F2[ind]) * aux4 / alph * RsinthdWdth;
+        /*
+          KRph/(R sin(th)^2) = - 1/2 exp(2F2) (1 + rH/(4R))^4 / alpha R dW/dR
+          Kthph/(R sin(th))  = - 1/2 exp(2F2) (1 + rH/(4R))^4 / alpha R sin(th) dW/dth
 
-        kxx[ind] = 2.*KRph_o_sinth2 *  R_x * sinth2ph_x                     +  2.*Kthph_o_sinth *  sinthth_x * ph_x;
-        kxy[ind] =    KRph_o_sinth2 * (R_x * sinth2ph_y + R_y * sinth2ph_x) +     Kthph_o_sinth * (sinthth_x * ph_y + sinthth_y * ph_x);
-        kxz[ind] =    KRph_o_sinth2 *                     R_z * sinth2ph_x  +     Kthph_o_sinth *                     sinthth_z * ph_x;
-        kyy[ind] = 2.*KRph_o_sinth2 *  R_y * sinth2ph_y                     +  2.*Kthph_o_sinth *  sinthth_y * ph_y;
-        kyz[ind] =    KRph_o_sinth2 *                     R_z * sinth2ph_y  +     Kthph_o_sinth *                     sinthth_z * ph_y;
+          note that in the expressions below we absorb one R factor in the terms
+          RdWdR and RsinthdWdth
+        */
+        const CCTK_REAL KRph_o_Rsinth2 = -0.5 * exp(2. * F2[ind]) * aux4 / alph * RdWdR;
+
+        CCTK_REAL RsinthdWdth_o_sinth2;
+        // if at the rho = 0 axis we need to regularize the division by sin(th)^2
+        if (rho < sqrt(dxsq + dysq) * 0.25) {
+          // R d^2W/dth^2
+          CCTK_REAL Rd2th_W = 0;         // FIXME
+
+          RsinthdWdth_o_sinth2 = Rd2th_W;
+        }
+        else {
+          RsinthdWdth_o_sinth2 = RsinthdWdth / sinth2;
+        }
+
+        const CCTK_REAL Kthph_o_Rsinth3 = -0.5 * exp(2. * F2[ind]) * aux4 / alph * RsinthdWdth_o_sinth2;
+
+
+        kxx[ind] = 2.*KRph_o_Rsinth2 *  x1 * sinth2ph_x                     +  2.*Kthph_o_Rsinth3 *  Rsinthth_x * sinth2ph_x;
+        kxy[ind] =    KRph_o_Rsinth2 * (x1 * sinth2ph_y + y1 * sinth2ph_x)  +     Kthph_o_Rsinth3 * (Rsinthth_x * sinth2ph_y + Rsinthth_y * sinth2ph_x);
+        kxz[ind] =    KRph_o_Rsinth2 *                    z1 * sinth2ph_x   +     Kthph_o_Rsinth3 *                            Rsinthth_z * sinth2ph_x;
+        kyy[ind] = 2.*KRph_o_Rsinth2 *  y1 * sinth2ph_y                     +  2.*Kthph_o_Rsinth3 *  Rsinthth_y * sinth2ph_y;
+        kyz[ind] =    KRph_o_Rsinth2 *                    z1 * sinth2ph_y   +     Kthph_o_Rsinth3 *                            Rsinthth_z * sinth2ph_y;
         kzz[ind] = 0.;
 
       }
