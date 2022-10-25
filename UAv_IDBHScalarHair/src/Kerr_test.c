@@ -151,12 +151,17 @@ void UAv_Kerr_test(CCTK_ARGUMENTS)
   const CCTK_INT N_points = cctk_lsh[0]*cctk_lsh[1]*cctk_lsh[2]; // total points
 
   CCTK_REAL *F1, *F2, *F0, *phi0, *W;
+  CCTK_REAL *dW_dR, *dW_dth, *d2W_dth2;
 
   F1   = (CCTK_REAL *) malloc(N_points * sizeof(CCTK_REAL));
   F2   = (CCTK_REAL *) malloc(N_points * sizeof(CCTK_REAL));
   F0   = (CCTK_REAL *) malloc(N_points * sizeof(CCTK_REAL));
   phi0 = (CCTK_REAL *) malloc(N_points * sizeof(CCTK_REAL));
   W    = (CCTK_REAL *) malloc(N_points * sizeof(CCTK_REAL));
+
+  dW_dR    = (CCTK_REAL *) malloc(N_points * sizeof(CCTK_REAL));
+  dW_dth   = (CCTK_REAL *) malloc(N_points * sizeof(CCTK_REAL));
+  d2W_dth2 = (CCTK_REAL *) malloc(N_points * sizeof(CCTK_REAL));
 
   for (int k = 0; k < cctk_lsh[2]; ++k) {
     for (int j = 0; j < cctk_lsh[1]; ++j) {
@@ -169,9 +174,12 @@ void UAv_Kerr_test(CCTK_ARGUMENTS)
         const CCTK_REAL z1  = z[ind] - z0;
 
         const CCTK_REAL rho2 = x1*x1 + y1*y1;
+        const CCTK_REAL rho  = sqrt(rho2);
 
         const CCTK_REAL RR2 = x1*x1 + y1*y1 + z1*z1;
         const CCTK_REAL RR  = sqrt(RR2);
+
+        const CCTK_REAL costh  = z1/RR;
 
         /* note that there are divisions by RR in the following expressions.
            divisions by zero should be avoided by choosing a non-zero value for
@@ -184,6 +192,12 @@ void UAv_Kerr_test(CCTK_ARGUMENTS)
         F0[ind] = -F2[ind];
 
         W[ind] = 4096*sqrt(ct*(ct - rH))*(-1 + 16*ct/(RR*pow(4 + rH/RR, 2)))*(2*ct - rH)*exp(-2*F1[ind] - 2*F2[ind])/(pow(RR, 3)*pow(4 + rH/RR, 6));
+
+        dW_dR[ind]    =  4096*pow(RR, 2)*sqrt(ct*(ct - rH))*(4*RR - rH)*(4*RR + rH)*(2*ct - rH)*(196608*pow(RR, 8) - 786432*pow(RR, 7)*ct + 393216*pow(RR, 7)*rH + 1310720*pow(RR, 6)*pow(ct, 2) - 1310720*pow(RR, 6)*ct*rH + 344064*pow(RR, 6)*pow(rH, 2) - 1048576*pow(RR, 5)*pow(ct, 3) + 1572864*pow(RR, 5)*pow(ct, 2)*rH - 868352*pow(RR, 5)*ct*pow(rH, 2) + 172032*pow(RR, 5)*pow(rH, 3) + 262144*pow(RR, 4)*pow(ct, 4) - 524288*pow(RR, 4)*pow(ct, 3)*rH + 557056*pow(RR, 4)*pow(ct, 2)*pow(rH, 2) - 65536*pow(RR, 4)*pow(ct, 2)*pow(rho, 2) - 294912*pow(RR, 4)*ct*pow(rH, 3) + 65536*pow(RR, 4)*ct*rH*pow(rho, 2) + 53760*pow(RR, 4)*pow(rH, 4) - 65536*pow(RR, 3)*pow(ct, 3)*pow(rH, 2) + 131072*pow(RR, 3)*pow(ct, 3)*pow(rho, 2) + 98304*pow(RR, 3)*pow(ct, 2)*pow(rH, 3) - 196608*pow(RR, 3)*pow(ct, 2)*rH*pow(rho, 2) - 54272*pow(RR, 3)*ct*pow(rH, 4) + 65536*pow(RR, 3)*ct*pow(rH, 2)*pow(rho, 2) + 10752*pow(RR, 3)*pow(rH, 5) + 5120*pow(RR, 2)*pow(ct, 2)*pow(rH, 4) - 24576*pow(RR, 2)*pow(ct, 2)*pow(rH, 2)*pow(rho, 2) - 5120*pow(RR, 2)*ct*pow(rH, 5) + 24576*pow(RR, 2)*ct*pow(rH, 3)*pow(rho, 2) + 1344*pow(RR, 2)*pow(rH, 6) + 8192*RR*pow(ct, 3)*pow(rH, 2)*pow(rho, 2) - 12288*RR*pow(ct, 2)*pow(rH, 3)*pow(rho, 2) - 192*RR*ct*pow(rH, 6) + 4096*RR*ct*pow(rH, 4)*pow(rho, 2) + 96*RR*pow(rH, 7) - 256*pow(ct, 2)*pow(rH, 4)*pow(rho, 2) + 256*ct*pow(rH, 5)*pow(rho, 2) + 3*pow(rH, 8))/pow(65536*pow(RR, 8) - 262144*pow(RR, 7)*ct + 131072*pow(RR, 7)*rH + 524288*pow(RR, 6)*pow(ct, 2) - 524288*pow(RR, 6)*ct*rH + 114688*pow(RR, 6)*pow(rH, 2) - 524288*pow(RR, 5)*pow(ct, 3) + 786432*pow(RR, 5)*pow(ct, 2)*rH - 376832*pow(RR, 5)*ct*pow(rH, 2) + 57344*pow(RR, 5)*pow(rH, 3) + 262144*pow(RR, 4)*pow(ct, 4) - 524288*pow(RR, 4)*pow(ct, 3)*rH + 393216*pow(RR, 4)*pow(ct, 2)*pow(rH, 2) - 65536*pow(RR, 4)*pow(ct, 2)*pow(rho, 2) - 131072*pow(RR, 4)*ct*pow(rH, 3) + 65536*pow(RR, 4)*ct*rH*pow(rho, 2) + 17920*pow(RR, 4)*pow(rH, 4) - 32768*pow(RR, 3)*pow(ct, 3)*pow(rH, 2) + 49152*pow(RR, 3)*pow(ct, 2)*pow(rH, 3) - 23552*pow(RR, 3)*ct*pow(rH, 4) + 3584*pow(RR, 3)*pow(rH, 5) + 2048*pow(RR, 2)*pow(ct, 2)*pow(rH, 4) + 8192*pow(RR, 2)*pow(ct, 2)*pow(rH, 2)*pow(rho, 2) - 2048*pow(RR, 2)*ct*pow(rH, 5) - 8192*pow(RR, 2)*ct*pow(rH, 3)*pow(rho, 2) + 448*pow(RR, 2)*pow(rH, 6) - 64*RR*ct*pow(rH, 6) + 32*RR*pow(rH, 7) - 256*pow(ct, 2)*pow(rH, 4)*pow(rho, 2) + 256*ct*pow(rH, 5)*pow(rho, 2) + pow(rH, 8), 2);
+
+        dW_dth[ind]   = -2097152*pow(RR, 4)*ct*rho*sqrt(ct*(ct - rH))*pow(4*RR - rH, 2)*pow(4*RR + rH, 2)*(ct - rH)*(2*ct - rH)*(16*pow(RR, 2) - 16*RR*ct + 8*RR*rH + pow(rH, 2))*costh/pow(65536*pow(RR, 8) - 262144*pow(RR, 7)*ct + 131072*pow(RR, 7)*rH + 524288*pow(RR, 6)*pow(ct, 2) - 524288*pow(RR, 6)*ct*rH + 114688*pow(RR, 6)*pow(rH, 2) - 524288*pow(RR, 5)*pow(ct, 3) + 786432*pow(RR, 5)*pow(ct, 2)*rH - 376832*pow(RR, 5)*ct*pow(rH, 2) + 57344*pow(RR, 5)*pow(rH, 3) + 262144*pow(RR, 4)*pow(ct, 4) - 524288*pow(RR, 4)*pow(ct, 3)*rH + 393216*pow(RR, 4)*pow(ct, 2)*pow(rH, 2) - 65536*pow(RR, 4)*pow(ct, 2)*pow(rho, 2) - 131072*pow(RR, 4)*ct*pow(rH, 3) + 65536*pow(RR, 4)*ct*rH*pow(rho, 2) + 17920*pow(RR, 4)*pow(rH, 4) - 32768*pow(RR, 3)*pow(ct, 3)*pow(rH, 2) + 49152*pow(RR, 3)*pow(ct, 2)*pow(rH, 3) - 23552*pow(RR, 3)*ct*pow(rH, 4) + 3584*pow(RR, 3)*pow(rH, 5) + 2048*pow(RR, 2)*pow(ct, 2)*pow(rH, 4) + 8192*pow(RR, 2)*pow(ct, 2)*pow(rH, 2)*pow(rho, 2) - 2048*pow(RR, 2)*ct*pow(rH, 5) - 8192*pow(RR, 2)*ct*pow(rH, 3)*pow(rho, 2) + 448*pow(RR, 2)*pow(rH, 6) - 64*RR*ct*pow(rH, 6) + 32*RR*pow(rH, 7) - 256*pow(ct, 2)*pow(rH, 4)*pow(rho, 2) + 256*ct*pow(rH, 5)*pow(rho, 2) + pow(rH, 8), 2);
+
+        d2W_dth2[ind] =  -2097152*pow(RR, 5)*ct*sqrt(ct*(ct - rH))*pow(4*RR - rH, 2)*pow(4*RR + rH, 2)*(ct - rH)*(2*ct - rH)*(16*pow(RR, 2) - 16*RR*ct + 8*RR*rH + pow(rH, 2))*(65536*pow(RR, 8)*pow(costh, 2) - 262144*pow(RR, 7)*ct*pow(costh, 2) + 131072*pow(RR, 7)*rH*pow(costh, 2) + 524288*pow(RR, 6)*pow(ct, 2)*pow(costh, 2) - 524288*pow(RR, 6)*ct*rH*pow(costh, 2) + 114688*pow(RR, 6)*pow(rH, 2)*pow(costh, 2) - 65536*pow(RR, 6)*pow(rho, 2) - 524288*pow(RR, 5)*pow(ct, 3)*pow(costh, 2) + 786432*pow(RR, 5)*pow(ct, 2)*rH*pow(costh, 2) - 376832*pow(RR, 5)*ct*pow(rH, 2)*pow(costh, 2) + 262144*pow(RR, 5)*ct*pow(rho, 2) + 57344*pow(RR, 5)*pow(rH, 3)*pow(costh, 2) - 131072*pow(RR, 5)*rH*pow(rho, 2) + 262144*pow(RR, 4)*pow(ct, 4)*pow(costh, 2) - 524288*pow(RR, 4)*pow(ct, 3)*rH*pow(costh, 2) + 393216*pow(RR, 4)*pow(ct, 2)*pow(rH, 2)*pow(costh, 2) + 196608*pow(RR, 4)*pow(ct, 2)*pow(rho, 2)*pow(costh, 2) - 524288*pow(RR, 4)*pow(ct, 2)*pow(rho, 2) - 131072*pow(RR, 4)*ct*pow(rH, 3)*pow(costh, 2) - 196608*pow(RR, 4)*ct*rH*pow(rho, 2)*pow(costh, 2) + 524288*pow(RR, 4)*ct*rH*pow(rho, 2) + 17920*pow(RR, 4)*pow(rH, 4)*pow(costh, 2) - 114688*pow(RR, 4)*pow(rH, 2)*pow(rho, 2) - 32768*pow(RR, 3)*pow(ct, 3)*pow(rH, 2)*pow(costh, 2) + 524288*pow(RR, 3)*pow(ct, 3)*pow(rho, 2) + 49152*pow(RR, 3)*pow(ct, 2)*pow(rH, 3)*pow(costh, 2) - 786432*pow(RR, 3)*pow(ct, 2)*rH*pow(rho, 2) - 23552*pow(RR, 3)*ct*pow(rH, 4)*pow(costh, 2) + 376832*pow(RR, 3)*ct*pow(rH, 2)*pow(rho, 2) + 3584*pow(RR, 3)*pow(rH, 5)*pow(costh, 2) - 57344*pow(RR, 3)*pow(rH, 3)*pow(rho, 2) - 262144*pow(RR, 2)*pow(ct, 4)*pow(rho, 2) + 524288*pow(RR, 2)*pow(ct, 3)*rH*pow(rho, 2) + 2048*pow(RR, 2)*pow(ct, 2)*pow(rH, 4)*pow(costh, 2) - 24576*pow(RR, 2)*pow(ct, 2)*pow(rH, 2)*pow(rho, 2)*pow(costh, 2) - 393216*pow(RR, 2)*pow(ct, 2)*pow(rH, 2)*pow(rho, 2) + 65536*pow(RR, 2)*pow(ct, 2)*pow(rho, 4) - 2048*pow(RR, 2)*ct*pow(rH, 5)*pow(costh, 2) + 24576*pow(RR, 2)*ct*pow(rH, 3)*pow(rho, 2)*pow(costh, 2) + 131072*pow(RR, 2)*ct*pow(rH, 3)*pow(rho, 2) - 65536*pow(RR, 2)*ct*rH*pow(rho, 4) + 448*pow(RR, 2)*pow(rH, 6)*pow(costh, 2) - 17920*pow(RR, 2)*pow(rH, 4)*pow(rho, 2) + 32768*RR*pow(ct, 3)*pow(rH, 2)*pow(rho, 2) - 49152*RR*pow(ct, 2)*pow(rH, 3)*pow(rho, 2) - 64*RR*ct*pow(rH, 6)*pow(costh, 2) + 23552*RR*ct*pow(rH, 4)*pow(rho, 2) + 32*RR*pow(rH, 7)*pow(costh, 2) - 3584*RR*pow(rH, 5)*pow(rho, 2) + 768*pow(ct, 2)*pow(rH, 4)*pow(rho, 2)*pow(costh, 2) - 2048*pow(ct, 2)*pow(rH, 4)*pow(rho, 2) - 8192*pow(ct, 2)*pow(rH, 2)*pow(rho, 4) - 768*ct*pow(rH, 5)*pow(rho, 2)*pow(costh, 2) + 2048*ct*pow(rH, 5)*pow(rho, 2) + 8192*ct*pow(rH, 3)*pow(rho, 4) + pow(rH, 8)*pow(costh, 2) - 448*pow(rH, 6)*pow(rho, 2) + 64*ct*pow(rH, 6)*pow(rho, 2)/RR - 32*pow(rH, 7)*pow(rho, 2)/RR + 256*pow(ct, 2)*pow(rH, 4)*pow(rho, 4)/pow(RR, 2) - 256*ct*pow(rH, 5)*pow(rho, 4)/pow(RR, 2) - pow(rH, 8)*pow(rho, 2)/pow(RR, 2))/pow(65536*pow(RR, 8) - 262144*pow(RR, 7)*ct + 131072*pow(RR, 7)*rH + 524288*pow(RR, 6)*pow(ct, 2) - 524288*pow(RR, 6)*ct*rH + 114688*pow(RR, 6)*pow(rH, 2) - 524288*pow(RR, 5)*pow(ct, 3) + 786432*pow(RR, 5)*pow(ct, 2)*rH - 376832*pow(RR, 5)*ct*pow(rH, 2) + 57344*pow(RR, 5)*pow(rH, 3) + 262144*pow(RR, 4)*pow(ct, 4) - 524288*pow(RR, 4)*pow(ct, 3)*rH + 393216*pow(RR, 4)*pow(ct, 2)*pow(rH, 2) - 65536*pow(RR, 4)*pow(ct, 2)*pow(rho, 2) - 131072*pow(RR, 4)*ct*pow(rH, 3) + 65536*pow(RR, 4)*ct*rH*pow(rho, 2) + 17920*pow(RR, 4)*pow(rH, 4) - 32768*pow(RR, 3)*pow(ct, 3)*pow(rH, 2) + 49152*pow(RR, 3)*pow(ct, 2)*pow(rH, 3) - 23552*pow(RR, 3)*ct*pow(rH, 4) + 3584*pow(RR, 3)*pow(rH, 5) + 2048*pow(RR, 2)*pow(ct, 2)*pow(rH, 4) + 8192*pow(RR, 2)*pow(ct, 2)*pow(rH, 2)*pow(rho, 2) - 2048*pow(RR, 2)*ct*pow(rH, 5) - 8192*pow(RR, 2)*ct*pow(rH, 3)*pow(rho, 2) + 448*pow(RR, 2)*pow(rH, 6) - 64*RR*ct*pow(rH, 6) + 32*RR*pow(rH, 7) - 256*pow(ct, 2)*pow(rH, 4)*pow(rho, 2) + 256*ct*pow(rH, 5)*pow(rho, 2) + pow(rH, 8), 3);
 
         phi0[ind] = 0.;
 
@@ -478,4 +492,7 @@ void UAv_Kerr_test(CCTK_ARGUMENTS)
   ExtrapolateGammas(cctkGH, kzz);
 
   free(F1); free(F2); free(F0); free(phi0); free(W);
+  free(dW_dR); free(dW_dth); free(d2W_dth2);
+
+  return;
 }
