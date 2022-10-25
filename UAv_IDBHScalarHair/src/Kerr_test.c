@@ -11,141 +11,14 @@
 
 #define SMALL (1.e-9)
 
-static void apply_jacobian(CCTK_REAL dvar[3], CCTK_REAL jac[3][3])
-{
-  CCTK_REAL xdvar[3];
-
-  for (int a = 0; a < 3; a++)
-    xdvar[a] = 0.0;
-
-  for (int a = 0; a < 3; a++)
-    for (int b = 0; b < 3; b++) {
-      xdvar[a] += dvar[b] * jac[b][a];
-    }
-
-  for (int a = 0; a < 3; a++)
-    dvar[a] = xdvar[a];
-
-  return;
-}
-
-static void apply_jacobian2(CCTK_REAL dvar[3], CCTK_REAL ddvar[3][3],
-                            CCTK_REAL jac[3][3],  CCTK_REAL hes[3][3][3])
-{
-  CCTK_REAL xdvar[3];
-  CCTK_REAL xddvar[3][3];
-
-  for (int a = 0; a < 3; a++)
-    xdvar[a] = 0.0;
-
-  for (int a = 0; a < 3; a++)
-    for (int b = 0; b < 3; b++)
-      xddvar[a][b] = 0.0;
-
-  for (int a = 0; a < 3; a++)
-    for (int b = 0; b < 3; b++)
-      xdvar[a] += dvar[b] * jac[b][a];
-
-  for (int a = 0; a < 3; a++) {
-    for (int b = 0; b < 3; b++) {
-      for (int c = 0; c < 3; c++) {
-        xddvar[a][b] += dvar[c] * hes[c][a][b];
-        for (int d = 0; d < 3; d++) {
-          xddvar[a][b] += ddvar[c][d] * jac[c][a] * jac[d][b];
-        }
-      }
-    }
-  }
-
-  for (int a = 0; a < 3; a++)
-    dvar[a] = xdvar[a];
-
-  for (int a = 0; a < 3; a++)
-    for (int b = 0; b < 3; b++)
-      ddvar[a][b] = xddvar[a][b];
-
-  return;
-}
-
 
 void UAv_Kerr_test(CCTK_ARGUMENTS)
 {
   DECLARE_CCTK_ARGUMENTS;
   DECLARE_CCTK_PARAMETERS;
 
-  const CCTK_REAL dx12 = 12 * CCTK_DELTA_SPACE(0);
-  const CCTK_REAL dy12 = 12 * CCTK_DELTA_SPACE(1);
-  const CCTK_REAL dz12 = 12 * CCTK_DELTA_SPACE(2);
-
   const CCTK_REAL dxsq = CCTK_DELTA_SPACE(0)*CCTK_DELTA_SPACE(0);
   const CCTK_REAL dysq = CCTK_DELTA_SPACE(1)*CCTK_DELTA_SPACE(1);
-
-  const CCTK_REAL dxsq12 = 12 * CCTK_DELTA_SPACE(0)*CCTK_DELTA_SPACE(0);
-  const CCTK_REAL dysq12 = 12 * CCTK_DELTA_SPACE(1)*CCTK_DELTA_SPACE(1);
-  const CCTK_REAL dzsq12 = 12 * CCTK_DELTA_SPACE(2)*CCTK_DELTA_SPACE(2);
-
-  bool use_jacobian = false;
-  if (CCTK_IsFunctionAliased("MultiPatch_GetDomainSpecification"))
-    use_jacobian = true;
-
-  const CCTK_REAL *lJ11 =
-    use_jacobian ? CCTK_VarDataPtr(cctkGH, 0, "Coordinates::J11") : NULL;
-  const CCTK_REAL *lJ12 =
-    use_jacobian ? CCTK_VarDataPtr(cctkGH, 0, "Coordinates::J12") : NULL;
-  const CCTK_REAL *lJ13 =
-    use_jacobian ? CCTK_VarDataPtr(cctkGH, 0, "Coordinates::J13") : NULL;
-  const CCTK_REAL *lJ21 =
-    use_jacobian ? CCTK_VarDataPtr(cctkGH, 0, "Coordinates::J21") : NULL;
-  const CCTK_REAL *lJ22 =
-    use_jacobian ? CCTK_VarDataPtr(cctkGH, 0, "Coordinates::J22") : NULL;
-  const CCTK_REAL *lJ23 =
-    use_jacobian ? CCTK_VarDataPtr(cctkGH, 0, "Coordinates::J23") : NULL;
-  const CCTK_REAL *lJ31 =
-    use_jacobian ? CCTK_VarDataPtr(cctkGH, 0, "Coordinates::J31") : NULL;
-  const CCTK_REAL *lJ32 =
-    use_jacobian ? CCTK_VarDataPtr(cctkGH, 0, "Coordinates::J32") : NULL;
-  const CCTK_REAL *lJ33 =
-    use_jacobian ? CCTK_VarDataPtr(cctkGH, 0, "Coordinates::J33") : NULL;
-
-  const CCTK_REAL *ldJ111 =
-    use_jacobian ? CCTK_VarDataPtr(cctkGH, 0, "Coordinates::dJ111") : NULL;
-  const CCTK_REAL *ldJ112 =
-    use_jacobian ? CCTK_VarDataPtr(cctkGH, 0, "Coordinates::dJ112") : NULL;
-  const CCTK_REAL *ldJ113 =
-    use_jacobian ? CCTK_VarDataPtr(cctkGH, 0, "Coordinates::dJ113") : NULL;
-  const CCTK_REAL *ldJ122 =
-    use_jacobian ? CCTK_VarDataPtr(cctkGH, 0, "Coordinates::dJ122") : NULL;
-  const CCTK_REAL *ldJ123 =
-    use_jacobian ? CCTK_VarDataPtr(cctkGH, 0, "Coordinates::dJ123") : NULL;
-  const CCTK_REAL *ldJ133 =
-    use_jacobian ? CCTK_VarDataPtr(cctkGH, 0, "Coordinates::dJ133") : NULL;
-
-  const CCTK_REAL *ldJ211 =
-    use_jacobian ? CCTK_VarDataPtr(cctkGH, 0, "Coordinates::dJ211") : NULL;
-  const CCTK_REAL *ldJ212 =
-    use_jacobian ? CCTK_VarDataPtr(cctkGH, 0, "Coordinates::dJ212") : NULL;
-  const CCTK_REAL *ldJ213 =
-    use_jacobian ? CCTK_VarDataPtr(cctkGH, 0, "Coordinates::dJ213") : NULL;
-  const CCTK_REAL *ldJ222 =
-    use_jacobian ? CCTK_VarDataPtr(cctkGH, 0, "Coordinates::dJ222") : NULL;
-  const CCTK_REAL *ldJ223 =
-    use_jacobian ? CCTK_VarDataPtr(cctkGH, 0, "Coordinates::dJ223") : NULL;
-  const CCTK_REAL *ldJ233 =
-    use_jacobian ? CCTK_VarDataPtr(cctkGH, 0, "Coordinates::dJ233") : NULL;
-
-  const CCTK_REAL *ldJ311 =
-    use_jacobian ? CCTK_VarDataPtr(cctkGH, 0, "Coordinates::dJ311") : NULL;
-  const CCTK_REAL *ldJ312 =
-    use_jacobian ? CCTK_VarDataPtr(cctkGH, 0, "Coordinates::dJ312") : NULL;
-  const CCTK_REAL *ldJ313 =
-    use_jacobian ? CCTK_VarDataPtr(cctkGH, 0, "Coordinates::dJ313") : NULL;
-  const CCTK_REAL *ldJ322 =
-    use_jacobian ? CCTK_VarDataPtr(cctkGH, 0, "Coordinates::dJ322") : NULL;
-  const CCTK_REAL *ldJ323 =
-    use_jacobian ? CCTK_VarDataPtr(cctkGH, 0, "Coordinates::dJ323") : NULL;
-  const CCTK_REAL *ldJ333 =
-    use_jacobian ? CCTK_VarDataPtr(cctkGH, 0, "Coordinates::dJ333") : NULL;
-
 
   /* let's create arrays for the F1, F2, F0, phi0, W functions */
   const CCTK_INT N_points = cctk_lsh[0]*cctk_lsh[1]*cctk_lsh[2]; // total points
@@ -299,22 +172,7 @@ void UAv_Kerr_test(CCTK_ARGUMENTS)
     for (int j = cctk_nghostzones[1]; j < cctk_lsh[1] - cctk_nghostzones[1]; j++)
       for (int i = cctk_nghostzones[0]; i < cctk_lsh[0] - cctk_nghostzones[0]; i++) {
 
-        const CCTK_INT ind     = CCTK_GFINDEX3D(cctkGH, i, j, k);
-
-        const CCTK_INT indim1  = CCTK_GFINDEX3D(cctkGH, i-1, j, k);
-        const CCTK_INT indip1  = CCTK_GFINDEX3D(cctkGH, i+1, j, k);
-        const CCTK_INT indim2  = CCTK_GFINDEX3D(cctkGH, i-2, j, k);
-        const CCTK_INT indip2  = CCTK_GFINDEX3D(cctkGH, i+2, j, k);
-
-        const CCTK_INT indjm1  = CCTK_GFINDEX3D(cctkGH, i, j-1, k);
-        const CCTK_INT indjp1  = CCTK_GFINDEX3D(cctkGH, i, j+1, k);
-        const CCTK_INT indjm2  = CCTK_GFINDEX3D(cctkGH, i, j-2, k);
-        const CCTK_INT indjp2  = CCTK_GFINDEX3D(cctkGH, i, j+2, k);
-
-        const CCTK_INT indkm1  = CCTK_GFINDEX3D(cctkGH, i, j, k-1);
-        const CCTK_INT indkp1  = CCTK_GFINDEX3D(cctkGH, i, j, k+1);
-        const CCTK_INT indkm2  = CCTK_GFINDEX3D(cctkGH, i, j, k-2);
-        const CCTK_INT indkp2  = CCTK_GFINDEX3D(cctkGH, i, j, k+2);
+        const CCTK_INT ind  = CCTK_GFINDEX3D(cctkGH, i, j, k);
 
         const CCTK_REAL x1  = x[ind] - x0;
         const CCTK_REAL y1  = y[ind] - y0;
@@ -331,96 +189,6 @@ void UAv_Kerr_test(CCTK_ARGUMENTS)
         const CCTK_REAL sinth2 = 1. - costh2;
         const CCTK_REAL sinth  = sqrt(sinth2);
 
-
-        /* get the jacobian and hessian to take derivatives. 0 is x, 1 is y and 2 is z */
-        CCTK_REAL jac[3][3];
-        CCTK_REAL hes[3][3][3];
-        if (use_jacobian) {
-          jac[0][0] = lJ11[ind];
-          jac[0][1] = lJ12[ind];
-          jac[0][2] = lJ13[ind];
-          jac[1][0] = lJ21[ind];
-          jac[1][1] = lJ22[ind];
-          jac[1][2] = lJ23[ind];
-          jac[2][0] = lJ31[ind];
-          jac[2][1] = lJ32[ind];
-          jac[2][2] = lJ33[ind];
-
-          hes[0][0][0]                = ldJ111[ind];
-          hes[0][0][1] = hes[0][1][0] = ldJ112[ind];
-          hes[0][0][2] = hes[0][2][0] = ldJ113[ind];
-          hes[0][1][1]                = ldJ122[ind];
-          hes[0][1][2] = hes[0][2][1] = ldJ123[ind];
-          hes[0][2][2]                = ldJ133[ind];
-
-          hes[1][0][0]                = ldJ211[ind];
-          hes[1][0][1] = hes[1][1][0] = ldJ212[ind];
-          hes[1][0][2] = hes[1][2][0] = ldJ213[ind];
-          hes[1][1][1]                = ldJ222[ind];
-          hes[1][1][2] = hes[1][2][1] = ldJ223[ind];
-          hes[1][2][2]                = ldJ233[ind];
-
-          hes[2][0][0]                = ldJ311[ind];
-          hes[2][0][1] = hes[2][1][0] = ldJ312[ind];
-          hes[2][0][2] = hes[2][2][0] = ldJ313[ind];
-          hes[2][1][1]                = ldJ322[ind];
-          hes[2][1][2] = hes[2][2][1] = ldJ323[ind];
-          hes[2][2][2]                = ldJ333[ind];
-
-        } else {
-          jac[0][0] = 1.0;
-          jac[1][1] = 1.0;
-          jac[2][2] = 1.0;
-          jac[0][1] = 0.0;
-          jac[0][2] = 0.0;
-          jac[1][0] = 0.0;
-          jac[1][2] = 0.0;
-          jac[2][0] = 0.0;
-          jac[2][1] = 0.0;
-
-          for (int a = 0; a < 3; a++)
-            for (int b = 0; b < 3; b++)
-              for (int c = 0; c < 3; c++)
-                hes[a][b][c] = 0.0;
-        }
-
-        // 4th-order accurate first derivatives of the W function
-        CCTK_REAL d1_W[3];
-
-        // dW/dx
-        d1_W[0] = (   -W[indip2] + 8*W[indip1]
-                   - 8*W[indim1] +   W[indim2] ) / dx12;
-
-        // dW/dy
-        d1_W[1] = (   -W[indjp2] + 8*W[indjp1]
-                   - 8*W[indjm1] +   W[indjm2] ) / dy12;
-
-        // dW/dz
-        d1_W[2] = (   -W[indkp2] + 8*W[indkp1]
-                   - 8*W[indkm1] +   W[indkm2] ) / dz12;
-
-        // 4th-order accurate second derivatives of the W function (for
-        // regularization at the rho=0 axis)
-        CCTK_REAL d2_W[3];
-
-        // d2W/dx2
-        d2_W[0] = (    -W[indip2] + 16*W[indip1] - 30*W[ind]
-                   + 16*W[indim1] -    W[indim2] ) / dxsq12;
-
-        // d2W/dy2
-        d2_W[1] = (    -W[indjp2] + 16*W[indjp1] - 30*W[ind]
-                   + 16*W[indjm1] -    W[indjm2] ) / dysq12;
-
-        // d2W/dz2
-        d2_W[2] = (    -W[indkp2] + 16*W[indkp1] - 30*W[ind]
-                   + 16*W[indkm1] -    W[indkm2] ) / dzsq12;
-
-
-        // TODO! transform 2nd derivatives as well
-        if (use_jacobian) {
-          apply_jacobian(d1_W, jac);
-        }
-
         // R dW/dR
         CCTK_REAL RdWdR = RR * dW_dR[ind];
 
@@ -432,7 +200,6 @@ void UAv_Kerr_test(CCTK_ARGUMENTS)
         const CCTK_REAL R_y = y1/RR;   // dR/dy
         const CCTK_REAL R_z = z1/RR;   // dR/dz
         */
-
 
         const CCTK_REAL sinth2ph_x = -y1/RR2; // sin(th)^2 dphi/dx
         const CCTK_REAL sinth2ph_y =  x1/RR2; // sin(th)^2 dphi/dy
