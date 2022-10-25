@@ -326,6 +326,12 @@ void UAv_Kerr_test(CCTK_ARGUMENTS)
         const CCTK_REAL rho2 = x1*x1 + y1*y1;
         const CCTK_REAL rho  = sqrt(rho2);
 
+        const CCTK_REAL costh  = z1/RR;
+        const CCTK_REAL costh2 = costh*costh;
+        const CCTK_REAL sinth2 = 1. - costh2;
+        const CCTK_REAL sinth  = sqrt(sinth2);
+
+
         /* get the jacobian and hessian to take derivatives. 0 is x, 1 is y and 2 is z */
         CCTK_REAL jac[3][3];
         CCTK_REAL hes[3][3][3];
@@ -416,11 +422,10 @@ void UAv_Kerr_test(CCTK_ARGUMENTS)
         }
 
         // R dW/dR
-        CCTK_REAL RdWdR = x1 * d1_W[0] + y1 * d1_W[1] + z1 * d1_W[2];
+        CCTK_REAL RdWdR = RR * dW_dR[ind];
 
         // R sin(th) dW/dth
-        CCTK_REAL RsinthdWdth = x1 * z1 * d1_W[0] + y1 * z1 * d1_W[1]
-                              - (x1 * x1 + y1 * y1) * d1_W[2];
+        CCTK_REAL RsinthdWdth = RR * sinth * dW_dth[ind];
 
         /*
         const CCTK_REAL R_x = x1/RR;   // dR/dx
@@ -428,9 +433,6 @@ void UAv_Kerr_test(CCTK_ARGUMENTS)
         const CCTK_REAL R_z = z1/RR;   // dR/dz
         */
 
-        const CCTK_REAL costh  = z1/RR;
-        const CCTK_REAL costh2 = costh*costh;
-        const CCTK_REAL sinth2 = 1. - costh2;
 
         const CCTK_REAL sinth2ph_x = -y1/RR2; // sin(th)^2 dphi/dx
         const CCTK_REAL sinth2ph_y =  x1/RR2; // sin(th)^2 dphi/dy
@@ -460,7 +462,7 @@ void UAv_Kerr_test(CCTK_ARGUMENTS)
         // if at the rho = 0 axis we need to regularize the division by sin(th)^2
         if (rho < sqrt(dxsq + dysq) * 0.25) {
           // R d^2W/dth^2
-          CCTK_REAL Rd2th_W = 0;         // FIXME
+          CCTK_REAL Rd2th_W = RR * d2W_dth2[ind];
 
           RsinthdWdth_o_sinth2 = Rd2th_W;
         }
