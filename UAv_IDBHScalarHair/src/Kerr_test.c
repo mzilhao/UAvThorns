@@ -84,9 +84,6 @@ void UAv_Kerr_test(CCTK_ARGUMENTS)
   /* printf("phi0 = %g\n", phi0[0]); */
   /* printf("W = %g\n", W[0]); */
 
-  /* now we finally write the metric and all 3+1 quantities. first we write the
-     3-metric, lapse and scalar fields */
-
   const CCTK_REAL tt = cctk_time;
 
   for (int k = 0; k < cctk_lsh[2]; ++k) {
@@ -101,6 +98,27 @@ void UAv_Kerr_test(CCTK_ARGUMENTS)
 
         const CCTK_REAL RR2 = x1*x1 + y1*y1 + z1*z1;
         const CCTK_REAL RR  = sqrt(RR2);
+
+        const CCTK_REAL rho2 = x1*x1 + y1*y1;
+        const CCTK_REAL rho  = sqrt(rho2);
+
+        const CCTK_REAL costh  = z1/RR;
+        const CCTK_REAL costh2 = costh*costh;
+        const CCTK_REAL sinth2 = 1. - costh2;
+        const CCTK_REAL sinth  = sqrt(sinth2);
+
+        /*
+        const CCTK_REAL R_x = x1/RR;   // dR/dx
+        const CCTK_REAL R_y = y1/RR;   // dR/dy
+        const CCTK_REAL R_z = z1/RR;   // dR/dz
+        */
+
+        const CCTK_REAL sinth2ph_x = -y1/RR2; // sin(th)^2 dphi/dx
+        const CCTK_REAL sinth2ph_y =  x1/RR2; // sin(th)^2 dphi/dy
+
+        const CCTK_REAL Rsinthth_x  = z1*x1/RR2; // R sin(th) dth/dx
+        const CCTK_REAL Rsinthth_y  = z1*y1/RR2; // R sin(th) dth/dy
+        const CCTK_REAL Rsinthth_z  = -sinth2;   // R sin(th) dth/dz
 
         const CCTK_REAL ph = atan2(y1, x1);
 
@@ -118,6 +136,12 @@ void UAv_Kerr_test(CCTK_ARGUMENTS)
         const CCTK_REAL psi2 = sqrt(psi4);
         const CCTK_REAL psi1 = sqrt(psi2);
 
+        // R dW/dR
+        CCTK_REAL RdWdR = RR * dW_dR[ind];
+
+        // R sin(th) dW/dth
+        CCTK_REAL RsinthdWdth = RR * sinth * dW_dth[ind];
+
         const CCTK_REAL h_rho2 = exp(2. * (F2[ind] - F1[ind])) - 1.;
 
         // 3-metric
@@ -132,89 +156,6 @@ void UAv_Kerr_test(CCTK_ARGUMENTS)
         // FIXME
         if (alph < SMALL)
           alph = SMALL;
-
-        // lapse
-        if (CCTK_EQUALS(initial_lapse, "psi^n"))
-          alp[ind] = pow(psi1, initial_lapse_psi_exponent);
-        else if (CCTK_EQUALS(initial_lapse, "Kerr_test"))
-          alp[ind] = alph;
-
-        // shift
-        if (CCTK_EQUALS(initial_shift, "Kerr_test")) {
-          betax[ind] =  W[ind] * y1;
-          betay[ind] = -W[ind] * x1;
-          betaz[ind] =  0.;
-        }
-
-
-        // add perturbation
-        CCTK_REAL phi0_l = phi0[ind];
-        phi0_l *= 1. + pert_A * exp( -0.5*RR2/(pert_Rmax*pert_Rmax) )
-                              * sin(2.*M_PI * RR / pert_lambda);
-
-        const CCTK_REAL omega = mm * OmegaH;
-
-        // scalar fields
-        phi1[ind]  = phi0_l * (cos(omega * tt) * cosmph + sin(omega * tt) * sinmph);
-        phi2[ind]  = phi0_l * (cos(omega * tt) * sinmph - sin(omega * tt) * cosmph);
-        Kphi1[ind] = 0.5 * mm * (W[ind] - OmegaH) / alph * phi2[ind];
-        Kphi2[ind] = 0.5 * mm * (OmegaH - W[ind]) / alph * phi1[ind];
-
-      } /* for i */
-    }   /* for j */
-  }     /* for k */
-
-
-  /* now we write the extrinsic curvature. since there are derivatives, we can
-     only loop through the interior points. */
-
-  for (int k = cctk_nghostzones[2]; k < cctk_lsh[2] - cctk_nghostzones[2]; k++)
-    for (int j = cctk_nghostzones[1]; j < cctk_lsh[1] - cctk_nghostzones[1]; j++)
-      for (int i = cctk_nghostzones[0]; i < cctk_lsh[0] - cctk_nghostzones[0]; i++) {
-
-        const CCTK_INT ind  = CCTK_GFINDEX3D(cctkGH, i, j, k);
-
-        const CCTK_REAL x1  = x[ind] - x0;
-        const CCTK_REAL y1  = y[ind] - y0;
-        const CCTK_REAL z1  = z[ind] - z0;
-
-        const CCTK_REAL RR2 = x1*x1 + y1*y1 + z1*z1;
-        const CCTK_REAL RR  = sqrt(RR2);
-
-        const CCTK_REAL rho2 = x1*x1 + y1*y1;
-        const CCTK_REAL rho  = sqrt(rho2);
-
-        const CCTK_REAL costh  = z1/RR;
-        const CCTK_REAL costh2 = costh*costh;
-        const CCTK_REAL sinth2 = 1. - costh2;
-        const CCTK_REAL sinth  = sqrt(sinth2);
-
-        // R dW/dR
-        CCTK_REAL RdWdR = RR * dW_dR[ind];
-
-        // R sin(th) dW/dth
-        CCTK_REAL RsinthdWdth = RR * sinth * dW_dth[ind];
-
-        /*
-        const CCTK_REAL R_x = x1/RR;   // dR/dx
-        const CCTK_REAL R_y = y1/RR;   // dR/dy
-        const CCTK_REAL R_z = z1/RR;   // dR/dz
-        */
-
-        const CCTK_REAL sinth2ph_x = -y1/RR2; // sin(th)^2 dphi/dx
-        const CCTK_REAL sinth2ph_y =  x1/RR2; // sin(th)^2 dphi/dy
-
-        const CCTK_REAL Rsinthth_x  = z1*x1/RR2; // R sin(th) dth/dx
-        const CCTK_REAL Rsinthth_y  = z1*y1/RR2; // R sin(th) dth/dy
-        const CCTK_REAL Rsinthth_z  = -sinth2;   // R sin(th) dth/dz
-
-        CCTK_REAL alph = exp(F0[ind]) * (RR - 0.25*rH) / (RR + 0.25*rH);
-        // FIXME
-        if (alph < SMALL)
-          alph = SMALL;
-
-        const CCTK_REAL aux  = 1. + 0.25 * rH/RR;
-        const CCTK_REAL aux4 = aux * aux * aux * aux;
 
         /*
           KRph/(R sin(th)^2) = - 1/2 exp(2F2) (1 + rH/(4R))^4 / alpha R dW/dR
@@ -239,7 +180,7 @@ void UAv_Kerr_test(CCTK_ARGUMENTS)
 
         const CCTK_REAL Kthph_o_Rsinth3 = -0.5 * exp(2. * F2[ind]) * aux4 / alph * RsinthdWdth_o_sinth2;
 
-
+        // extrinsic curvature
         kxx[ind] = 2.*KRph_o_Rsinth2 *  x1 * sinth2ph_x                     +  2.*Kthph_o_Rsinth3 *  Rsinthth_x * sinth2ph_x;
         kxy[ind] =    KRph_o_Rsinth2 * (x1 * sinth2ph_y + y1 * sinth2ph_x)  +     Kthph_o_Rsinth3 * (Rsinthth_x * sinth2ph_y + Rsinthth_y * sinth2ph_x);
         kxz[ind] =    KRph_o_Rsinth2 *                    z1 * sinth2ph_x   +     Kthph_o_Rsinth3 *                            Rsinthth_z * sinth2ph_x;
@@ -247,18 +188,35 @@ void UAv_Kerr_test(CCTK_ARGUMENTS)
         kyz[ind] =    KRph_o_Rsinth2 *                    z1 * sinth2ph_y   +     Kthph_o_Rsinth3 *                            Rsinthth_z * sinth2ph_y;
         kzz[ind] = 0.;
 
-      }
+        // lapse
+        if (CCTK_EQUALS(initial_lapse, "psi^n"))
+          alp[ind] = pow(psi1, initial_lapse_psi_exponent);
+        else if (CCTK_EQUALS(initial_lapse, "Kerr_test"))
+          alp[ind] = alph;
 
-  /* now we use the function ExtrapolateGammas, from NewRad thorn, to
-     extrapolate the extrinsic curvature to the outer boundary points. inner
-     boundaries will be filled after synchronisation. */
+        // shift
+        if (CCTK_EQUALS(initial_shift, "Kerr_test")) {
+          betax[ind] =  W[ind] * y1;
+          betay[ind] = -W[ind] * x1;
+          betaz[ind] =  0.;
+        }
 
-  ExtrapolateGammas(cctkGH, kxx);
-  ExtrapolateGammas(cctkGH, kxy);
-  ExtrapolateGammas(cctkGH, kxz);
-  ExtrapolateGammas(cctkGH, kyy);
-  ExtrapolateGammas(cctkGH, kyz);
-  ExtrapolateGammas(cctkGH, kzz);
+        // add perturbation
+        CCTK_REAL phi0_l = phi0[ind];
+        phi0_l *= 1. + pert_A * exp( -0.5*RR2/(pert_Rmax*pert_Rmax) )
+                              * sin(2.*M_PI * RR / pert_lambda);
+
+        const CCTK_REAL omega = mm * OmegaH;
+
+        // scalar fields
+        phi1[ind]  = phi0_l * (cos(omega * tt) * cosmph + sin(omega * tt) * sinmph);
+        phi2[ind]  = phi0_l * (cos(omega * tt) * sinmph - sin(omega * tt) * cosmph);
+        Kphi1[ind] = 0.5 * mm * (W[ind] - OmegaH) / alph * phi2[ind];
+        Kphi2[ind] = 0.5 * mm * (OmegaH - W[ind]) / alph * phi1[ind];
+
+      } /* for i */
+    }   /* for j */
+  }     /* for k */
 
   free(F1); free(F2); free(F0); free(phi0); free(W);
   free(dW_dR); free(dW_dth); free(d2W_dth2);
