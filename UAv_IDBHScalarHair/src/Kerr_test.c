@@ -19,6 +19,7 @@ void UAv_Kerr_test(CCTK_ARGUMENTS)
 
   const CCTK_REAL dxsq = CCTK_DELTA_SPACE(0)*CCTK_DELTA_SPACE(0);
   const CCTK_REAL dysq = CCTK_DELTA_SPACE(1)*CCTK_DELTA_SPACE(1);
+  const CCTK_REAL dzsq = CCTK_DELTA_SPACE(2)*CCTK_DELTA_SPACE(2);
 
   /* let's create arrays for the F1, F2, F0, phi0, W functions */
   const CCTK_INT N_points = cctk_lsh[0]*cctk_lsh[1]*cctk_lsh[2]; // total points
@@ -49,7 +50,7 @@ void UAv_Kerr_test(CCTK_ARGUMENTS)
         const CCTK_REAL z1  = z[ind] - z0;
 
         const CCTK_REAL rho2 = x1*x1 + y1*y1;
-        const CCTK_REAL rho  = sqrt(rho2);
+        // const CCTK_REAL rho  = sqrt(rho2);
 
         const CCTK_REAL RR2 = x1*x1 + y1*y1 + z1*z1;
         const CCTK_REAL RR  = sqrt(RR2);
@@ -127,6 +128,9 @@ void UAv_Kerr_test(CCTK_ARGUMENTS)
         const CCTK_REAL sinth2ph_x = -y1/RR2; // sin(th)^2 dphi/dx
         const CCTK_REAL sinth2ph_y =  x1/RR2; // sin(th)^2 dphi/dy
 
+        const CCTK_REAL R2sinth2ph_x = -y1;  // R^2 sin(th)^2 dphi/dx
+        const CCTK_REAL R2sinth2ph_y =  x1;  // R^2 sin(th)^2 dphi/dy
+
         const CCTK_REAL Rsinthth_x  = z1*x1/RR2; // R sin(th) dth/dx
         const CCTK_REAL Rsinthth_y  = z1*y1/RR2; // R sin(th) dth/dy
         const CCTK_REAL Rsinthth_z  = -sinth2;   // R sin(th) dth/dz
@@ -144,19 +148,12 @@ void UAv_Kerr_test(CCTK_ARGUMENTS)
         const CCTK_REAL aux  = 1. + 0.25 * rH/RR;
         const CCTK_REAL aux2 = aux  * aux;
         const CCTK_REAL aux4 = aux2 * aux2;
+        const CCTK_REAL aux5 = aux4 * aux;
+        const CCTK_REAL aux6 = aux4 * aux2;
         const CCTK_REAL psi4 = exp(2. * F1[ind]) * aux4;
         const CCTK_REAL psi2 = sqrt(psi4);
         const CCTK_REAL psi1 = sqrt(psi2);
 
-
-        const CCTK_REAL rr  = RR * aux2;
-
-        // R dW/dR = R dr_dR dW_dr
-        // TODO: verificar!!
-        CCTK_REAL RdWdR = RR * dW_dr[ind] * (1 - 0.25 * rH/RR) * (1 + 0.25 * rH/RR);
-
-        // R sin(th) dW/dth
-        CCTK_REAL RsinthdWdth = RR * sinth * dW_dth[ind];
 
         const CCTK_REAL h_rho2 = exp(2. * (F2[ind] - F1[ind])) - 1.;
 
@@ -168,41 +165,44 @@ void UAv_Kerr_test(CCTK_ARGUMENTS)
         gyz[ind] = 0;
         gzz[ind] = psi4;
 
-        CCTK_REAL alph = exp(F0[ind]) * (RR - 0.25*rH) / (RR + 0.25*rH);
-        // FIXME
-        if (alph < SMALL)
-          alph = SMALL;
-
         /*
-          KRph/(R sin(th)^2) = - 1/2 exp(2F2) (1 + rH/(4R))^4 / alpha R dW/dR
-          Kthph/(R sin(th))  = - 1/2 exp(2F2) (1 + rH/(4R))^4 / alpha R sin(th) dW/dth
-
-          note that in the expressions below we absorb one R factor in the terms
-          RdWdR and RsinthdWdth
+          KRph/(R sin(th)^2)  = - 1/2 exp(2F2-F0) (1 + rH/(4R))^6 R dW/dr
+          Kthph/(R sin(th))^3 = - 1/2 exp(2F2-F0) (1 + rH/(4R))^5 dW/dth / sin(th) 1/(R - rH/4)
         */
-        const CCTK_REAL KRph_o_Rsinth2 = -0.5 * exp(2. * F2[ind]) * aux4 / alph * RdWdR;
 
-        CCTK_REAL RsinthdWdth_o_sinth2;
-        // if at the rho = 0 axis we need to regularize the division by sin(th)^2
-        if (rho < sqrt(dxsq + dysq) * 0.25) {
-          // R d^2W/dth^2
-          CCTK_REAL Rd2th_W = RR * d2W_dth2[ind];
+        // KRph/(R sin(th)^2)
+        const CCTK_REAL KRph_o_Rsinth2 = -0.5 * exp(2. * F2[ind] - F0[ind]) * aux6 * RR * dW_dr[ind];
 
-          RsinthdWdth_o_sinth2 = Rd2th_W;
-        }
-        else {
-          RsinthdWdth_o_sinth2 = RsinthdWdth / sinth2;
-        }
+        const CCTK_REAL den = RR - 0.25 * rH;
 
-        const CCTK_REAL Kthph_o_Rsinth3 = -0.5 * exp(2. * F2[ind]) * aux4 / alph * RsinthdWdth_o_sinth2;
+        // dW/dth / sin(th) 1/(R - rH/4)
+        CCTK_REAL dWdth_o_sinth_den;
+
+        // if at the rho = 0 axis we need to regularize the division by sin(th)
+        if (rho < sqrt(dxsq + dysq) * 0.25)
+          dWdth_o_sinth_den = d2W_dth2[ind] / den;
+        // if at R ~ rH/4 we need to regularize the division by R - rH/4
+        else if ( fabs(den) < sqrt(dxsq + dysq + dzsq) * 0.125 )
+          dWdth_o_sinth_den = (1. - 0.25*0.25 * rH*rH / RR2) * d2W_drth[ind] / sinth;
+        else
+          dWdth_o_sinth_den = dW_dth[ind] / (den * sinth);
+
+        // Kthph/(R sin(th))^3
+        const CCTK_REAL Kthph_o_R3sinth3 = -0.5 * exp(2. * F2[ind] - F0[ind]) * aux5 * dWdth_o_sinth_den;
+
 
         // extrinsic curvature
-        kxx[ind] = 2.*KRph_o_Rsinth2 *  x1 * sinth2ph_x                     +  2.*Kthph_o_Rsinth3 *  Rsinthth_x * sinth2ph_x;
-        kxy[ind] =    KRph_o_Rsinth2 * (x1 * sinth2ph_y + y1 * sinth2ph_x)  +     Kthph_o_Rsinth3 * (Rsinthth_x * sinth2ph_y + Rsinthth_y * sinth2ph_x);
-        kxz[ind] =    KRph_o_Rsinth2 *                    z1 * sinth2ph_x   +     Kthph_o_Rsinth3 *                            Rsinthth_z * sinth2ph_x;
-        kyy[ind] = 2.*KRph_o_Rsinth2 *  y1 * sinth2ph_y                     +  2.*Kthph_o_Rsinth3 *  Rsinthth_y * sinth2ph_y;
-        kyz[ind] =    KRph_o_Rsinth2 *                    z1 * sinth2ph_y   +     Kthph_o_Rsinth3 *                            Rsinthth_z * sinth2ph_y;
+        kxx[ind] = 2.*KRph_o_Rsinth2 *  x1 * sinth2ph_x                     +  2.*Kthph_o_R3sinth3 *  Rsinthth_x * R2sinth2ph_x;
+        kxy[ind] =    KRph_o_Rsinth2 * (x1 * sinth2ph_y + y1 * sinth2ph_x)  +     Kthph_o_R3sinth3 * (Rsinthth_x * R2sinth2ph_y + Rsinthth_y * R2sinth2ph_x);
+        kxz[ind] =    KRph_o_Rsinth2 *                    z1 * sinth2ph_x   +     Kthph_o_R3sinth3 *                              Rsinthth_z * R2sinth2ph_x;
+        kyy[ind] = 2.*KRph_o_Rsinth2 *  y1 * sinth2ph_y                     +  2.*Kthph_o_R3sinth3 *  Rsinthth_y * R2sinth2ph_y;
+        kyz[ind] =    KRph_o_Rsinth2 *                    z1 * sinth2ph_y   +     Kthph_o_R3sinth3 *                              Rsinthth_z * R2sinth2ph_y;
         kzz[ind] = 0.;
+
+
+        CCTK_REAL alph = exp(F0[ind]) * (RR - 0.25*rH) / (RR + 0.25*rH);
+        if (alph < SMALL)
+          alph = SMALL;
 
         // lapse
         if (CCTK_EQUALS(initial_lapse, "psi^n"))
