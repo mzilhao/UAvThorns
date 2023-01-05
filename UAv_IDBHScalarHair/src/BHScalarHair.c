@@ -14,55 +14,19 @@
 void UAv_ID_read_data(CCTK_INT *, CCTK_INT *, CCTK_REAL [], CCTK_REAL [],
                    CCTK_REAL [], CCTK_REAL [], CCTK_REAL [], CCTK_REAL [], CCTK_REAL []);
 
-static void apply_jacobian(CCTK_REAL dvar[3], CCTK_REAL jac[3][3])
-{
-  CCTK_REAL xdvar[3];
-
-  for (int a = 0; a < 3; a++)
-    xdvar[a] = 0.0;
-
-  for (int a = 0; a < 3; a++)
-    for (int b = 0; b < 3; b++) {
-      xdvar[a] += dvar[b] * jac[b][a];
-    }
-
-  for (int a = 0; a < 3; a++)
-    dvar[a] = xdvar[a];
-
-  return;
-}
 
 void UAv_IDBHScalarHair(CCTK_ARGUMENTS)
 {
   DECLARE_CCTK_ARGUMENTS;
   DECLARE_CCTK_PARAMETERS;
 
-  CCTK_REAL dx12 = 12 * CCTK_DELTA_SPACE(0);
-  CCTK_REAL dy12 = 12 * CCTK_DELTA_SPACE(1);
-  CCTK_REAL dz12 = 12 * CCTK_DELTA_SPACE(2);
+  const CCTK_REAL dx12 = 12 * CCTK_DELTA_SPACE(0);
+  const CCTK_REAL dy12 = 12 * CCTK_DELTA_SPACE(1);
+  const CCTK_REAL dz12 = 12 * CCTK_DELTA_SPACE(2);
 
-  bool use_jacobian = false;
-  if (CCTK_IsFunctionAliased("MultiPatch_GetDomainSpecification"))
-    use_jacobian = true;
-
-  const CCTK_REAL *lJ11 =
-    use_jacobian ? CCTK_VarDataPtr(cctkGH, 0, "Coordinates::J11") : NULL;
-  const CCTK_REAL *lJ12 =
-    use_jacobian ? CCTK_VarDataPtr(cctkGH, 0, "Coordinates::J12") : NULL;
-  const CCTK_REAL *lJ13 =
-    use_jacobian ? CCTK_VarDataPtr(cctkGH, 0, "Coordinates::J13") : NULL;
-  const CCTK_REAL *lJ21 =
-    use_jacobian ? CCTK_VarDataPtr(cctkGH, 0, "Coordinates::J21") : NULL;
-  const CCTK_REAL *lJ22 =
-    use_jacobian ? CCTK_VarDataPtr(cctkGH, 0, "Coordinates::J22") : NULL;
-  const CCTK_REAL *lJ23 =
-    use_jacobian ? CCTK_VarDataPtr(cctkGH, 0, "Coordinates::J23") : NULL;
-  const CCTK_REAL *lJ31 =
-    use_jacobian ? CCTK_VarDataPtr(cctkGH, 0, "Coordinates::J31") : NULL;
-  const CCTK_REAL *lJ32 =
-    use_jacobian ? CCTK_VarDataPtr(cctkGH, 0, "Coordinates::J32") : NULL;
-  const CCTK_REAL *lJ33 =
-    use_jacobian ? CCTK_VarDataPtr(cctkGH, 0, "Coordinates::J33") : NULL;
+  const CCTK_REAL dxsq = CCTK_DELTA_SPACE(0)*CCTK_DELTA_SPACE(0);
+  const CCTK_REAL dysq = CCTK_DELTA_SPACE(1)*CCTK_DELTA_SPACE(1);
+  const CCTK_REAL dzsq = CCTK_DELTA_SPACE(2)*CCTK_DELTA_SPACE(2);
 
   CCTK_INT NF;      // NF will be the actual size of the arrays
   CCTK_INT NX;      // NX will be the number of X points
@@ -98,8 +62,8 @@ void UAv_IDBHScalarHair(CCTK_ARGUMENTS)
   }
 
   // the spacing in each coordinate is
-  CCTK_REAL dX     = (X[NX-1] - X[0])/(NX-1);
-  CCTK_REAL dtheta = (theta[Ntheta-1] - theta[0])/(Ntheta-1);
+  const CCTK_REAL dX     = (X[NX-1] - X[0])/(NX-1);
+  const CCTK_REAL dtheta = (theta[Ntheta-1] - theta[0])/(Ntheta-1);
 
   /* printf("dX     = %e\n", dX); */
   /* printf("dtheta = %e\n", dtheta); */
@@ -116,6 +80,25 @@ void UAv_IDBHScalarHair(CCTK_ARGUMENTS)
       CCTK_WARN(0, "theta grid is not uniformly spaced. Aborting.");
   }
 
+
+  // TODO
+  CCTK_REAL *dW_dr_in, *dW_dth_in, *d2W_dth2_in, *d2W_drth_in;
+  dW_dr_in    = (CCTK_REAL *) malloc(NF * sizeof(CCTK_REAL));
+  dW_dth_in   = (CCTK_REAL *) malloc(NF * sizeof(CCTK_REAL));
+  d2W_dth2_in = (CCTK_REAL *) malloc(NF * sizeof(CCTK_REAL));
+  d2W_drth_in = (CCTK_REAL *) malloc(NF * sizeof(CCTK_REAL));
+
+  CCTK_REAL *dW_dr, *dW_dth, *d2W_dth2, *d2W_drth;
+  dW_dr    = (CCTK_REAL *) malloc(NF * sizeof(CCTK_REAL));
+  dW_dth   = (CCTK_REAL *) malloc(NF * sizeof(CCTK_REAL));
+  d2W_dth2 = (CCTK_REAL *) malloc(NF * sizeof(CCTK_REAL));
+  d2W_drth = (CCTK_REAL *) malloc(NF * sizeof(CCTK_REAL));
+
+
+  // take the derivatives of the input data
+  for (int idx = 0; idx < NF; idx++) {
+
+  }
 
   /* now we need to interpolate onto the actual grid points. first let's store
      the grid points themselves in the coordinates (X, theta). */
@@ -139,6 +122,7 @@ void UAv_IDBHScalarHair(CCTK_ARGUMENTS)
 
         CCTK_REAL RR  = sqrt(RR2);
         // prevent divisions from 0
+        // TODO: manter?
         if (RR < SMALL)
           RR = SMALL;
 
@@ -257,6 +241,9 @@ void UAv_IDBHScalarHair(CCTK_ARGUMENTS)
   free(Xtmp); free(thtmp);
   free(F1_in); free(F2_in); free(F0_in); free(phi0_in); free(W_in);
 
+  free(dW_dr_in); free(dW_dth_in); free(d2W_dth2_in); free(d2W_drth_in);
+
+
   /* printf("F1 = %g\n", F1[0]); */
   /* printf("F2 = %g\n", F2[0]); */
   /* printf("F0 = %g\n", F0[0]); */
@@ -279,9 +266,34 @@ void UAv_IDBHScalarHair(CCTK_ARGUMENTS)
         const CCTK_REAL z1  = z[ind] - z0;
 
         CCTK_REAL RR2 = x1*x1 + y1*y1 + z1*z1;
+        // TODO: manter?
         if (RR2 < pow(SMALL, 2))
           RR2 = pow(SMALL, 2);
         const CCTK_REAL RR  = sqrt(RR2);
+
+        const CCTK_REAL rho2 = x1*x1 + y1*y1;
+        const CCTK_REAL rho  = sqrt(rho2);
+
+        const CCTK_REAL costh  = z1/RR;
+        const CCTK_REAL costh2 = costh*costh;
+        const CCTK_REAL sinth2 = 1. - costh2;
+        const CCTK_REAL sinth  = sqrt(sinth2);
+
+        /*
+        const CCTK_REAL R_x = x1/RR;   // dR/dx
+        const CCTK_REAL R_y = y1/RR;   // dR/dy
+        const CCTK_REAL R_z = z1/RR;   // dR/dz
+        */
+
+        const CCTK_REAL sinth2ph_x = -y1/RR2; // sin(th)^2 dphi/dx
+        const CCTK_REAL sinth2ph_y =  x1/RR2; // sin(th)^2 dphi/dy
+
+        const CCTK_REAL R2sinth2ph_x = -y1;  // R^2 sin(th)^2 dphi/dx
+        const CCTK_REAL R2sinth2ph_y =  x1;  // R^2 sin(th)^2 dphi/dy
+
+        const CCTK_REAL Rsinthth_x  = z1*x1/RR2; // R sin(th) dth/dx
+        const CCTK_REAL Rsinthth_y  = z1*y1/RR2; // R sin(th) dth/dy
+        const CCTK_REAL Rsinthth_z  = -sinth2;   // R sin(th) dth/dz
 
         const CCTK_REAL ph = atan2(y1, x1);
 
@@ -291,8 +303,13 @@ void UAv_IDBHScalarHair(CCTK_ARGUMENTS)
         const CCTK_REAL cosmph = cos(mm*ph);
         const CCTK_REAL sinmph = sin(mm*ph);
 
+        /* note the division by RR in the following. divisions by zero should be
+           avoided by choosing a non-zero value for z0 (for instance) */
         const CCTK_REAL aux  = 1. + 0.25 * rH/RR;
-        const CCTK_REAL aux4 = aux * aux * aux * aux;
+        const CCTK_REAL aux2 = aux  * aux;
+        const CCTK_REAL aux4 = aux2 * aux2;
+        const CCTK_REAL aux5 = aux4 * aux;
+        const CCTK_REAL aux6 = aux4 * aux2;
         const CCTK_REAL psi4 = exp(2. * F1[ind]) * aux4;
         const CCTK_REAL psi2 = sqrt(psi4);
         const CCTK_REAL psi1 = sqrt(psi2);
@@ -306,6 +323,41 @@ void UAv_IDBHScalarHair(CCTK_ARGUMENTS)
         gyy[ind] = psi4 * (1. + h_rho2 * cosph * cosph);
         gyz[ind] = 0;
         gzz[ind] = psi4;
+
+        /*
+          KRph/(R sin(th)^2)  = - 1/2 exp(2F2-F0) (1 + rH/(4R))^6 R dW/dr
+          Kthph/(R sin(th))^3 = - 1/2 exp(2F2-F0) (1 + rH/(4R))^5 dW/dth / sin(th) 1/(R - rH/4)
+        */
+
+        // KRph/(R sin(th)^2)
+        const CCTK_REAL KRph_o_Rsinth2 = -0.5 * exp(2. * F2[ind] - F0[ind]) * aux6 * RR * dW_dr[ind];
+
+        const CCTK_REAL den = RR - 0.25 * rH;
+
+        // dW/dth / sin(th) 1/(R - rH/4)
+        CCTK_REAL dWdth_o_sinth_den;
+
+        // if at the rho = 0 axis we need to regularize the division by sin(th)
+        if (rho < sqrt(dxsq + dysq) * 0.25)
+          dWdth_o_sinth_den = d2W_dth2[ind] / den;
+        // if at R ~ rH/4 we need to regularize the division by R - rH/4
+        else if ( fabs(den) < sqrt(dxsq + dysq + dzsq) * 0.125 )
+          dWdth_o_sinth_den = (1. - 0.25*0.25 * rH*rH / RR2) * d2W_drth[ind] / sinth;
+        else
+          dWdth_o_sinth_den = dW_dth[ind] / (den * sinth);
+
+        // Kthph/(R sin(th))^3
+        const CCTK_REAL Kthph_o_R3sinth3 = -0.5 * exp(2. * F2[ind] - F0[ind]) * aux5 * dWdth_o_sinth_den;
+
+
+        // extrinsic curvature
+        kxx[ind] = 2.*KRph_o_Rsinth2 *  x1 * sinth2ph_x                     +  2.*Kthph_o_R3sinth3 *  Rsinthth_x * R2sinth2ph_x;
+        kxy[ind] =    KRph_o_Rsinth2 * (x1 * sinth2ph_y + y1 * sinth2ph_x)  +     Kthph_o_R3sinth3 * (Rsinthth_x * R2sinth2ph_y + Rsinthth_y * R2sinth2ph_x);
+        kxz[ind] =    KRph_o_Rsinth2 *                    z1 * sinth2ph_x   +     Kthph_o_R3sinth3 *                              Rsinthth_z * R2sinth2ph_x;
+        kyy[ind] = 2.*KRph_o_Rsinth2 *  y1 * sinth2ph_y                     +  2.*Kthph_o_R3sinth3 *  Rsinthth_y * R2sinth2ph_y;
+        kyz[ind] =    KRph_o_Rsinth2 *                    z1 * sinth2ph_y   +     Kthph_o_R3sinth3 *                              Rsinthth_z * R2sinth2ph_y;
+        kzz[ind] = 0.;
+
 
         CCTK_REAL alph = exp(F0[ind]) * (RR - 0.25*rH) / (RR + 0.25*rH);
         if (alph < SMALL)
@@ -324,7 +376,6 @@ void UAv_IDBHScalarHair(CCTK_ARGUMENTS)
           betaz[ind] =  0.;
         }
 
-
         // add perturbation
         CCTK_REAL phi0_l = phi0[ind];
         phi0_l *= 1. + pert_A * exp( -0.5*RR2/(pert_Rmax*pert_Rmax) )
@@ -342,144 +393,9 @@ void UAv_IDBHScalarHair(CCTK_ARGUMENTS)
     }   /* for j */
   }     /* for k */
 
-
-  /* now we write the extrinsic curvature. since there are derivatives, we can
-     only loop through the interior points. */
-
-  for (int k = cctk_nghostzones[2]; k < cctk_lsh[2] - cctk_nghostzones[2]; k++)
-    for (int j = cctk_nghostzones[1]; j < cctk_lsh[1] - cctk_nghostzones[1]; j++)
-      for (int i = cctk_nghostzones[0]; i < cctk_lsh[0] - cctk_nghostzones[0]; i++) {
-
-        const CCTK_INT ind     = CCTK_GFINDEX3D(cctkGH, i, j, k);
-
-        const CCTK_INT indim1  = CCTK_GFINDEX3D(cctkGH, i-1, j, k);
-        const CCTK_INT indip1  = CCTK_GFINDEX3D(cctkGH, i+1, j, k);
-        const CCTK_INT indim2  = CCTK_GFINDEX3D(cctkGH, i-2, j, k);
-        const CCTK_INT indip2  = CCTK_GFINDEX3D(cctkGH, i+2, j, k);
-
-        const CCTK_INT indjm1  = CCTK_GFINDEX3D(cctkGH, i, j-1, k);
-        const CCTK_INT indjp1  = CCTK_GFINDEX3D(cctkGH, i, j+1, k);
-        const CCTK_INT indjm2  = CCTK_GFINDEX3D(cctkGH, i, j-2, k);
-        const CCTK_INT indjp2  = CCTK_GFINDEX3D(cctkGH, i, j+2, k);
-
-        const CCTK_INT indkm1  = CCTK_GFINDEX3D(cctkGH, i, j, k-1);
-        const CCTK_INT indkp1  = CCTK_GFINDEX3D(cctkGH, i, j, k+1);
-        const CCTK_INT indkm2  = CCTK_GFINDEX3D(cctkGH, i, j, k-2);
-        const CCTK_INT indkp2  = CCTK_GFINDEX3D(cctkGH, i, j, k+2);
-
-        const CCTK_REAL x1  = x[ind] - x0;
-        const CCTK_REAL y1  = y[ind] - y0;
-        const CCTK_REAL z1  = z[ind] - z0;
-
-        CCTK_REAL RR2 = x1*x1 + y1*y1 + z1*z1;
-        if (RR2 < pow(SMALL, 2))
-          RR2 = pow(SMALL, 2);
-        const CCTK_REAL RR  = sqrt(RR2);
-
-        CCTK_REAL rho2 = x1*x1 + y1*y1;
-        if (rho2 < pow(SMALL, 2))
-          rho2 = pow(SMALL, 2);
-        /* const CCTK_REAL rho  = sqrt(rho2); */
-
-        /* get the jacobian to take derivatives. 0 is x, 1 is y and 2 is z */
-        CCTK_REAL jac[3][3];
-        if (use_jacobian) {
-          jac[0][0] = lJ11[ind];
-          jac[0][1] = lJ12[ind];
-          jac[0][2] = lJ13[ind];
-          jac[1][0] = lJ21[ind];
-          jac[1][1] = lJ22[ind];
-          jac[1][2] = lJ23[ind];
-          jac[2][0] = lJ31[ind];
-          jac[2][1] = lJ32[ind];
-          jac[2][2] = lJ33[ind];
-        } else {
-          jac[0][0] = 1.0;
-          jac[1][1] = 1.0;
-          jac[2][2] = 1.0;
-          jac[0][1] = 0.0;
-          jac[0][2] = 0.0;
-          jac[1][0] = 0.0;
-          jac[1][2] = 0.0;
-          jac[2][0] = 0.0;
-          jac[2][1] = 0.0;
-        }
-
-        // 4th-order accurate first derivatives of the W function
-        CCTK_REAL d1_W[3];
-
-        // dW/dx
-        d1_W[0] = (   -W[indip2] + 8*W[indip1]
-                   - 8*W[indim1] +   W[indim2] ) / dx12;
-
-        // dW/dy
-        d1_W[1] = (   -W[indjp2] + 8*W[indjp1]
-                   - 8*W[indjm1] +   W[indjm2] ) / dy12;
-
-        // dW/dz
-        d1_W[2] = (   -W[indkp2] + 8*W[indkp1]
-                   - 8*W[indkm1] +   W[indkm2] ) / dz12;
-
-        if (use_jacobian) {
-          apply_jacobian(d1_W, jac);
-        }
-
-        // R dW/dR
-        CCTK_REAL RdWdR = x1 * d1_W[0] + y1 * d1_W[1] + z1 * d1_W[2];
-
-        // R sin(th) dW/dth
-        CCTK_REAL RsinthdWdth = x1 * z1 * d1_W[0] + y1 * z1 * d1_W[1]
-                              - (x1 * x1 + y1 * y1) * d1_W[2];
-
-        const CCTK_REAL R_x = x1/RR;   // dR/dx
-        const CCTK_REAL R_y = y1/RR;   // dR/dy
-        const CCTK_REAL R_z = z1/RR;   // dR/dz
-
-        const CCTK_REAL costh  = z1/RR;
-        const CCTK_REAL costh2 = costh*costh;
-        const CCTK_REAL sinth2 = 1. - costh2;
-
-        const CCTK_REAL ph_x = -y1/rho2; // dphi/dx
-        const CCTK_REAL ph_y =  x1/rho2; // dphi/dy
-
-        const CCTK_REAL sinth2ph_x = -y1/RR2; // sin(th)^2 dphi/dx
-        const CCTK_REAL sinth2ph_y =  x1/RR2; // sin(th)^2 dphi/dy
-
-        const CCTK_REAL sinthth_x  = z1*x1/(RR*RR2); // sin(th) dth/dx
-        const CCTK_REAL sinthth_y  = z1*y1/(RR*RR2); // sin(th) dth/dy
-        const CCTK_REAL sinthth_z  = -sinth2/RR;     // sin(th) dth/dz
-
-        CCTK_REAL alph = exp(F0[ind]) * (RR - 0.25*rH) / (RR + 0.25*rH);
-        if (alph < SMALL)
-          alph = SMALL;
-
-        const CCTK_REAL aux  = 1. + 0.25 * rH/RR;
-        const CCTK_REAL aux4 = aux * aux * aux * aux;
-
-        // KRph/sin(th)^2 = - 1/2 R^2 exp(2F2) (1 + rH/(4R))^4 / alpha  dW/dR
-        // Kthph/sin(th)  = - 1/2 R^2 exp(2F2) (1 + rH/(4R))^4 / alpha sin(th) dW/dth
-        CCTK_REAL KRph_o_sinth2 = -0.5 * RR * exp(2. * F2[ind]) * aux4 / alph * RdWdR;
-        CCTK_REAL Kthph_o_sinth = -0.5 * RR * exp(2. * F2[ind]) * aux4 / alph * RsinthdWdth;
-
-        kxx[ind] = 2.*KRph_o_sinth2 *  R_x * sinth2ph_x                     +  2.*Kthph_o_sinth *  sinthth_x * ph_x;
-        kxy[ind] =    KRph_o_sinth2 * (R_x * sinth2ph_y + R_y * sinth2ph_x) +     Kthph_o_sinth * (sinthth_x * ph_y + sinthth_y * ph_x);
-        kxz[ind] =    KRph_o_sinth2 *                     R_z * sinth2ph_x  +     Kthph_o_sinth *                     sinthth_z * ph_x;
-        kyy[ind] = 2.*KRph_o_sinth2 *  R_y * sinth2ph_y                     +  2.*Kthph_o_sinth *  sinthth_y * ph_y;
-        kyz[ind] =    KRph_o_sinth2 *                     R_z * sinth2ph_y  +     Kthph_o_sinth *                     sinthth_z * ph_y;
-        kzz[ind] = 0.;
-
-      }
-
-  /* now we use the function ExtrapolateGammas, from NewRad thorn, to
-     extrapolate the extrinsic curvature to the outer boundary points. inner
-     boundaries will be filled after synchronisation. */
-
-  ExtrapolateGammas(cctkGH, kxx);
-  ExtrapolateGammas(cctkGH, kxy);
-  ExtrapolateGammas(cctkGH, kxz);
-  ExtrapolateGammas(cctkGH, kyy);
-  ExtrapolateGammas(cctkGH, kyz);
-  ExtrapolateGammas(cctkGH, kzz);
-
   free(F1); free(F2); free(F0); free(phi0); free(W);
+
+  free(dW_dr); free(dW_dth); free(d2W_dth2); free(d2W_drth);
+
+  return;
 }
