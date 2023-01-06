@@ -20,10 +20,6 @@ void UAv_IDBHScalarHair(CCTK_ARGUMENTS)
   DECLARE_CCTK_ARGUMENTS;
   DECLARE_CCTK_PARAMETERS;
 
-  const CCTK_REAL dx12 = 12 * CCTK_DELTA_SPACE(0);
-  const CCTK_REAL dy12 = 12 * CCTK_DELTA_SPACE(1);
-  const CCTK_REAL dz12 = 12 * CCTK_DELTA_SPACE(2);
-
   const CCTK_REAL dxsq = CCTK_DELTA_SPACE(0)*CCTK_DELTA_SPACE(0);
   const CCTK_REAL dysq = CCTK_DELTA_SPACE(1)*CCTK_DELTA_SPACE(1);
   const CCTK_REAL dzsq = CCTK_DELTA_SPACE(2)*CCTK_DELTA_SPACE(2);
@@ -81,24 +77,167 @@ void UAv_IDBHScalarHair(CCTK_ARGUMENTS)
   }
 
 
-  // TODO
   CCTK_REAL *dW_dr_in, *dW_dth_in, *d2W_dth2_in, *d2W_drth_in;
   dW_dr_in    = (CCTK_REAL *) malloc(NF * sizeof(CCTK_REAL));
   dW_dth_in   = (CCTK_REAL *) malloc(NF * sizeof(CCTK_REAL));
   d2W_dth2_in = (CCTK_REAL *) malloc(NF * sizeof(CCTK_REAL));
   d2W_drth_in = (CCTK_REAL *) malloc(NF * sizeof(CCTK_REAL));
 
-  CCTK_REAL *dW_dr, *dW_dth, *d2W_dth2, *d2W_drth;
-  dW_dr    = (CCTK_REAL *) malloc(NF * sizeof(CCTK_REAL));
-  dW_dth   = (CCTK_REAL *) malloc(NF * sizeof(CCTK_REAL));
-  d2W_dth2 = (CCTK_REAL *) malloc(NF * sizeof(CCTK_REAL));
-  d2W_drth = (CCTK_REAL *) malloc(NF * sizeof(CCTK_REAL));
-
-
   // take the derivatives of the input data
-  for (int idx = 0; idx < NF; idx++) {
 
+  const CCTK_REAL oodX       = 1. / dX;
+  const CCTK_REAL oodXsq     = oodX * oodX;
+  const CCTK_REAL oodX12     = 1. / (12. * dX);
+  const CCTK_REAL oodth12    = 1. / (12. * dtheta);
+  const CCTK_REAL oodthsq12  = 1. / (12. * dtheta * dtheta);
+  const CCTK_REAL oodXdth4   = 1. / (4.  * dX * dtheta);
+  const CCTK_REAL oodXdth144 = 1. / (144. * dX * dtheta);
+
+  for (int j = 0; j < Ntheta; j++) {
+    for (int i = 0; i < NX; i++) {
+
+      const CCTK_INT ind    = i + j*NX;
+
+      const CCTK_INT indim1 = i-1 + j*NX;
+      const CCTK_INT indip1 = i+1 + j*NX;
+      const CCTK_INT indim2 = i-2 + j*NX;
+      const CCTK_INT indip2 = i+2 + j*NX;
+      const CCTK_INT indip3 = i+3 + j*NX;
+
+      CCTK_INT indim2jm1 = i-2 + (j-1)*NX;
+      CCTK_INT indim2jm2 = i-2 + (j-2)*NX;
+      CCTK_INT indim2jp1 = i-2 + (j+1)*NX;
+      CCTK_INT indim2jp2 = i-2 + (j+2)*NX;
+
+      CCTK_INT indim1jm1 = i-1 + (j-1)*NX;
+      CCTK_INT indim1jm2 = i-1 + (j-2)*NX;
+      CCTK_INT indim1jp1 = i-1 + (j+1)*NX;
+      CCTK_INT indim1jp2 = i-1 + (j+2)*NX;
+
+      CCTK_INT indjm1 = i + (j-1)*NX;
+      CCTK_INT indjm2 = i + (j-2)*NX;
+      CCTK_INT indjp1 = i + (j+1)*NX;
+      CCTK_INT indjp2 = i + (j+2)*NX;
+
+      CCTK_INT indip1jm1 = i+1 + (j-1)*NX;
+      CCTK_INT indip1jm2 = i+1 + (j-2)*NX;
+      CCTK_INT indip1jp1 = i+1 + (j+1)*NX;
+      CCTK_INT indip1jp2 = i+1 + (j+2)*NX;
+
+      CCTK_INT indip2jm1 = i+2 + (j-1)*NX;
+      CCTK_INT indip2jm2 = i+2 + (j-2)*NX;
+      CCTK_INT indip2jp1 = i+2 + (j+1)*NX;
+      CCTK_INT indip2jp2 = i+2 + (j+2)*NX;
+
+      /* let's use the fact that the solution is axi-symmetric (and that
+         theta[0] = 0) for the boundary points in j */
+      if (j == 0) {
+        indjm1    = i   + (j+1)*NX;
+        indjm2    = i   + (j+2)*NX;
+        indim1jm1 = i-1 + (j+1)*NX;
+        indim2jm2 = i-2 + (j+2)*NX;
+        indip1jm1 = i+1 + (j+1)*NX;
+        indip2jm2 = i+2 + (j+2)*NX;
+      } else if (j == 1) {
+        indjm1    = i   + (j-1)*NX;
+        indjm2    = i   + (j+1)*NX;
+        indim1jm1 = i-1 + (j-1)*NX;
+        indim2jm2 = i-2 + (j+1)*NX;
+        indip1jm1 = i+1 + (j-1)*NX;
+        indip2jm2 = i+2 + (j+1)*NX;
+      } else if (j == Ntheta - 2) {
+        indjp1    = i   + (j+1)*NX;
+        indjp2    = i   + (j-1)*NX;
+        indim1jp1 = i-1 + (j+1)*NX;
+        indim2jp2 = i-2 + (j-1)*NX;
+        indip1jp1 = i+1 + (j+1)*NX;
+        indip2jp2 = i+2 + (j-1)*NX;
+      } else if (j == Ntheta - 1) {
+        indjp1    = i   + (j-1)*NX;
+        indjp2    = i   + (j-2)*NX;
+        indim1jp1 = i-1 + (j-1)*NX;
+        indim2jp2 = i-2 + (j-2)*NX;
+        indip1jp1 = i+1 + (j-1)*NX;
+        indip2jp2 = i+2 + (j-2)*NX;
+      }
+
+      const CCTK_REAL lX = X[i];
+      /* const CCTK_REAL lth = theta[j]; */
+
+      /* Xtmp[idx]; */
+      /* thtmp[idx]; */
+      /* printf("X[%3d] = %lf\n", i, X[i]); */
+
+
+      // 4th order accurate stencils
+      const CCTK_REAL W_th = (-W_in[indjp2] + 8 * W_in[indjp1] - 8 * W_in[indjm1] + W_in[indjm2]) *
+        oodth12;
+      const CCTK_REAL W_thth =  (  -W_in[indjp2] + 16 * W_in[indjp1] - 30 * W_in[ind]
+                             + 16 * W_in[indjm1] -      W_in[indjm2] ) * oodthsq12;
+
+      CCTK_REAL W_X, W_Xth;
+
+      if (i == 1 || i == NX - 2) {
+        // 1st derivative with 2nd order accuracy (central stencils)
+        W_X = (-W_in[indim1] + W_in[indip1]) * 0.5 * oodX;
+
+        W_Xth  = ( W_in[indip1jp1] - W_in[indip1jm1] - W_in[indim1jp1] + W_in[indim1jm1] ) * oodXdth4;
+
+      } else if (i == 0) {
+        /* this point is X == 0, r == rH, R == rH/4. dW_dX goes to zero here. but
+           since we're interested in dW_dr, and since drxdr diverges (here), we
+           will use L'Hopital's rule. for that, we will write instead the 2nd
+           derivative */
+
+        // 2nd derivative with 2nd order accuracy (forward stencils)
+        W_X = (2*W_in[ind] - 5*W_in[indip1] + 4*W_in[indip2] - W_in[indip3]) * oodXsq;
+
+        // mixed (1st) derivatives with 2nd order accuracy (central stencils in j and forward in i)
+        W_Xth = ( - 3*W_in[indjp1] + 3*W_in[indjm1] + 4*W_in[indip1jp1] - 4*W_in[indip1jm1]
+                  - W_in[indip2jp1] + W_in[indip2jm1] ) * oodXdth4;
+
+      } else if (i == NX - 1) {
+        /* last radial point */
+
+        // 1st derivative with 2nd order accuracy (backward stencils)
+        W_X = (W_in[indim2] - 4*W_in[indim1] + 3*W_in[ind]) * 0.5 * oodX;
+        W_Xth = 0.; // we don't actually use this variable at large r, so just
+                    // set it to zero
+
+      } else {
+        // 4th order accurate stencils
+        W_X    = (-W_in[indip2] + 8 * W_in[indip1] - 8 * W_in[indim1] + W_in[indim2]) * oodX12;
+        W_Xth  = (
+            -W_in[indim2jp2] +  8*W_in[indim1jp2] -  8*W_in[indip1jp2] +   W_in[indip2jp2]
+         + 8*W_in[indim2jp1] - 64*W_in[indim1jp1] + 64*W_in[indip1jp1] - 8*W_in[indip2jp1]
+         - 8*W_in[indim2jm1] + 64*W_in[indim1jm1] - 64*W_in[indip1jm1] + 8*W_in[indip2jm1]
+         +   W_in[indim2jm2] -  8*W_in[indim1jm2] +  8*W_in[indip1jm2] -   W_in[indip2jm2] ) * oodXdth144;
+      }
+
+      // from the X coordinate used in the input files to the x coordinate
+      const CCTK_REAL rx = C0*lX/(1. - lX);
+      // from the x coordinate to the metric coordinate r
+      // const CCTK_REAL rr = sqrt(rH*rH + rx*rx);
+
+      // corresponding derivatives
+      const CCTK_REAL dXdrx = 1./(C0 + rx) - rx/((C0 + rx)*(C0 + rx));
+
+      CCTK_REAL drxdr;
+      if (i == 0) { // rx == 0 (X == 0)
+        drxdr = sqrt(rH*rH + rx*rx);
+      } else {
+        drxdr = sqrt(rH*rH + rx*rx)/rx;
+      }
+      const CCTK_REAL dXdr = dXdrx * drxdr;
+
+      dW_dr_in[ind]    = dXdr * W_X;
+      d2W_drth_in[ind] = dXdr * W_Xth;
+
+      dW_dth_in[ind]   = W_th;
+      d2W_dth2_in[ind] = W_thth;
+    }
   }
+
 
   /* now we need to interpolate onto the actual grid points. first let's store
      the grid points themselves in the coordinates (X, theta). */
@@ -146,6 +285,14 @@ void UAv_IDBHScalarHair(CCTK_ARGUMENTS)
   }
 
   /* now for the interpolation */
+
+  // TODO: add these
+  CCTK_REAL *dW_dr, *dW_dth, *d2W_dth2, *d2W_drth;
+  dW_dr    = (CCTK_REAL *) malloc(N_interp_points * sizeof(CCTK_REAL));
+  dW_dth   = (CCTK_REAL *) malloc(N_interp_points * sizeof(CCTK_REAL));
+  d2W_dth2 = (CCTK_REAL *) malloc(N_interp_points * sizeof(CCTK_REAL));
+  d2W_drth = (CCTK_REAL *) malloc(N_interp_points * sizeof(CCTK_REAL));
+
 
   const CCTK_INT N_dims  = 2;   // 2-D interpolation
 
