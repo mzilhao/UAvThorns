@@ -286,18 +286,10 @@ void UAv_IDBHScalarHair(CCTK_ARGUMENTS)
 
   /* now for the interpolation */
 
-  // TODO: add these
-  CCTK_REAL *dW_dr, *dW_dth, *d2W_dth2, *d2W_drth;
-  dW_dr    = (CCTK_REAL *) malloc(N_interp_points * sizeof(CCTK_REAL));
-  dW_dth   = (CCTK_REAL *) malloc(N_interp_points * sizeof(CCTK_REAL));
-  d2W_dth2 = (CCTK_REAL *) malloc(N_interp_points * sizeof(CCTK_REAL));
-  d2W_drth = (CCTK_REAL *) malloc(N_interp_points * sizeof(CCTK_REAL));
-
-
   const CCTK_INT N_dims  = 2;   // 2-D interpolation
 
-  const CCTK_INT N_input_arrays  = 5;
-  const CCTK_INT N_output_arrays = 5;
+  const CCTK_INT N_input_arrays  = 9;
+  const CCTK_INT N_output_arrays = 9;
 
   /* origin and stride of the input coordinates. with this Cactus reconstructs
      the whole X and theta array. */
@@ -325,6 +317,10 @@ void UAv_IDBHScalarHair(CCTK_ARGUMENTS)
   input_array_type_codes[2] = CCTK_VARIABLE_REAL;
   input_array_type_codes[3] = CCTK_VARIABLE_REAL;
   input_array_type_codes[4] = CCTK_VARIABLE_REAL;
+  input_array_type_codes[5] = CCTK_VARIABLE_REAL;
+  input_array_type_codes[6] = CCTK_VARIABLE_REAL;
+  input_array_type_codes[7] = CCTK_VARIABLE_REAL;
+  input_array_type_codes[8] = CCTK_VARIABLE_REAL;
 
   /* Cactus stores and expects arrays in Fortran order, that is, faster in the
      first index. this is compatible with our input file, where the X coordinate
@@ -334,30 +330,46 @@ void UAv_IDBHScalarHair(CCTK_ARGUMENTS)
   input_arrays[2] = (const void *) F0_in;
   input_arrays[3] = (const void *) phi0_in;
   input_arrays[4] = (const void *) W_in;
-
+  input_arrays[5] = (const void *) dW_dr_in;
+  input_arrays[6] = (const void *) dW_dth_in;
+  input_arrays[7] = (const void *) d2W_dth2_in;
+  input_arrays[8] = (const void *) d2W_drth_in;
 
   /* output arrays */
   void *output_arrays[N_output_arrays];
   CCTK_INT output_array_type_codes[N_output_arrays];
   CCTK_REAL *F1, *F2, *F0, *phi0, *W;
+  CCTK_REAL *dW_dr, *dW_dth, *d2W_dth2, *d2W_drth;
 
-  F1   = (CCTK_REAL *) malloc(N_interp_points * sizeof(CCTK_REAL));
-  F2   = (CCTK_REAL *) malloc(N_interp_points * sizeof(CCTK_REAL));
-  F0   = (CCTK_REAL *) malloc(N_interp_points * sizeof(CCTK_REAL));
-  phi0 = (CCTK_REAL *) malloc(N_interp_points * sizeof(CCTK_REAL));
-  W    = (CCTK_REAL *) malloc(N_interp_points * sizeof(CCTK_REAL));
+  F1       = (CCTK_REAL *) malloc(N_interp_points * sizeof(CCTK_REAL));
+  F2       = (CCTK_REAL *) malloc(N_interp_points * sizeof(CCTK_REAL));
+  F0       = (CCTK_REAL *) malloc(N_interp_points * sizeof(CCTK_REAL));
+  phi0     = (CCTK_REAL *) malloc(N_interp_points * sizeof(CCTK_REAL));
+  W        = (CCTK_REAL *) malloc(N_interp_points * sizeof(CCTK_REAL));
+  dW_dr    = (CCTK_REAL *) malloc(N_interp_points * sizeof(CCTK_REAL));
+  dW_dth   = (CCTK_REAL *) malloc(N_interp_points * sizeof(CCTK_REAL));
+  d2W_dth2 = (CCTK_REAL *) malloc(N_interp_points * sizeof(CCTK_REAL));
+  d2W_drth = (CCTK_REAL *) malloc(N_interp_points * sizeof(CCTK_REAL));
 
   output_array_type_codes[0] = CCTK_VARIABLE_REAL;
   output_array_type_codes[1] = CCTK_VARIABLE_REAL;
   output_array_type_codes[2] = CCTK_VARIABLE_REAL;
   output_array_type_codes[3] = CCTK_VARIABLE_REAL;
   output_array_type_codes[4] = CCTK_VARIABLE_REAL;
+  output_array_type_codes[5] = CCTK_VARIABLE_REAL;
+  output_array_type_codes[6] = CCTK_VARIABLE_REAL;
+  output_array_type_codes[7] = CCTK_VARIABLE_REAL;
+  output_array_type_codes[8] = CCTK_VARIABLE_REAL;
 
   output_arrays[0] = (void *) F1;
   output_arrays[1] = (void *) F2;
   output_arrays[2] = (void *) F0;
   output_arrays[3] = (void *) phi0;
   output_arrays[4] = (void *) W;
+  output_arrays[5] = (void *) dW_dr;
+  output_arrays[6] = (void *) dW_dth;
+  output_arrays[7] = (void *) d2W_dth2;
+  output_arrays[8] = (void *) d2W_drth;
 
 
   /* handle and settings for the interpolation routine */
@@ -387,7 +399,6 @@ void UAv_IDBHScalarHair(CCTK_ARGUMENTS)
   free(X_g); free(theta_g);
   free(Xtmp); free(thtmp);
   free(F1_in); free(F2_in); free(F0_in); free(phi0_in); free(W_in);
-
   free(dW_dr_in); free(dW_dth_in); free(d2W_dth2_in); free(d2W_drth_in);
 
 
@@ -541,7 +552,6 @@ void UAv_IDBHScalarHair(CCTK_ARGUMENTS)
   }     /* for k */
 
   free(F1); free(F2); free(F0); free(phi0); free(W);
-
   free(dW_dr); free(dW_dth); free(d2W_dth2); free(d2W_drth);
 
   return;
