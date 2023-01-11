@@ -77,13 +77,13 @@ void UAv_IDBHScalarHair(CCTK_ARGUMENTS)
   }
 
 
+  // now we need to take the derivatives of the W function and store their values
+
   CCTK_REAL *dW_dr_in, *dW_dth_in, *d2W_dth2_in, *d2W_drth_in;
   dW_dr_in    = (CCTK_REAL *) malloc(NF * sizeof(CCTK_REAL));
   dW_dth_in   = (CCTK_REAL *) malloc(NF * sizeof(CCTK_REAL));
   d2W_dth2_in = (CCTK_REAL *) malloc(NF * sizeof(CCTK_REAL));
   d2W_drth_in = (CCTK_REAL *) malloc(NF * sizeof(CCTK_REAL));
-
-  // take the derivatives of the input data
 
   const CCTK_REAL oodX       = 1. / dX;
   const CCTK_REAL oodXsq     = oodX * oodX;
@@ -163,15 +163,13 @@ void UAv_IDBHScalarHair(CCTK_ARGUMENTS)
 
       const CCTK_REAL lX = X[i];
       /* const CCTK_REAL lth = theta[j]; */
-
-      /* Xtmp[idx]; */
-      /* thtmp[idx]; */
-      /* printf("X[%3d] = %lf\n", i, X[i]); */
+      /* printf("X[%3d] = %lf\n", i, lX); */
 
 
-      // 4th order accurate stencils
+      // 1st derivative with 4th order accuracy (central stencils)
       const CCTK_REAL W_th = (-W_in[indjp2] + 8 * W_in[indjp1] - 8 * W_in[indjm1] + W_in[indjm2]) *
         oodth12;
+      // 2nd derivative with 4th order accuracy (central stencils)
       const CCTK_REAL W_thth =  (  -W_in[indjp2] + 16 * W_in[indjp1] - 30 * W_in[ind]
                              + 16 * W_in[indjm1] -      W_in[indjm2] ) * oodthsq12;
 
@@ -260,10 +258,9 @@ void UAv_IDBHScalarHair(CCTK_ARGUMENTS)
         const CCTK_REAL RR2 = x1*x1 + y1*y1 + z1*z1;
 
         CCTK_REAL RR  = sqrt(RR2);
-        // prevent divisions from 0
-        // TODO: manter?
-        if (RR < SMALL)
-          RR = SMALL;
+        /* note that there are divisions by RR in the following expressions.
+           divisions by zero should be avoided by choosing a non-zero value for
+           z0 (for instance) */
 
         // from (quasi-)isotropic coordinate R to the metric coordinate r
         const CCTK_REAL rr = RR * (1. + 0.25 * rH / RR) * (1. + 0.25 * rH / RR);
@@ -424,9 +421,10 @@ void UAv_IDBHScalarHair(CCTK_ARGUMENTS)
         const CCTK_REAL z1  = z[ind] - z0;
 
         CCTK_REAL RR2 = x1*x1 + y1*y1 + z1*z1;
-        // TODO: manter?
-        if (RR2 < pow(SMALL, 2))
-          RR2 = pow(SMALL, 2);
+        /* note that there are divisions by RR in the following expressions.
+           divisions by zero should be avoided by choosing a non-zero value for
+           z0 (for instance) */
+
         const CCTK_REAL RR  = sqrt(RR2);
 
         const CCTK_REAL rho2 = x1*x1 + y1*y1;
