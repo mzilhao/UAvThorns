@@ -505,7 +505,6 @@ void UAv_IDBHScalarHair(CCTK_ARGUMENTS)
         // Kthph/(R sin(th))^3
         const CCTK_REAL Kthph_o_R3sinth3 = -0.5 * exp(2. * F2[ind] - F0[ind]) * aux5 * dWdth_o_sinth_den;
 
-
         // extrinsic curvature
         kxx[ind] = 2.*KRph_o_Rsinth2 *  x1 * sinth2ph_x                     +  2.*Kthph_o_R3sinth3 *  Rsinthth_x * R2sinth2ph_x;
         kxy[ind] =    KRph_o_Rsinth2 * (x1 * sinth2ph_y + y1 * sinth2ph_x)  +     Kthph_o_R3sinth3 * (Rsinthth_x * R2sinth2ph_y + Rsinthth_y * R2sinth2ph_x);
@@ -515,24 +514,7 @@ void UAv_IDBHScalarHair(CCTK_ARGUMENTS)
         kzz[ind] = 0.;
 
 
-        CCTK_REAL alph = exp(F0[ind]) * (RR - 0.25*rH) / (RR + 0.25*rH);
-        if (alph < SMALL)
-          alph = SMALL;
-
-        // lapse
-        if (CCTK_EQUALS(initial_lapse, "psi^n"))
-          alp[ind] = pow(psi1, initial_lapse_psi_exponent);
-        else if (CCTK_EQUALS(initial_lapse, "HairyBH"))
-          alp[ind] = alph;
-
-        // shift
-        if (CCTK_EQUALS(initial_shift, "HairyBH")) {
-          betax[ind] =  W[ind] * y1;
-          betay[ind] = -W[ind] * x1;
-          betaz[ind] =  0.;
-        }
-
-        // add perturbation
+        // add perturbation to scalar field
         CCTK_REAL phi0_l = phi0[ind];
         phi0_l *= 1. + pert_A * exp( -0.5*RR2/(pert_Rmax*pert_Rmax) )
                               * sin(2.*M_PI * RR / pert_lambda);
@@ -542,8 +524,36 @@ void UAv_IDBHScalarHair(CCTK_ARGUMENTS)
         // scalar fields
         phi1[ind]  = phi0_l * (cos(omega * tt) * cosmph + sin(omega * tt) * sinmph);
         phi2[ind]  = phi0_l * (cos(omega * tt) * sinmph - sin(omega * tt) * cosmph);
-        Kphi1[ind] = 0.5 * mm * (W[ind] - OmegaH) / alph * phi2[ind];
-        Kphi2[ind] = 0.5 * mm * (OmegaH - W[ind]) / alph * phi1[ind];
+
+        const CCTK_REAL alph = exp(F0[ind]) * (RR - 0.25*rH) / (RR + 0.25*rH);
+
+        // if at R ~ rH/4 we need to regularize the division by R - rH/4
+        if ( fabs(den) < sqrt(dxsq + dysq + dzsq) * 0.125 ) {
+          const CCTK_REAL drdR = (1. - 0.25*0.25 * rH*rH / RR2);
+          const CCTK_REAL reg  = exp(-F0[ind]) * (RR + 0.25*rH) * drdR * dW_dr[ind];
+
+          Kphi1[ind] =  0.5 * mm * reg * phi2[ind];
+          Kphi2[ind] = -0.5 * mm * reg * phi1[ind];
+        } else {
+          Kphi1[ind] = 0.5 * mm * (W[ind] - OmegaH) / alph * phi2[ind];
+          Kphi2[ind] = 0.5 * mm * (OmegaH - W[ind]) / alph * phi1[ind];
+        }
+
+        // lapse
+        if (CCTK_EQUALS(initial_lapse, "psi^n"))
+          alp[ind] = pow(psi1, initial_lapse_psi_exponent);
+        else if (CCTK_EQUALS(initial_lapse, "HairyBH")) {
+          alp[ind] = alph;
+          if (alp[ind] < SMALL)
+            alp[ind] = SMALL;
+        }
+
+        // shift
+        if (CCTK_EQUALS(initial_shift, "HairyBH")) {
+          betax[ind] =  W[ind] * y1;
+          betay[ind] = -W[ind] * x1;
+          betaz[ind] =  0.;
+        }
 
       } /* for i */
     }   /* for j */
