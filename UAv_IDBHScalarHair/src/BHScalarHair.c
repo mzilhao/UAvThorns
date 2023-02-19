@@ -28,17 +28,17 @@ void UAv_IDBHScalarHair(CCTK_ARGUMENTS)
   CCTK_INT NX;      // NX will be the number of X points
   CCTK_INT Ntheta;  // Ntheta will be the number of theta points
 
-  CCTK_REAL *Xtmp, *thtmp, *F1_in, *F2_in, *F0_in, *phi0_in, *W_in;
+  CCTK_REAL *Xtmp, *thtmp, *F1_in, *F2_in, *F0_in, *phi0_in, *Wbar_in;
   Xtmp     = (CCTK_REAL *) malloc(maxNF * sizeof(CCTK_REAL));
   thtmp    = (CCTK_REAL *) malloc(maxNF * sizeof(CCTK_REAL));
   F1_in    = (CCTK_REAL *) malloc(maxNF * sizeof(CCTK_REAL));
   F2_in    = (CCTK_REAL *) malloc(maxNF * sizeof(CCTK_REAL));
   F0_in    = (CCTK_REAL *) malloc(maxNF * sizeof(CCTK_REAL));
   phi0_in  = (CCTK_REAL *) malloc(maxNF * sizeof(CCTK_REAL));
-  W_in     = (CCTK_REAL *) malloc(maxNF * sizeof(CCTK_REAL));
+  Wbar_in  = (CCTK_REAL *) malloc(maxNF * sizeof(CCTK_REAL));
 
   // we get the data from the input file
-  UAv_ID_read_data(&NF, &NX, Xtmp, thtmp, F1_in, F2_in, F0_in, phi0_in, W_in);
+  UAv_ID_read_data(&NF, &NX, Xtmp, thtmp, F1_in, F2_in, F0_in, phi0_in, Wbar_in);
 
   Ntheta = NF/NX;
 
@@ -77,13 +77,13 @@ void UAv_IDBHScalarHair(CCTK_ARGUMENTS)
   }
 
 
-  // now we need to take the derivatives of the W function and store their values
+  // now we need to take the derivatives of the Wbar function and store their values
 
-  CCTK_REAL *dW_dr_in, *dW_dth_in, *d2W_dth2_in, *d2W_drth_in;
-  dW_dr_in    = (CCTK_REAL *) malloc(NF * sizeof(CCTK_REAL));
-  dW_dth_in   = (CCTK_REAL *) malloc(NF * sizeof(CCTK_REAL));
-  d2W_dth2_in = (CCTK_REAL *) malloc(NF * sizeof(CCTK_REAL));
-  d2W_drth_in = (CCTK_REAL *) malloc(NF * sizeof(CCTK_REAL));
+  CCTK_REAL *dWbar_dr_in, *dWbar_dth_in, *d2Wbar_dth2_in, *d2Wbar_drth_in;
+  dWbar_dr_in    = (CCTK_REAL *) malloc(NF * sizeof(CCTK_REAL));
+  dWbar_dth_in   = (CCTK_REAL *) malloc(NF * sizeof(CCTK_REAL));
+  d2Wbar_dth2_in = (CCTK_REAL *) malloc(NF * sizeof(CCTK_REAL));
+  d2Wbar_drth_in = (CCTK_REAL *) malloc(NF * sizeof(CCTK_REAL));
 
   const CCTK_REAL oodX       = 1. / dX;
   const CCTK_REAL oodXsq     = oodX * oodX;
@@ -167,49 +167,49 @@ void UAv_IDBHScalarHair(CCTK_ARGUMENTS)
 
 
       // 1st derivative with 4th order accuracy (central stencils)
-      const CCTK_REAL W_th = (-W_in[indjp2] + 8 * W_in[indjp1] - 8 * W_in[indjm1] + W_in[indjm2]) *
+      const CCTK_REAL Wbar_th = (-Wbar_in[indjp2] + 8 * Wbar_in[indjp1] - 8 * Wbar_in[indjm1] + Wbar_in[indjm2]) *
         oodth12;
       // 2nd derivative with 4th order accuracy (central stencils)
-      const CCTK_REAL W_thth =  (  -W_in[indjp2] + 16 * W_in[indjp1] - 30 * W_in[ind]
-                             + 16 * W_in[indjm1] -      W_in[indjm2] ) * oodthsq12;
+      const CCTK_REAL Wbar_thth =  (  -Wbar_in[indjp2] + 16 * Wbar_in[indjp1] - 30 * Wbar_in[ind]
+                                + 16 * Wbar_in[indjm1] -      Wbar_in[indjm2] ) * oodthsq12;
 
-      CCTK_REAL W_X, W_Xth;
+      CCTK_REAL Wbar_X, Wbar_Xth;
 
       if (i == 1 || i == NX - 2) {
         // 1st derivative with 2nd order accuracy (central stencils)
-        W_X = (-W_in[indim1] + W_in[indip1]) * 0.5 * oodX;
+        Wbar_X = (-Wbar_in[indim1] + Wbar_in[indip1]) * 0.5 * oodX;
 
-        W_Xth  = ( W_in[indip1jp1] - W_in[indip1jm1] - W_in[indim1jp1] + W_in[indim1jm1] ) * oodXdth4;
+        Wbar_Xth  = ( Wbar_in[indip1jp1] - Wbar_in[indip1jm1] - Wbar_in[indim1jp1] + Wbar_in[indim1jm1] ) * oodXdth4;
 
       } else if (i == 0) {
-        /* this point is X == 0, r == rH, R == rH/4. dW_dX goes to zero here. but
-           since we're interested in dW_dr, and since drxdr diverges (here), we
+        /* this point is X == 0, r == rH, R == rH/4. dWbar_dX goes to zero here. but
+           since we're interested in dWbar_dr, and since drxdr diverges (here), we
            will use L'Hopital's rule. for that, we will write instead the 2nd
            derivative */
 
         // 2nd derivative with 2nd order accuracy (forward stencils)
-        W_X = (2*W_in[ind] - 5*W_in[indip1] + 4*W_in[indip2] - W_in[indip3]) * oodXsq;
+        Wbar_X = (2*Wbar_in[ind] - 5*Wbar_in[indip1] + 4*Wbar_in[indip2] - Wbar_in[indip3]) * oodXsq;
 
         // mixed (1st) derivatives with 2nd order accuracy (central stencils in j and forward in i)
-        W_Xth = ( - 3*W_in[indjp1] + 3*W_in[indjm1] + 4*W_in[indip1jp1] - 4*W_in[indip1jm1]
-                  - W_in[indip2jp1] + W_in[indip2jm1] ) * oodXdth4;
+        Wbar_Xth = ( - 3*Wbar_in[indjp1] + 3*Wbar_in[indjm1] + 4*Wbar_in[indip1jp1] - 4*Wbar_in[indip1jm1]
+                    - Wbar_in[indip2jp1] + Wbar_in[indip2jm1] ) * oodXdth4;
 
       } else if (i == NX - 1) {
         /* last radial point */
 
         // 1st derivative with 2nd order accuracy (backward stencils)
-        W_X = (W_in[indim2] - 4*W_in[indim1] + 3*W_in[ind]) * 0.5 * oodX;
-        W_Xth = 0.; // we don't actually use this variable at large r, so just
+        Wbar_X = (Wbar_in[indim2] - 4*Wbar_in[indim1] + 3*Wbar_in[ind]) * 0.5 * oodX;
+        Wbar_Xth = 0.; // we don't actually use this variable at large r, so just
                     // set it to zero
 
       } else {
         // 4th order accurate stencils
-        W_X    = (-W_in[indip2] + 8 * W_in[indip1] - 8 * W_in[indim1] + W_in[indim2]) * oodX12;
-        W_Xth  = (
-            -W_in[indim2jp2] +  8*W_in[indim1jp2] -  8*W_in[indip1jp2] +   W_in[indip2jp2]
-         + 8*W_in[indim2jp1] - 64*W_in[indim1jp1] + 64*W_in[indip1jp1] - 8*W_in[indip2jp1]
-         - 8*W_in[indim2jm1] + 64*W_in[indim1jm1] - 64*W_in[indip1jm1] + 8*W_in[indip2jm1]
-         +   W_in[indim2jm2] -  8*W_in[indim1jm2] +  8*W_in[indip1jm2] -   W_in[indip2jm2] ) * oodXdth144;
+        Wbar_X    = (-Wbar_in[indip2] + 8 * Wbar_in[indip1] - 8 * Wbar_in[indim1] + Wbar_in[indim2]) * oodX12;
+        Wbar_Xth  = (
+            -Wbar_in[indim2jp2] +  8*Wbar_in[indim1jp2] -  8*Wbar_in[indip1jp2] +   Wbar_in[indip2jp2]
+         + 8*Wbar_in[indim2jp1] - 64*Wbar_in[indim1jp1] + 64*Wbar_in[indip1jp1] - 8*Wbar_in[indip2jp1]
+         - 8*Wbar_in[indim2jm1] + 64*Wbar_in[indim1jm1] - 64*Wbar_in[indip1jm1] + 8*Wbar_in[indip2jm1]
+         +   Wbar_in[indim2jm2] -  8*Wbar_in[indim1jm2] +  8*Wbar_in[indip1jm2] -   Wbar_in[indip2jm2] ) * oodXdth144;
       }
 
       // from the X coordinate used in the input files to the x coordinate
@@ -228,11 +228,11 @@ void UAv_IDBHScalarHair(CCTK_ARGUMENTS)
       }
       const CCTK_REAL dXdr = dXdrx * drxdr;
 
-      dW_dr_in[ind]    = dXdr * W_X;
-      d2W_drth_in[ind] = dXdr * W_Xth;
+      dWbar_dr_in[ind]    = dXdr * Wbar_X;
+      d2Wbar_drth_in[ind] = dXdr * Wbar_Xth;
 
-      dW_dth_in[ind]   = W_th;
-      d2W_dth2_in[ind] = W_thth;
+      dWbar_dth_in[ind]   = Wbar_th;
+      d2Wbar_dth2_in[ind] = Wbar_thth;
     }
   }
 
@@ -326,27 +326,27 @@ void UAv_IDBHScalarHair(CCTK_ARGUMENTS)
   input_arrays[1] = (const void *) F2_in;
   input_arrays[2] = (const void *) F0_in;
   input_arrays[3] = (const void *) phi0_in;
-  input_arrays[4] = (const void *) W_in;
-  input_arrays[5] = (const void *) dW_dr_in;
-  input_arrays[6] = (const void *) dW_dth_in;
-  input_arrays[7] = (const void *) d2W_dth2_in;
-  input_arrays[8] = (const void *) d2W_drth_in;
+  input_arrays[4] = (const void *) Wbar_in;
+  input_arrays[5] = (const void *) dWbar_dr_in;
+  input_arrays[6] = (const void *) dWbar_dth_in;
+  input_arrays[7] = (const void *) d2Wbar_dth2_in;
+  input_arrays[8] = (const void *) d2Wbar_drth_in;
 
   /* output arrays */
   void *output_arrays[N_output_arrays];
   CCTK_INT output_array_type_codes[N_output_arrays];
-  CCTK_REAL *F1, *F2, *F0, *phi0, *W;
-  CCTK_REAL *dW_dr, *dW_dth, *d2W_dth2, *d2W_drth;
+  CCTK_REAL *F1, *F2, *F0, *phi0, *Wbar;
+  CCTK_REAL *dWbar_dr, *dWbar_dth, *d2Wbar_dth2, *d2Wbar_drth;
 
-  F1       = (CCTK_REAL *) malloc(N_interp_points * sizeof(CCTK_REAL));
-  F2       = (CCTK_REAL *) malloc(N_interp_points * sizeof(CCTK_REAL));
-  F0       = (CCTK_REAL *) malloc(N_interp_points * sizeof(CCTK_REAL));
-  phi0     = (CCTK_REAL *) malloc(N_interp_points * sizeof(CCTK_REAL));
-  W        = (CCTK_REAL *) malloc(N_interp_points * sizeof(CCTK_REAL));
-  dW_dr    = (CCTK_REAL *) malloc(N_interp_points * sizeof(CCTK_REAL));
-  dW_dth   = (CCTK_REAL *) malloc(N_interp_points * sizeof(CCTK_REAL));
-  d2W_dth2 = (CCTK_REAL *) malloc(N_interp_points * sizeof(CCTK_REAL));
-  d2W_drth = (CCTK_REAL *) malloc(N_interp_points * sizeof(CCTK_REAL));
+  F1          = (CCTK_REAL *) malloc(N_interp_points * sizeof(CCTK_REAL));
+  F2          = (CCTK_REAL *) malloc(N_interp_points * sizeof(CCTK_REAL));
+  F0          = (CCTK_REAL *) malloc(N_interp_points * sizeof(CCTK_REAL));
+  phi0        = (CCTK_REAL *) malloc(N_interp_points * sizeof(CCTK_REAL));
+  Wbar        = (CCTK_REAL *) malloc(N_interp_points * sizeof(CCTK_REAL));
+  dWbar_dr    = (CCTK_REAL *) malloc(N_interp_points * sizeof(CCTK_REAL));
+  dWbar_dth   = (CCTK_REAL *) malloc(N_interp_points * sizeof(CCTK_REAL));
+  d2Wbar_dth2 = (CCTK_REAL *) malloc(N_interp_points * sizeof(CCTK_REAL));
+  d2Wbar_drth = (CCTK_REAL *) malloc(N_interp_points * sizeof(CCTK_REAL));
 
   output_array_type_codes[0] = CCTK_VARIABLE_REAL;
   output_array_type_codes[1] = CCTK_VARIABLE_REAL;
@@ -362,11 +362,11 @@ void UAv_IDBHScalarHair(CCTK_ARGUMENTS)
   output_arrays[1] = (void *) F2;
   output_arrays[2] = (void *) F0;
   output_arrays[3] = (void *) phi0;
-  output_arrays[4] = (void *) W;
-  output_arrays[5] = (void *) dW_dr;
-  output_arrays[6] = (void *) dW_dth;
-  output_arrays[7] = (void *) d2W_dth2;
-  output_arrays[8] = (void *) d2W_drth;
+  output_arrays[4] = (void *) Wbar;
+  output_arrays[5] = (void *) dWbar_dr;
+  output_arrays[6] = (void *) dWbar_dth;
+  output_arrays[7] = (void *) d2Wbar_dth2;
+  output_arrays[8] = (void *) d2Wbar_drth;
 
 
   /* handle and settings for the interpolation routine */
@@ -395,8 +395,8 @@ void UAv_IDBHScalarHair(CCTK_ARGUMENTS)
 
   free(X_g); free(theta_g);
   free(Xtmp); free(thtmp);
-  free(F1_in); free(F2_in); free(F0_in); free(phi0_in); free(W_in);
-  free(dW_dr_in); free(dW_dth_in); free(d2W_dth2_in); free(d2W_drth_in);
+  free(F1_in); free(F2_in); free(F0_in); free(phi0_in); free(Wbar_in);
+  free(dWbar_dr_in); free(dWbar_dth_in); free(d2Wbar_dth2_in); free(d2Wbar_drth_in);
 
 
   /* printf("F1 = %g\n", F1[0]); */
@@ -426,6 +426,11 @@ void UAv_IDBHScalarHair(CCTK_ARGUMENTS)
            z0 (for instance) */
 
         const CCTK_REAL RR  = sqrt(RR2);
+
+        // from (quasi-)isotropic coordinate R to the metric coordinate r
+        const CCTK_REAL rr = RR * (1. + 0.25 * rH / RR) * (1. + 0.25 * rH / RR);
+        const CCTK_REAL rr2 = rr*rr;
+        const CCTK_REAL rr3 = rr*rr2;
 
         const CCTK_REAL rho2 = x1*x1 + y1*y1;
         const CCTK_REAL rho  = sqrt(rho2);
@@ -472,6 +477,14 @@ void UAv_IDBHScalarHair(CCTK_ARGUMENTS)
 
         const CCTK_REAL h_rho2 = exp(2. * (F2[ind] - F1[ind])) - 1.;
 
+        // from Wbar to W function
+        const CCTK_REAL W        = Wbar[ind] / rr2;
+        const CCTK_REAL dW_dth   = dWbar_dth[ind] / rr2;
+        const CCTK_REAL d2W_dth2 = d2Wbar_dth2[ind] / rr2;
+        const CCTK_REAL dW_dr    = dWbar_dr[ind] / rr2 - 2 * Wbar[ind] / rr3;
+        const CCTK_REAL d2W_drth = d2Wbar_drth[ind] / rr2 - 2 * dWbar_dth[ind] / rr3;
+
+
         // 3-metric
         gxx[ind] = psi4 * (1. + h_rho2 * sinph * sinph);
         gxy[ind] = -psi4 * h_rho2 * sinph * cosph;
@@ -486,7 +499,7 @@ void UAv_IDBHScalarHair(CCTK_ARGUMENTS)
         */
 
         // KRph/(R sin(th)^2)
-        const CCTK_REAL KRph_o_Rsinth2 = -0.5 * exp(2. * F2[ind] - F0[ind]) * aux6 * RR * dW_dr[ind];
+        const CCTK_REAL KRph_o_Rsinth2 = -0.5 * exp(2. * F2[ind] - F0[ind]) * aux6 * RR * dW_dr;
 
         const CCTK_REAL den = RR - 0.25 * rH;
 
@@ -495,12 +508,12 @@ void UAv_IDBHScalarHair(CCTK_ARGUMENTS)
 
         // if at the rho = 0 axis we need to regularize the division by sin(th)
         if (rho < sqrt(dxsq + dysq) * 0.25)
-          dWdth_o_sinth_den = d2W_dth2[ind] / den;
+          dWdth_o_sinth_den = d2W_dth2 / den;
         // if at R ~ rH/4 we need to regularize the division by R - rH/4
         else if ( fabs(den) < sqrt(dxsq + dysq + dzsq) * 0.125 )
-          dWdth_o_sinth_den = (1. - 0.25*0.25 * rH*rH / RR2) * d2W_drth[ind] / sinth;
+          dWdth_o_sinth_den = (1. - 0.25*0.25 * rH*rH / RR2) * d2W_drth / sinth;
         else
-          dWdth_o_sinth_den = dW_dth[ind] / (den * sinth);
+          dWdth_o_sinth_den = dW_dth / (den * sinth);
 
         // Kthph/(R sin(th))^3
         const CCTK_REAL Kthph_o_R3sinth3 = -0.5 * exp(2. * F2[ind] - F0[ind]) * aux5 * dWdth_o_sinth_den;
@@ -530,13 +543,13 @@ void UAv_IDBHScalarHair(CCTK_ARGUMENTS)
         // if at R ~ rH/4 we need to regularize the division by R - rH/4
         if ( fabs(den) < sqrt(dxsq + dysq + dzsq) * 0.125 ) {
           const CCTK_REAL drdR = (1. - 0.25*0.25 * rH*rH / RR2);
-          const CCTK_REAL reg  = exp(-F0[ind]) * (RR + 0.25*rH) * drdR * dW_dr[ind];
+          const CCTK_REAL reg  = exp(-F0[ind]) * (RR + 0.25*rH) * drdR * dW_dr;
 
           Kphi1[ind] =  0.5 * mm * reg * phi2[ind];
           Kphi2[ind] = -0.5 * mm * reg * phi1[ind];
         } else {
-          Kphi1[ind] = 0.5 * mm * (W[ind] - OmegaH) / alph * phi2[ind];
-          Kphi2[ind] = 0.5 * mm * (OmegaH - W[ind]) / alph * phi1[ind];
+          Kphi1[ind] = 0.5 * mm * (W - OmegaH) / alph * phi2[ind];
+          Kphi2[ind] = 0.5 * mm * (OmegaH - W) / alph * phi1[ind];
         }
 
         // lapse
@@ -550,8 +563,8 @@ void UAv_IDBHScalarHair(CCTK_ARGUMENTS)
 
         // shift
         if (CCTK_EQUALS(initial_shift, "HairyBH")) {
-          betax[ind] =  W[ind] * y1;
-          betay[ind] = -W[ind] * x1;
+          betax[ind] =  W * y1;
+          betay[ind] = -W * x1;
           betaz[ind] =  0.;
         }
 
@@ -559,8 +572,8 @@ void UAv_IDBHScalarHair(CCTK_ARGUMENTS)
     }   /* for j */
   }     /* for k */
 
-  free(F1); free(F2); free(F0); free(phi0); free(W);
-  free(dW_dr); free(dW_dth); free(d2W_dth2); free(d2W_drth);
+  free(F1); free(F2); free(F0); free(phi0); free(Wbar);
+  free(dWbar_dr); free(dWbar_dth); free(d2Wbar_dth2); free(d2Wbar_drth);
 
   return;
 }
