@@ -93,8 +93,43 @@ void UAv_IDBHScalarHair(CCTK_ARGUMENTS)
   const CCTK_REAL oodXdth4   = 1. / (4.  * dX * dtheta);
   const CCTK_REAL oodXdth144 = 1. / (144. * dX * dtheta);
 
-  for (int j = 0; j < Ntheta; j++) {
+  for (int jj = 0; jj < Ntheta; jj++) {
     for (int i = 0; i < NX; i++) {
+
+      CCTK_INT j, jm1, jm2, jp1, jp2;
+      /* let's use the fact that the solution is axi-symmetric (and that
+         theta[0] = 0) for the boundary points in j */
+      if (jj == 0) {
+        j   = jj;
+        jp1 = jj+1;
+        jp2 = jj+2;
+        jm1 = jj+1;
+        jm2 = jj+2;
+      } else if (jj == 1) {
+        j   = jj;
+        jp1 = jj+1;
+        jp2 = jj+2;
+        jm1 = jj-1;
+        jm2 = jj+1;
+      } else if (jj == Ntheta - 2) {
+        j   = jj;
+        jm1 = jj-1;
+        jm2 = jj-2;
+        jp1 = jj+1;
+        jp2 = jj-1;
+      } else if (jj == Ntheta - 1) {
+        j   = jj;
+        jm1 = jj-1;
+        jm2 = jj-2;
+        jp1 = jj-1;
+        jp2 = jj-2;
+      } else {
+        j   = jj;
+        jp1 = jj+1;
+        jp2 = jj+2;
+        jm1 = jj-1;
+        jm2 = jj-2;
+      }
 
       const CCTK_INT ind    = i + j*NX;
 
@@ -104,62 +139,31 @@ void UAv_IDBHScalarHair(CCTK_ARGUMENTS)
       const CCTK_INT indip2 = i+2 + j*NX;
       const CCTK_INT indip3 = i+3 + j*NX;
 
-      CCTK_INT indim2jm1 = i-2 + (j-1)*NX;
-      CCTK_INT indim2jm2 = i-2 + (j-2)*NX;
-      CCTK_INT indim2jp1 = i-2 + (j+1)*NX;
-      CCTK_INT indim2jp2 = i-2 + (j+2)*NX;
+      const CCTK_INT indim2jm1 = i-2 + jm1*NX;
+      const CCTK_INT indim2jm2 = i-2 + jm2*NX;
+      const CCTK_INT indim2jp1 = i-2 + jp1*NX;
+      const CCTK_INT indim2jp2 = i-2 + jp2*NX;
 
-      CCTK_INT indim1jm1 = i-1 + (j-1)*NX;
-      CCTK_INT indim1jm2 = i-1 + (j-2)*NX;
-      CCTK_INT indim1jp1 = i-1 + (j+1)*NX;
-      CCTK_INT indim1jp2 = i-1 + (j+2)*NX;
+      const CCTK_INT indim1jm1 = i-1 + jm1*NX;
+      const CCTK_INT indim1jm2 = i-1 + jm2*NX;
+      const CCTK_INT indim1jp1 = i-1 + jp1*NX;
+      const CCTK_INT indim1jp2 = i-1 + jp2*NX;
 
-      CCTK_INT indjm1 = i + (j-1)*NX;
-      CCTK_INT indjm2 = i + (j-2)*NX;
-      CCTK_INT indjp1 = i + (j+1)*NX;
-      CCTK_INT indjp2 = i + (j+2)*NX;
+      const CCTK_INT indjm1 = i + jm1*NX;
+      const CCTK_INT indjm2 = i + jm2*NX;
+      const CCTK_INT indjp1 = i + jp1*NX;
+      const CCTK_INT indjp2 = i + jp2*NX;
 
-      CCTK_INT indip1jm1 = i+1 + (j-1)*NX;
-      CCTK_INT indip1jm2 = i+1 + (j-2)*NX;
-      CCTK_INT indip1jp1 = i+1 + (j+1)*NX;
-      CCTK_INT indip1jp2 = i+1 + (j+2)*NX;
+      const CCTK_INT indip1jm1 = i+1 + jm1*NX;
+      const CCTK_INT indip1jm2 = i+1 + jm2*NX;
+      const CCTK_INT indip1jp1 = i+1 + jp1*NX;
+      const CCTK_INT indip1jp2 = i+1 + jp2*NX;
 
-      CCTK_INT indip2jm1 = i+2 + (j-1)*NX;
-      CCTK_INT indip2jm2 = i+2 + (j-2)*NX;
-      CCTK_INT indip2jp1 = i+2 + (j+1)*NX;
-      CCTK_INT indip2jp2 = i+2 + (j+2)*NX;
+      const CCTK_INT indip2jm1 = i+2 + jm1*NX;
+      const CCTK_INT indip2jm2 = i+2 + jm2*NX;
+      const CCTK_INT indip2jp1 = i+2 + jp1*NX;
+      const CCTK_INT indip2jp2 = i+2 + jp2*NX;
 
-      /* let's use the fact that the solution is axi-symmetric (and that
-         theta[0] = 0) for the boundary points in j */
-      if (j == 0) {
-        indjm1    = i   + (j+1)*NX;
-        indjm2    = i   + (j+2)*NX;
-        indim1jm1 = i-1 + (j+1)*NX;
-        indim2jm2 = i-2 + (j+2)*NX;
-        indip1jm1 = i+1 + (j+1)*NX;
-        indip2jm2 = i+2 + (j+2)*NX;
-      } else if (j == 1) {
-        indjm1    = i   + (j-1)*NX;
-        indjm2    = i   + (j+1)*NX;
-        indim1jm1 = i-1 + (j-1)*NX;
-        indim2jm2 = i-2 + (j+1)*NX;
-        indip1jm1 = i+1 + (j-1)*NX;
-        indip2jm2 = i+2 + (j+1)*NX;
-      } else if (j == Ntheta - 2) {
-        indjp1    = i   + (j+1)*NX;
-        indjp2    = i   + (j-1)*NX;
-        indim1jp1 = i-1 + (j+1)*NX;
-        indim2jp2 = i-2 + (j-1)*NX;
-        indip1jp1 = i+1 + (j+1)*NX;
-        indip2jp2 = i+2 + (j-1)*NX;
-      } else if (j == Ntheta - 1) {
-        indjp1    = i   + (j-1)*NX;
-        indjp2    = i   + (j-2)*NX;
-        indim1jp1 = i-1 + (j-1)*NX;
-        indim2jp2 = i-2 + (j-2)*NX;
-        indip1jp1 = i+1 + (j-1)*NX;
-        indip2jp2 = i+2 + (j-2)*NX;
-      }
 
       const CCTK_REAL lX = X[i];
       /* const CCTK_REAL lth = theta[j]; */
