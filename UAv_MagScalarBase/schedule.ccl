@@ -2,7 +2,7 @@
 
 STORAGE: Ei[3] Ai[3] Aphi[3] Zeta[3]
 
-schedule MagScalarBase_symmetries at BASEGRID
+schedule MagScalar_symmetries at BASEGRID
 {
   LANG: Fortran
   OPTIONS: Global
