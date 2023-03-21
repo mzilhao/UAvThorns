@@ -488,14 +488,21 @@ void UAv_IDBHScalarHair(CCTK_ARGUMENTS)
         const CCTK_REAL dW_dr    = dWbar_dr[ind] / rr2 - 2 * Wbar[ind] / rr3;
         const CCTK_REAL d2W_drth = d2Wbar_drth[ind] / rr2 - 2 * dWbar_dth[ind] / rr3;
 
+        // add non-axisymmetric perturbation
+        const CCTK_REAL RR0pert2 = (RR - R0pert)*(RR - R0pert);
+        // horizon location
+        const CCTK_REAL RH = rH * 0.25;
+        const CCTK_REAL pert = 1. + pert_A * (x1*x1 - y1*y1)/(mu*mu) * exp( -0.5*RR0pert2/(RH*RH) );
+
+        const CCTK_REAL conf_fac = psi4 * pert;
 
         // 3-metric
-        gxx[ind] = psi4 * (1. + h_rho2 * sinph * sinph);
-        gxy[ind] = -psi4 * h_rho2 * sinph * cosph;
+        gxx[ind] = conf_fac * (1. + h_rho2 * sinph * sinph);
+        gxy[ind] = -conf_fac * h_rho2 * sinph * cosph;
         gxz[ind] = 0;
-        gyy[ind] = psi4 * (1. + h_rho2 * cosph * cosph);
+        gyy[ind] = conf_fac * (1. + h_rho2 * cosph * cosph);
         gyz[ind] = 0;
-        gzz[ind] = psi4;
+        gzz[ind] = conf_fac;
 
         /*
           KRph/(R sin(th)^2)  = - 1/2 exp(2F2-F0) (1 + rH/(4R))^6 R dW/dr
@@ -531,10 +538,8 @@ void UAv_IDBHScalarHair(CCTK_ARGUMENTS)
         kzz[ind] = 0.;
 
 
-        // add perturbation to scalar field
-        CCTK_REAL phi0_l = phi0[ind];
-        phi0_l *= 1. + pert_A * exp( -0.5*RR2/(pert_Rmax*pert_Rmax) )
-                              * sin(2.*M_PI * RR / pert_lambda);
+        // let's add the perturbation to the scalar field as well
+        const CCTK_REAL phi0_l = phi0[ind] * pert;
 
         const CCTK_REAL omega = mm * OmegaH;
 

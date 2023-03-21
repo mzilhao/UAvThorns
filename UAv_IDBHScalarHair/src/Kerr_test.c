@@ -217,11 +217,7 @@ void UAv_Kerr_test(CCTK_ARGUMENTS)
           betaz[ind] =  0.;
         }
 
-        // add perturbation
-        CCTK_REAL phi0_l = phi0[ind];
-        phi0_l *= 1. + pert_A * exp( -0.5*RR2/(pert_Rmax*pert_Rmax) )
-                              * sin(2.*M_PI * RR / pert_lambda);
-
+        const CCTK_REAL phi0_l = phi0[ind];
         const CCTK_REAL omega = mm * OmegaH;
 
         // scalar fields

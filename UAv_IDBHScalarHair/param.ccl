@@ -79,20 +79,17 @@ REAL z0 "z coordinate of central point"
   *:* :: "any real number"
 } 0.0
 
+
 REAL pert_A "maximum amplitude for perturbation"
 {
   0:* :: "non-negative"
 } 0.0
 
-REAL pert_Rmax "maximum radius for perturbation"
+REAL R0pert "center of perturbation"
 {
-  0:* :: "positive"
-} 4.0
+  0:* :: "non-negative"
+} 0.0
 
-REAL pert_lambda "perturbation wavelength"
-{
-  0:* :: "positive"
-} 1.0
 
 REAL initial_lapse_psi_exponent "Exponent n for psi^n initial lapse profile"
 {
