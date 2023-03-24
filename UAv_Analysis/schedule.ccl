@@ -4,11 +4,19 @@ storage: dE_gf_volume[3]
 storage: quadrupole_gf_volume[3]
 storage: total_energy[1]
 storage: quadrupole[1]
+storage: densities[3]
 
 schedule UAv_Analysis_RegisterMask at STARTUP
 {
   LANG: C
 } "Register the masks for excision"
+
+
+schedule UAv_Analysis_Symmetries at BASEGRID
+{
+  LANG: Fortran
+  OPTIONS: Global
+} "Register symmetries of the density functions"
 
 
 schedule GROUP UAv_Analysis_Group at CCTK_POSTSTEP after AHFinderDirect_maybe_do_masks
@@ -22,7 +30,21 @@ schedule UAv_Analysis_gfs in UAv_Analysis_Group
   OPTIONS: global loop-local
   SYNC: dE_gf_volume
   SYNC: quadrupole_gf_volume
+  SYNC: densities
 } "Calculate grid functions"
+
+
+schedule UAv_Analysis_Boundaries after UAv_Analysis_gfs in UAv_Analysis_Group
+{
+  LANG: Fortran
+  OPTIONS: LEVEL
+  SYNC: densities
+} "Enforce symmetry BCs in Analysis"
+
+schedule GROUP ApplyBCs as UAv_Analysis_ApplyBCs after UAv_Analysis_Boundaries in UAv_Analysis_Group
+{
+} "Apply boundary conditions"
+
 
 schedule UAv_Analysis_IntegrateVol at CCTK_ANALYSIS
 {

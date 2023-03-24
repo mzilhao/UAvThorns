@@ -126,7 +126,7 @@ subroutine UAv_Analysis_gfs( CCTK_ARGUMENTS )
     end do
     rho = rho / ( alph * alph )
 
-    rho_gf(i,j,k) = rho
+    density_rho(i,j,k) = rho
 
 
     aux = 0
@@ -282,7 +282,7 @@ subroutine UAv_Analysis_IntegrateVol( CCTK_ARGUMENTS )
 
   ! write(*,*) 'total_energy = ', total_energy
 
-  ! note that the integrated value just obtained does *not* take into account
+  ! note that the integrated values just obtained do *not* take into account
   ! any grid symmetries that may be present. so one needs to remember to
   ! multiply by the appropriate factor (ie, 8 in the case of using just an
   ! octant, etc) a posteriori.

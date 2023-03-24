@@ -5,6 +5,17 @@ inherits: ADMBase TmunuBase SphericalSurface SpaceMask
 
 USES INCLUDE: SpaceMask.h
 
+CCTK_INT FUNCTION                        \
+    Boundary_SelectGroupForBC            \
+        (CCTK_POINTER_TO_CONST IN GH,    \
+         CCTK_INT IN faces,              \
+         CCTK_INT IN boundary_width,     \
+         CCTK_INT IN table_handle,       \
+         CCTK_STRING IN group_name,      \
+         CCTK_STRING IN bc_name)
+USES FUNCTION Boundary_SelectGroupForBC
+
+
 private:
 
 CCTK_REAL total_energy type=scalar timelevels=1 tags='checkpoint="no"'
@@ -28,8 +39,7 @@ CCTK_REAL quadrupole_gf_volume type=gf timelevels=3 tags='Prolongation="none" te
   dIzz_gf_volume
 } "quadrupole moments I_ij gridfunctions for volume integration"
 
-# TODO: prolongation and BCs
-CCTK_REAL densities type=gf timelevels=3 tags='tensortypealias="Scalar" tensorweight=0 prolongation="none" Checkpoint="no"'
+CCTK_REAL densities type=gf timelevels=3 tags='tensortypealias="Scalar" tensorweight=0 Checkpoint="no"'
 {
-  rho_gf
+  density_rho
 } "energy-momentum densities"

@@ -1,7 +1,10 @@
 # Main make.code.defn file for thorn UAv_Analysis
 
 # Source files in this directory
-SRCS = UAv_AH_mask.c  UAv_Analysis.F90
+SRCS = UAv_AH_mask.c      \
+       UAv_Analysis.F90   \
+       UAv_Boundaries.F90 \
+       UAv_Symmetries.F90
 
 # Subdirectories containing source files
 SUBDIRS =
