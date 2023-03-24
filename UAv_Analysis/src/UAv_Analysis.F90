@@ -15,7 +15,7 @@ subroutine UAv_Analysis_gfs( CCTK_ARGUMENTS )
   CCTK_REAL alph, beta(3), Tab(4,4)
   CCTK_REAL gd(3,3), gu(3,3), detgd
 
-  CCTK_REAL aux, S
+  CCTK_REAL aux, S, rho
 
   CCTK_INT  i, j, k, m, n
 
@@ -41,7 +41,7 @@ subroutine UAv_Analysis_gfs( CCTK_ARGUMENTS )
   end if
 
 
-  dE = 0
+  dE_gf_volume = 0
 
   do k = 1+cctk_nghostzones(3), cctk_lsh(3)-cctk_nghostzones(3)
   do j = 1+cctk_nghostzones(2), cctk_lsh(2)-cctk_nghostzones(2)
@@ -104,6 +104,19 @@ subroutine UAv_Analysis_gfs( CCTK_ARGUMENTS )
     gu(3,2) = gu(2,3)
     !--------------------------------------------
 
+    ! Eulerian energy density
+    rho = Tab(4,4)
+    do m = 1, 3
+       rho = rho - 2 * beta(m) * Tab(m,4)
+       do n = 1, 3
+          rho = rho + beta(m) * beta(n) * Tab(m,n)
+       end do
+    end do
+    rho = rho / ( alph * alph )
+
+    rho_gf(i,j,k) = rho
+
+
     aux = 0
     do m = 1, 3
       do n = 1, 3
@@ -124,9 +137,9 @@ subroutine UAv_Analysis_gfs( CCTK_ARGUMENTS )
     if (SpaceMask_CheckStateBitsF90(space_mask, i, j, k, type_bits, state_outside) .or. &
          excise_horizon == 0) then
 
-       ! dE = (alpha h^ij T_ij + T_tt / alpha - beta^i beta^j T_ij / alpha) sqrt(detgd)
+       ! dE_gf_volume = (alpha h^ij T_ij + T_tt / alpha - beta^i beta^j T_ij / alpha) sqrt(detgd)
 
-       dE(i,j,k) = (alph * S + aux) * sqrt(detgd)
+       dE_gf_volume(i,j,k) = (alph * S + aux) * sqrt(detgd)
 
     end if
 
@@ -148,20 +161,24 @@ subroutine UAv_Analysis_IntegrateVol( CCTK_ARGUMENTS )
   CCTK_REAL E_int
 
   call CCTK_ReductionHandle(reduction_handle, 'sum')
-  if( reduction_handle < 0 ) then
+  if (reduction_handle < 0) then
      call CCTK_WARN(0, 'Could not obtain a handle for sum reduction')
   end if
 
 
   ! get index to the integration array
-  call CCTK_VarIndex(varid, 'KillingQuantities::dE')
-  if( varid < 0 ) then
-     call CCTK_WARN(0, 'Could not get index to grid array dE')
+  call CCTK_VarIndex(varid, 'UAv_Analysis::dE_gf_volume')
+  if (varid < 0) then
+     call CCTK_WARN(0, 'Could not get index to grid array dE_gf_volume')
   end if
 
   ! do a sum over all processors
   call CCTK_Reduce(ierr, cctkGH, -1, reduction_handle, 1, CCTK_VARIABLE_REAL, &
        E_int, 1, varid)
+  if (ierr < 0) then
+     call CCTK_WARN(0, 'Error while reducing dE_gf_volume')
+  end if
+
 
   ! the multiplication with the volume element needs to be done here
   total_energy = E_int * cctk_delta_space(1) * cctk_delta_space(2) * cctk_delta_space(3)

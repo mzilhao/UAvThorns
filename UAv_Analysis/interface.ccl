@@ -5,8 +5,14 @@ inherits: ADMBase TmunuBase SphericalSurface SpaceMask
 
 USES INCLUDE: SpaceMask.h
 
-public:
+private:
 
-CCTK_REAL dE type = gf timelevels = 3 tags='Prolongation="none" tensortypealias="Scalar" checkpoint="no"'
+CCTK_REAL total_energy type=scalar timelevels=1 tags='checkpoint="no"'
 
-CCTK_REAL total_energy type = scalar timelevels = 1 tags='checkpoint="no"'
+CCTK_REAL dE_gf_volume type=gf timelevels=3 tags='Prolongation="none" tensortypealias="Scalar" checkpoint="no"' "energy density gridfunction for volume integration"
+
+# TODO: prolongation and BCs
+CCTK_REAL densities type=gf timelevels=3 tags='tensortypealias="Scalar" tensorweight=0 prolongation="none" Checkpoint="no"'
+{
+  rho_gf
+} "energy-momentum densities"

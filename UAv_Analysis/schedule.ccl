@@ -1,6 +1,6 @@
 # Schedule definitions for thorn UAv_Analysis
 
-storage: dE[3]
+storage: dE_gf_volume[3]
 storage: total_energy[1]
 
 schedule UAv_Analysis_RegisterMask at STARTUP
@@ -18,7 +18,7 @@ schedule UAv_Analysis_gfs in UAv_Analysis_Group
 {
   LANG: Fortran
   OPTIONS: global loop-local
-  SYNC: dE
+  SYNC: dE_gf_volume
 } "Calculate grid functions"
 
 schedule UAv_Analysis_IntegrateVol at CCTK_ANALYSIS
