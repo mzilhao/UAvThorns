@@ -50,6 +50,7 @@ subroutine UAv_Analysis_gfs( CCTK_ARGUMENTS )
   dIyy_gf_volume = 0
   dIyz_gf_volume = 0
   dIzz_gf_volume = 0
+  density_rho    = 0
 
   do k = 1+cctk_nghostzones(3), cctk_lsh(3)-cctk_nghostzones(3)
   do j = 1+cctk_nghostzones(2), cctk_lsh(2)-cctk_nghostzones(2)
