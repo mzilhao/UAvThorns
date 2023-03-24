@@ -11,6 +11,23 @@ CCTK_REAL total_energy type=scalar timelevels=1 tags='checkpoint="no"'
 
 CCTK_REAL dE_gf_volume type=gf timelevels=3 tags='Prolongation="none" tensortypealias="Scalar" checkpoint="no"' "energy density gridfunction for volume integration"
 
+CCTK_REAL quadrupole type=scalar timelevels=1 tags='checkpoint="no"'
+{
+  Ixx, Ixy, Ixz
+  Iyy, Iyz
+  Izz
+} "quadrupole moments I_ij of matter density distribution"
+
+CCTK_REAL quadrupole_gf_volume type=gf timelevels=3 tags='Prolongation="none" tensortypealias="DD_sym" checkpoint="no"'
+{
+  dIxx_gf_volume
+  dIxy_gf_volume
+  dIxz_gf_volume
+  dIyy_gf_volume
+  dIyz_gf_volume
+  dIzz_gf_volume
+} "quadrupole moments I_ij gridfunctions for volume integration"
+
 # TODO: prolongation and BCs
 CCTK_REAL densities type=gf timelevels=3 tags='tensortypealias="Scalar" tensorweight=0 prolongation="none" Checkpoint="no"'
 {

@@ -17,6 +17,8 @@ subroutine UAv_Analysis_gfs( CCTK_ARGUMENTS )
 
   CCTK_REAL aux, S, rho
 
+  CCTK_REAL x1, y1, z1
+
   CCTK_INT  i, j, k, m, n
 
   CCTK_INT type_bits, state_outside
@@ -41,7 +43,13 @@ subroutine UAv_Analysis_gfs( CCTK_ARGUMENTS )
   end if
 
 
-  dE_gf_volume = 0
+  dE_gf_volume   = 0
+  dIxx_gf_volume = 0
+  dIxy_gf_volume = 0
+  dIxz_gf_volume = 0
+  dIyy_gf_volume = 0
+  dIyz_gf_volume = 0
+  dIzz_gf_volume = 0
 
   do k = 1+cctk_nghostzones(3), cctk_lsh(3)-cctk_nghostzones(3)
   do j = 1+cctk_nghostzones(2), cctk_lsh(2)-cctk_nghostzones(2)
@@ -63,6 +71,10 @@ subroutine UAv_Analysis_gfs( CCTK_ARGUMENTS )
     beta(1) = betax(i,j,k)
     beta(2) = betay(i,j,k)
     beta(3) = betaz(i,j,k)
+
+    x1      = x(i,j,k)
+    y1      = y(i,j,k)
+    z1      = z(i,j,k)
 
     ! stress-energy tensor variables
     Tab = 0
@@ -139,7 +151,15 @@ subroutine UAv_Analysis_gfs( CCTK_ARGUMENTS )
 
        ! dE_gf_volume = (alpha h^ij T_ij + T_tt / alpha - beta^i beta^j T_ij / alpha) sqrt(detgd)
 
-       dE_gf_volume(i,j,k) = (alph * S + aux) * sqrt(detgd)
+       dE_gf_volume(i,j,k)   = (alph * S + aux) * sqrt(detgd)
+
+       ! dI_ij = rho * x^i x^j * alpha * sqrt(detgd)
+       dIxx_gf_volume(i,j,k) = alph * rho * x1 * x1 * sqrt(detgd)
+       dIxy_gf_volume(i,j,k) = alph * rho * x1 * y1 * sqrt(detgd)
+       dIxz_gf_volume(i,j,k) = alph * rho * x1 * z1 * sqrt(detgd)
+       dIyy_gf_volume(i,j,k) = alph * rho * y1 * y1 * sqrt(detgd)
+       dIyz_gf_volume(i,j,k) = alph * rho * y1 * z1 * sqrt(detgd)
+       dIzz_gf_volume(i,j,k) = alph * rho * z1 * z1 * sqrt(detgd)
 
     end if
 
@@ -159,12 +179,14 @@ subroutine UAv_Analysis_IntegrateVol( CCTK_ARGUMENTS )
   CCTK_INT reduction_handle, varid
 
   CCTK_REAL E_int
+  CCTK_REAL Ixx_int, Ixy_int, Ixz_int, Iyy_int, Iyz_int, Izz_int
 
   call CCTK_ReductionHandle(reduction_handle, 'sum')
   if (reduction_handle < 0) then
      call CCTK_WARN(0, 'Could not obtain a handle for sum reduction')
   end if
 
+  ! energy
 
   ! get index to the integration array
   call CCTK_VarIndex(varid, 'UAv_Analysis::dE_gf_volume')
@@ -179,9 +201,84 @@ subroutine UAv_Analysis_IntegrateVol( CCTK_ARGUMENTS )
      call CCTK_WARN(0, 'Error while reducing dE_gf_volume')
   end if
 
+  ! TODO: is there a way of doing all components at once?
+
+  ! Ixx
+  call CCTK_VarIndex(varid, 'UAv_Analysis::dIxx_gf_volume')
+  if (varid < 0) then
+     call CCTK_WARN(0, 'Could not get index to grid array dIxx_gf_volume')
+  end if
+  call CCTK_Reduce(ierr, cctkGH, -1, reduction_handle, 1, CCTK_VARIABLE_REAL, &
+       Ixx_int, 1, varid)
+  if (ierr < 0) then
+     call CCTK_WARN(0, 'Error while reducing dIxx_gf_volume')
+  end if
+
+  ! Ixy
+  call CCTK_VarIndex(varid, 'UAv_Analysis::dIxy_gf_volume')
+  if (varid < 0) then
+     call CCTK_WARN(0, 'Could not get index to grid array dIxy_gf_volume')
+  end if
+  call CCTK_Reduce(ierr, cctkGH, -1, reduction_handle, 1, CCTK_VARIABLE_REAL, &
+       Ixy_int, 1, varid)
+  if (ierr < 0) then
+     call CCTK_WARN(0, 'Error while reducing dIxy_gf_volume')
+  end if
+
+  ! Ixz
+  call CCTK_VarIndex(varid, 'UAv_Analysis::dIxz_gf_volume')
+  if (varid < 0) then
+     call CCTK_WARN(0, 'Could not get index to grid array dIxz_gf_volume')
+  end if
+  call CCTK_Reduce(ierr, cctkGH, -1, reduction_handle, 1, CCTK_VARIABLE_REAL, &
+       Ixz_int, 1, varid)
+  if (ierr < 0) then
+     call CCTK_WARN(0, 'Error while reducing dIxz_gf_volume')
+  end if
+
+  ! Iyy
+  call CCTK_VarIndex(varid, 'UAv_Analysis::dIyy_gf_volume')
+  if (varid < 0) then
+     call CCTK_WARN(0, 'Could not get index to grid array dIyy_gf_volume')
+  end if
+  call CCTK_Reduce(ierr, cctkGH, -1, reduction_handle, 1, CCTK_VARIABLE_REAL, &
+       Iyy_int, 1, varid)
+  if (ierr < 0) then
+     call CCTK_WARN(0, 'Error while reducing dIyy_gf_volume')
+  end if
+
+  ! Iyz
+  call CCTK_VarIndex(varid, 'UAv_Analysis::dIyz_gf_volume')
+  if (varid < 0) then
+     call CCTK_WARN(0, 'Could not get index to grid array dIyz_gf_volume')
+  end if
+  call CCTK_Reduce(ierr, cctkGH, -1, reduction_handle, 1, CCTK_VARIABLE_REAL, &
+       Iyz_int, 1, varid)
+  if (ierr < 0) then
+     call CCTK_WARN(0, 'Error while reducing dIyz_gf_volume')
+  end if
+
+  ! Izz
+  call CCTK_VarIndex(varid, 'UAv_Analysis::dIzz_gf_volume')
+  if (varid < 0) then
+     call CCTK_WARN(0, 'Could not get index to grid array dIzz_gf_volume')
+  end if
+  call CCTK_Reduce(ierr, cctkGH, -1, reduction_handle, 1, CCTK_VARIABLE_REAL, &
+       Izz_int, 1, varid)
+  if (ierr < 0) then
+     call CCTK_WARN(0, 'Error while reducing dIzz_gf_volume')
+  end if
+
 
   ! the multiplication with the volume element needs to be done here
   total_energy = E_int * cctk_delta_space(1) * cctk_delta_space(2) * cctk_delta_space(3)
+
+  Ixx = Ixx_int * cctk_delta_space(1) * cctk_delta_space(2) * cctk_delta_space(3)
+  Ixy = Ixy_int * cctk_delta_space(1) * cctk_delta_space(2) * cctk_delta_space(3)
+  Ixz = Ixz_int * cctk_delta_space(1) * cctk_delta_space(2) * cctk_delta_space(3)
+  Iyy = Iyy_int * cctk_delta_space(1) * cctk_delta_space(2) * cctk_delta_space(3)
+  Iyz = Iyz_int * cctk_delta_space(1) * cctk_delta_space(2) * cctk_delta_space(3)
+  Izz = Izz_int * cctk_delta_space(1) * cctk_delta_space(2) * cctk_delta_space(3)
 
   ! write(*,*) 'total_energy = ', total_energy
 
