@@ -1,0 +1,28 @@
+# Schedule definitions for thorn UAv_Analysis
+
+storage: dE[3]
+storage: total_energy[1]
+
+schedule UAv_Analysis_RegisterMask at STARTUP
+{
+  LANG: C
+} "Register the masks for excision"
+
+
+schedule GROUP UAv_Analysis_Group at CCTK_POSTSTEP after AHFinderDirect_maybe_do_masks
+{
+} "Compute several diagnostic quantities"
+
+
+schedule UAv_Analysis_gfs in UAv_Analysis_Group
+{
+  LANG: Fortran
+  OPTIONS: global loop-local
+  SYNC: dE
+} "Calculate grid functions"
+
+schedule UAv_Analysis_IntegrateVol at CCTK_ANALYSIS
+{
+  LANG: Fortran
+  OPTIONS: global
+} "Compute volume integrals"
