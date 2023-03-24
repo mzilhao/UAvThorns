@@ -492,7 +492,7 @@ void UAv_IDBHScalarHair(CCTK_ARGUMENTS)
         const CCTK_REAL RR0pert2 = (RR - R0pert)*(RR - R0pert);
         // horizon location
         const CCTK_REAL RH = rH * 0.25;
-        const CCTK_REAL pert = 1. + pert_A * (x1*x1 - y1*y1)/(mu*mu) * exp( -0.5*RR0pert2/(RH*RH) );
+        const CCTK_REAL pert = 1. + Apert_BH * (x1*x1 - y1*y1)/(mu*mu) * exp( -0.5*RR0pert2/(RH*RH) );
 
         const CCTK_REAL conf_fac = psi4 * pert;
 
@@ -538,8 +538,10 @@ void UAv_IDBHScalarHair(CCTK_ARGUMENTS)
         kzz[ind] = 0.;
 
 
-        // let's add the perturbation to the scalar field as well
-        const CCTK_REAL phi0_l = phi0[ind] * pert;
+        // let's add a perturbation to the scalar field as well
+        const CCTK_REAL pert_phi = 1. + Apert_phi * (x1*x1 - y1*y1)/(Rphi_pert*Rphi_pert);
+
+        const CCTK_REAL phi0_l = phi0[ind] * pert_phi;
 
         const CCTK_REAL omega = mm * OmegaH;
 
