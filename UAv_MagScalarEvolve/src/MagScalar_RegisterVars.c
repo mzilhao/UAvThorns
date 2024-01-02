@@ -42,6 +42,16 @@ void MagScalar_RegisterVars(CCTK_ARGUMENTS)
   rhs   = CCTK_VarIndex("MagScalarEvolve::rhs_Zeta");
   ierr += MoLRegisterEvolved(var, rhs);
 
+  /* phi and rhs_phi */
+  group = CCTK_GroupIndex("MagScalarBase::phi");
+  rhs   = CCTK_GroupIndex("MagScalarEvolve::rhs_phi");
+  ierr += MoLRegisterEvolvedGroup(group, rhs);
+
+  /* Kphi and rhs_Kphi */
+  group = CCTK_GroupIndex("MagScalarBase::Kphi");
+  rhs   = CCTK_GroupIndex("MagScalarEvolve::rhs_Kphi");
+  ierr += MoLRegisterEvolvedGroup(group, rhs);
+
   if (ierr) CCTK_ERROR("Problems registering with MoL");
 
 }

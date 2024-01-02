@@ -2,7 +2,7 @@
 
 # Source files in this directory
 SRCS = MagScalar_RegisterVars.c     \
-       MagScalar_calc_rhs.F90  \
+       MagScalar_calc_rhs.F90       \
        MagScalar_Boundaries.F90     \
        MagScalar_calc_Tmunu.F90     \
        MagScalar_InitSymBound.F90   \

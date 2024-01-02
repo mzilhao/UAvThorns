@@ -15,27 +15,36 @@ subroutine MagScalar_calc_rhs( CCTK_ARGUMENTS )
   CCTK_REAL                alph, beta(3)
   CCTK_REAL                hh(3,3), hu(3,3), trk, dethh, ch
   CCTK_REAL                lE(3), lA(3), lAphi, lZeta
+  CCTK_REAL                lphi1, lphi2, lKphi1, lKphi2
 
   ! First derivatives
   CCTK_REAL                d1_alph(3), d1_beta(3,3)
   CCTK_REAL                d1_hh(3,3,3), d1_ch(3)
   CCTK_REAL                d1_lE(3,3), d1_lA(3,3), d1_lZeta(3), d1_lAphi(3)
+  CCTK_REAL                d1_lphi1(3), d1_lphi2(3), d1_lKphi1(3), d1_lKphi2(3)
 
   ! Second derivatives
   CCTK_REAL                d2_lA(3,3,3)
+  CCTK_REAL                d2_lphi1(3,3), d2_lphi2(3,3)
 
   ! Advection derivatives
   CCTK_REAL                ad1_lE(3), ad1_lA(3), ad1_lZeta, ad1_lAphi
+  CCTK_REAL                ad1_lphi1, ad1_lphi2, ad1_lKphi1, ad1_lKphi2
   CCTK_REAL                d1_f(3)   ! Place holder for the advection derivs
 
   ! Auxiliary variables
   CCTK_REAL                cf1(3,3,3), cf2(3,3,3)
+  CCTK_REAL                tr_dalp_dphi1, tr_cd2_phi1, tr_dch_dphi1
+  CCTK_REAL                tr_dalp_dphi2, tr_cd2_phi2, tr_dch_dphi2
 
   ! Covaraint derivatives
   CCTK_REAL                cd_lA(3,3), cd_dA(3,3,3)
+  CCTK_REAL                cd2_lphi1(3,3), cd2_lphi2(3,3)
 
   ! Right hand sides
   CCTK_REAL                rhs_lE(3), rhs_lA(3), rhs_lZeta, rhs_lAphi
+  CCTK_REAL                rhs_lphi1, rhs_lphi2 
+  CCTK_REAL                rhs_lKphi1, rhs_lKphi2
 
   ! Misc variables
   CCTK_REAL                dx12, dy12, dz12, dxsq12, dysq12, dzsq12,         &
@@ -81,6 +90,7 @@ subroutine MagScalar_calc_rhs( CCTK_ARGUMENTS )
   !$OMP PARALLEL DO COLLAPSE(3) &
   !$OMP PRIVATE(alph, beta, hh, hu, trk, dethh, ch,&
   !$OMP lE, lA, lAphi, lZeta,&
+  !$OMP lphi1, lphi2, lKphi1, lKphi2,&
   !$OMP d1_alph, d1_beta, d1_hh, d1_ch,&
   !$OMP d1_lE, d1_lA, d1_lZeta, d1_lAphi,&
   !$OMP d2_lA, ad1_lE, ad1_lA, ad1_lZeta, ad1_lAphi,&
@@ -124,6 +134,12 @@ subroutine MagScalar_calc_rhs( CCTK_ARGUMENTS )
 
     lZeta     = Zeta(i,j,k)
     lAphi     = Aphi(i,j,k)
+
+    lphi1   = phi1(i,j,k)
+    lphi2   = phi2(i,j,k)
+
+    lKphi1  = Kphi1(i,j,k)
+    lKphi2  = Kphi2(i,j,k)
     !-------------------------------------------
 
 
@@ -302,6 +318,46 @@ subroutine MagScalar_calc_rhs( CCTK_ARGUMENTS )
       d1_lAphi(3) = (   -Aphi(i,j,k+2) + 8*Aphi(i,j,k+1)                        &
                      - 8*Aphi(i,j,k-1) +   Aphi(i,j,k-2) ) / dz12
 
+      ! d1_lphi1(3)
+      d1_lphi1(1) = (   -phi1(i+2,j,k) + 8*phi1(i+1,j,k)                          &
+                    - 8*phi1(i-1,j,k) +   phi1(i-2,j,k) ) / dx12
+
+      d1_lphi1(2) = (   -phi1(i,j+2,k) + 8*phi1(i,j+1,k)                          &
+                    - 8*phi1(i,j-1,k) +   phi1(i,j-2,k) ) / dy12
+
+      d1_lphi1(3) = (   -phi1(i,j,k+2) + 8*phi1(i,j,k+1)                          &
+                    - 8*phi1(i,j,k-1) +   phi1(i,j,k-2) ) / dz12
+
+      ! d1_lphi2(3)
+      d1_lphi2(1) = (   -phi2(i+2,j,k) + 8*phi2(i+1,j,k)                          &
+                    - 8*phi2(i-1,j,k) +   phi2(i-2,j,k) ) / dx12
+
+      d1_lphi2(2) = (   -phi2(i,j+2,k) + 8*phi2(i,j+1,k)                          &
+                    - 8*phi2(i,j-1,k) +   phi2(i,j-2,k) ) / dy12
+
+      d1_lphi2(3) = (   -phi2(i,j,k+2) + 8*phi2(i,j,k+1)                          &
+                    - 8*phi2(i,j,k-1) +   phi2(i,j,k-2) ) / dz12
+
+      ! d1_lKphi1(3)
+      d1_lKphi1(1) = (   -Kphi1(i+2,j,k) + 8*Kphi1(i+1,j,k)                          &
+                      - 8*Kphi1(i-1,j,k) +   Kphi1(i-2,j,k) ) / dx12
+
+      d1_lKphi1(2) = (   -Kphi1(i,j+2,k) + 8*Kphi1(i,j+1,k)                          &
+                      - 8*Kphi1(i,j-1,k) +   Kphi1(i,j-2,k) ) / dy12
+
+      d1_lKphi1(3) = (   -Kphi1(i,j,k+2) + 8*Kphi1(i,j,k+1)                          &
+                      - 8*Kphi1(i,j,k-1) +   Kphi1(i,j,k-2) ) / dz12
+
+      ! d1_lKphi2(3)
+      d1_lKphi2(1) = (   -Kphi2(i+2,j,k) + 8*Kphi2(i+1,j,k)                          &
+                      - 8*Kphi2(i-1,j,k) +   Kphi2(i-2,j,k) ) / dx12
+
+      d1_lKphi2(2) = (   -Kphi2(i,j+2,k) + 8*Kphi2(i,j+1,k)                          &
+                      - 8*Kphi2(i,j-1,k) +   Kphi2(i,j-2,k) ) / dy12
+
+      d1_lKphi2(3) = (   -Kphi2(i,j,k+2) + 8*Kphi2(i,j,k+1)                          &
+                      - 8*Kphi2(i,j,k-1) +   Kphi2(i,j,k-2) ) / dz12
+
       !--------------------------------------------------
 
 
@@ -372,6 +428,63 @@ subroutine MagScalar_calc_rhs( CCTK_ARGUMENTS )
       d2_lA(:,3,1) = d2_lA(:,1,3)
       d2_lA(:,3,2) = d2_lA(:,2,3)
 
+      ! d2_lphi1(3,3)
+      d2_lphi1(1,1) = (   -phi1(i+2,j,k) + 16*phi1(i+1,j,k) - 30*phi1(i,j,k)     &
+                      + 16*phi1(i-1,j,k) -    phi1(i-2,j,k) ) / dxsq12
+
+      d2_lphi1(2,2) = (   -phi1(i,j+2,k) + 16*phi1(i,j+1,k) - 30*phi1(i,j,k)     &
+                      + 16*phi1(i,j-1,k) -    phi1(i,j-2,k) ) / dysq12
+
+      d2_lphi1(3,3) = (   -phi1(i,j,k+2) + 16*phi1(i,j,k+1) - 30*phi1(i,j,k)     &
+                      + 16*phi1(i,j,k-1) -    phi1(i,j,k-2) ) / dzsq12
+
+      d2_lphi1(1,2) = (   -phi1(i-2,j+2,k) +  8*phi1(i-1,j+2,k) -  8*phi1(i+1,j+2,k) +   phi1(i+2,j+2,k)   &
+                      + 8*phi1(i-2,j+1,k) - 64*phi1(i-1,j+1,k) + 64*phi1(i+1,j+1,k) - 8*phi1(i+2,j+1,k)   &
+                      - 8*phi1(i-2,j-1,k) + 64*phi1(i-1,j-1,k) - 64*phi1(i+1,j-1,k) + 8*phi1(i+2,j-1,k)   &
+                      +   phi1(i-2,j-2,k) -  8*phi1(i-1,j-2,k) +  8*phi1(i+1,j-2,k) -   phi1(i+2,j-2,k) ) / dxdy144
+
+      d2_lphi1(1,3) = (   -phi1(i-2,j,k+2) +  8*phi1(i-1,j,k+2) -  8*phi1(i+1,j,k+2) +   phi1(i+2,j,k+2)   &
+                      + 8*phi1(i-2,j,k+1) - 64*phi1(i-1,j,k+1) + 64*phi1(i+1,j,k+1) - 8*phi1(i+2,j,k+1)   &
+                      - 8*phi1(i-2,j,k-1) + 64*phi1(i-1,j,k-1) - 64*phi1(i+1,j,k-1) + 8*phi1(i+2,j,k-1)   &
+                      +   phi1(i-2,j,k-2) -  8*phi1(i-1,j,k-2) +  8*phi1(i+1,j,k-2) -   phi1(i+2,j,k-2) ) / dxdz144
+
+      d2_lphi1(2,3) = (   -phi1(i,j-2,k+2) +  8*phi1(i,j-1,k+2) -  8*phi1(i,j+1,k+2) +   phi1(i,j+2,k+2)   &
+                      + 8*phi1(i,j-2,k+1) - 64*phi1(i,j-1,k+1) + 64*phi1(i,j+1,k+1) - 8*phi1(i,j+2,k+1)   &
+                      - 8*phi1(i,j-2,k-1) + 64*phi1(i,j-1,k-1) - 64*phi1(i,j+1,k-1) + 8*phi1(i,j+2,k-1)   &
+                      +   phi1(i,j-2,k-2) -  8*phi1(i,j-1,k-2) +  8*phi1(i,j+1,k-2) -   phi1(i,j+2,k-2) ) / dydz144
+
+      d2_lphi1(2,1) = d2_lphi1(1,2)
+      d2_lphi1(3,1) = d2_lphi1(1,3)
+      d2_lphi1(3,2) = d2_lphi1(2,3)
+
+      ! d2_lphi2(3,3)
+      d2_lphi2(1,1) = (   -phi2(i+2,j,k) + 16*phi2(i+1,j,k) - 30*phi2(i,j,k)     &
+                      + 16*phi2(i-1,j,k) -    phi2(i-2,j,k) ) / dxsq12
+
+      d2_lphi2(2,2) = (   -phi2(i,j+2,k) + 16*phi2(i,j+1,k) - 30*phi2(i,j,k)     &
+                      + 16*phi2(i,j-1,k) -    phi2(i,j-2,k) ) / dysq12
+
+      d2_lphi2(3,3) = (   -phi2(i,j,k+2) + 16*phi2(i,j,k+1) - 30*phi2(i,j,k)     &
+                      + 16*phi2(i,j,k-1) -    phi2(i,j,k-2) ) / dzsq12
+
+      d2_lphi2(1,2) = (   -phi2(i-2,j+2,k) +  8*phi2(i-1,j+2,k) -  8*phi2(i+1,j+2,k) +   phi2(i+2,j+2,k)   &
+                      + 8*phi2(i-2,j+1,k) - 64*phi2(i-1,j+1,k) + 64*phi2(i+1,j+1,k) - 8*phi2(i+2,j+1,k)   &
+                      - 8*phi2(i-2,j-1,k) + 64*phi2(i-1,j-1,k) - 64*phi2(i+1,j-1,k) + 8*phi2(i+2,j-1,k)   &
+                      +   phi2(i-2,j-2,k) -  8*phi2(i-1,j-2,k) +  8*phi2(i+1,j-2,k) -   phi2(i+2,j-2,k) ) / dxdy144
+
+      d2_lphi2(1,3) = (   -phi2(i-2,j,k+2) +  8*phi2(i-1,j,k+2) -  8*phi2(i+1,j,k+2) +   phi2(i+2,j,k+2)   &
+                      + 8*phi2(i-2,j,k+1) - 64*phi2(i-1,j,k+1) + 64*phi2(i+1,j,k+1) - 8*phi2(i+2,j,k+1)   &
+                      - 8*phi2(i-2,j,k-1) + 64*phi2(i-1,j,k-1) - 64*phi2(i+1,j,k-1) + 8*phi2(i+2,j,k-1)   &
+                      +   phi2(i-2,j,k-2) -  8*phi2(i-1,j,k-2) +  8*phi2(i+1,j,k-2) -   phi2(i+2,j,k-2) ) / dxdz144
+
+      d2_lphi2(2,3) = (   -phi2(i,j-2,k+2) +  8*phi2(i,j-1,k+2) -  8*phi2(i,j+1,k+2) +   phi2(i,j+2,k+2)   &
+                      + 8*phi2(i,j-2,k+1) - 64*phi2(i,j-1,k+1) + 64*phi2(i,j+1,k+1) - 8*phi2(i,j+2,k+1)   &
+                      - 8*phi2(i,j-2,k-1) + 64*phi2(i,j-1,k-1) - 64*phi2(i,j+1,k-1) + 8*phi2(i,j+2,k-1)   &
+                      +   phi2(i,j-2,k-2) -  8*phi2(i,j-1,k-2) +  8*phi2(i,j+1,k-2) -   phi2(i,j+2,k-2) ) / dydz144
+
+      d2_lphi2(2,1) = d2_lphi2(1,2)
+      d2_lphi2(3,1) = d2_lphi2(1,3)
+      d2_lphi2(3,2) = d2_lphi2(2,3)
 
       !------------ Advection derivatives --------
       if( use_advection_stencils /= 0 ) then
@@ -448,6 +561,42 @@ subroutine MagScalar_calc_rhs( CCTK_ARGUMENTS )
                         - 6*Aphi(i,j,k+2*dk) + Aphi(i,j,k+3*dk)) / dz12
         ad1_lAphi = beta(1)*d1_f(1) + beta(2)*d1_f(2) + beta(3)*d1_f(3)
 
+        ! ad1_lphi1
+        d1_f(1) = di * ( -3*phi1(i-di,j,k) - 10*phi1(i,j,k) + 18*phi1(i+di,j,k)   &
+                        - 6*phi1(i+2*di,j,k)  + phi1(i+3*di,j,k)) / dx12
+        d1_f(2) = dj * ( -3*phi1(i,j-dj,k) - 10*phi1(i,j,k) + 18*phi1(i,j+dj,k)   &
+                        - 6*phi1(i,j+2*dj,k)  + phi1(i,j+3*dj,k)) / dy12
+        d1_f(3) = dk * ( -3*phi1(i,j,k-dk) - 10*phi1(i,j,k) + 18*phi1(i,j,k+dk)   &
+                        - 6*phi1(i,j,k+2*dk)  + phi1(i,j,k+3*dk)) / dz12
+        ad1_lphi1 = beta(1)*d1_f(1) + beta(2)*d1_f(2) + beta(3)*d1_f(3)
+
+        ! ad1_lKphi1
+        d1_f(1) = di * ( -3*Kphi1(i-di,j,k) - 10*Kphi1(i,j,k) + 18*Kphi1(i+di,j,k)   &
+                        - 6*Kphi1(i+2*di,j,k)  + Kphi1(i+3*di,j,k)) / dx12
+        d1_f(2) = dj * ( -3*Kphi1(i,j-dj,k) - 10*Kphi1(i,j,k) + 18*Kphi1(i,j+dj,k)   &
+                        - 6*Kphi1(i,j+2*dj,k)  + Kphi1(i,j+3*dj,k)) / dy12
+        d1_f(3) = dk * ( -3*Kphi1(i,j,k-dk) - 10*Kphi1(i,j,k) + 18*Kphi1(i,j,k+dk)   &
+                        - 6*Kphi1(i,j,k+2*dk)  + Kphi1(i,j,k+3*dk)) / dz12
+        ad1_lKphi1 = beta(1)*d1_f(1) + beta(2)*d1_f(2) + beta(3)*d1_f(3)
+
+        ! ad1_lphi2
+        d1_f(1) = di * ( -3*phi2(i-di,j,k) - 10*phi2(i,j,k) + 18*phi2(i+di,j,k)   &
+                        - 6*phi2(i+2*di,j,k)  + phi2(i+3*di,j,k)) / dx12
+        d1_f(2) = dj * ( -3*phi2(i,j-dj,k) - 10*phi2(i,j,k) + 18*phi2(i,j+dj,k)   &
+                        - 6*phi2(i,j+2*dj,k)  + phi2(i,j+3*dj,k)) / dy12
+        d1_f(3) = dk * ( -3*phi2(i,j,k-dk) - 10*phi2(i,j,k) + 18*phi2(i,j,k+dk)   &
+                        - 6*phi2(i,j,k+2*dk)  + phi2(i,j,k+3*dk)) / dz12
+        ad1_lphi2 = beta(1)*d1_f(1) + beta(2)*d1_f(2) + beta(3)*d1_f(3)
+
+        ! ad1_lKphi2
+        d1_f(1) = di * ( -3*Kphi2(i-di,j,k) - 10*Kphi2(i,j,k) + 18*Kphi2(i+di,j,k)   &
+                        - 6*Kphi2(i+2*di,j,k)  + Kphi2(i+3*di,j,k)) / dx12
+        d1_f(2) = dj * ( -3*Kphi2(i,j-dj,k) - 10*Kphi2(i,j,k) + 18*Kphi2(i,j+dj,k)   &
+                        - 6*Kphi2(i,j+2*dj,k)  + Kphi2(i,j+3*dj,k)) / dy12
+        d1_f(3) = dk * ( -3*Kphi2(i,j,k-dk) - 10*Kphi2(i,j,k) + 18*Kphi2(i,j,k+dk)   &
+                        - 6*Kphi2(i,j,k+2*dk)  + Kphi2(i,j,k+3*dk)) / dz12
+        ad1_lKphi2 = beta(1)*d1_f(1) + beta(2)*d1_f(2) + beta(3)*d1_f(3)
+
       else
 
         ! ad1_lE(3)
@@ -465,6 +614,18 @@ subroutine MagScalar_calc_rhs( CCTK_ARGUMENTS )
 
         ! ad1_lAphi
         ad1_lAphi = beta(1)*d1_lAphi(1) + beta(2)*d1_lAphi(2) + beta(3)*d1_lAphi(3)
+
+        ! ad1_lphi1
+        ad1_lphi1 = beta(1)*d1_lphi1(1) + beta(2)*d1_lphi1(2) + beta(3)*d1_lphi1(3)
+
+        ! ad1_lKphi1
+        ad1_lKphi1 = beta(1)*d1_lKphi1(1) + beta(2)*d1_lKphi1(2) + beta(3)*d1_lKphi1(3)
+
+        ! ad1_lphi2
+        ad1_lphi2 = beta(1)*d1_lphi2(1) + beta(2)*d1_lphi2(2) + beta(3)*d1_lphi2(3)
+
+        ! ad1_lKphi2
+        ad1_lKphi2 = beta(1)*d1_lKphi2(1) + beta(2)*d1_lKphi2(2) + beta(3)*d1_lKphi2(3)
 
       end if
       !-------------------------------------------
@@ -843,10 +1004,14 @@ subroutine MagScalar_calc_rhs( CCTK_ARGUMENTS )
 
     !------------ Covariant derivatives --------
     cd_lA = d1_lA
+    cd2_lphi1  = d2_lphi1
+    cd2_lphi2  = d2_lphi2
     do a = 1, 3
       do b = 1, 3
         do m = 1, 3
           cd_lA(a,b) = cd_lA(a,b) - cf2(m,a,b) * lA(m)
+          cd2_lphi1(a,b)  = cd2_lphi1(a,b) - cf2(m,a,b) * d1_lphi1(m)
+          cd2_lphi2(a,b)  = cd2_lphi2(a,b) - cf2(m,a,b) * d1_lphi2(m)
        end do
       end do
     end do
@@ -881,7 +1046,7 @@ subroutine MagScalar_calc_rhs( CCTK_ARGUMENTS )
     do a = 1, 3
        do b = 1, 3
           rhs_lE(a) = rhs_lE(a) + alph * ch**conf_fac_exponent * hu(a,b) * d1_lZeta(b)      &
-                                + alph * mu*mu * ch**conf_fac_exponent * hu(a,b) * lA(b)
+                                + alph * mu_V*mu_V * ch**conf_fac_exponent * hu(a,b) * lA(b)
           do c = 1, 3
              do m = 1, 3
                 rhs_lE(a) = rhs_lE(a)                                                       &
@@ -928,9 +1093,56 @@ subroutine MagScalar_calc_rhs( CCTK_ARGUMENTS )
         end do
     end do
 
+    
+    !--------- Evolution of phi, Kphi ----------
+
+    ! rhs_lphi1, rhs_lphi2
+    rhs_lphi1  = ad1_lphi1
+    rhs_lphi2  = ad1_lphi2
+
+    rhs_lphi1 = rhs_lphi1 - 2.0d0 * alph * lKphi1
+
+    rhs_lphi2 = rhs_lphi2 - 2.0d0 * alph * lKphi2
+
+
+    ! rhs_lKphi1, rhs_lKphi2
+    rhs_lKphi1 = ad1_lKphi1
+    rhs_lKphi2 = ad1_lKphi2
+
+    tr_dalp_dphi1 = 0
+    tr_dalp_dphi2 = 0
+    tr_cd2_phi1   = 0
+    tr_cd2_phi2   = 0
+    tr_dch_dphi1  = 0
+    tr_dch_dphi2  = 0
+    do a = 1, 3
+      do b = 1, 3
+        tr_dalp_dphi1 = tr_dalp_dphi1 + hu(a,b) * d1_alph(a) * d1_lphi1(b)
+        tr_dalp_dphi2 = tr_dalp_dphi2 + hu(a,b) * d1_alph(a) * d1_lphi2(b)
+        tr_cd2_phi1   = tr_cd2_phi1   + hu(a,b) * cd2_lphi1(a,b)
+        tr_cd2_phi2   = tr_cd2_phi2   + hu(a,b) * cd2_lphi2(a,b)
+        tr_dch_dphi1  = tr_dch_dphi1  + hu(a,b) * d1_ch(a) * d1_lphi1(b)
+        tr_dch_dphi2  = tr_dch_dphi2  + hu(a,b) * d1_ch(a) * d1_lphi2(b)
+      end do
+    end do
+
+    rhs_lKphi1 = rhs_lKphi1 - 0.5d0 * ch * tr_dalp_dphi1                                                      &
+                 + 0.5d0 * alph * ( - ch * tr_cd2_phi1 + 0.5d0 * tr_dch_dphi1                                 &
+                                    + mu*mu * lphi1 * ( 1 - 8*V_lambda*( lphi1*lphi1 + lphi2*lphi2 )          &
+                                    + 12*V_lambda*V_lambda                                                    &
+                                    * ( lphi1*lphi1 + lphi2*lphi2 ) * ( lphi1*lphi1 + lphi2*lphi2 ) )         &
+                                    + 2 * trk * lKphi1 )
+
+    rhs_lKphi2 = rhs_lKphi2 - 0.5d0 * ch * tr_dalp_dphi2                                                      &
+                 + 0.5d0 * alph * ( - ch * tr_cd2_phi2 + 0.5d0 * tr_dch_dphi2                                 &
+                                    + mu*mu * lphi2 * ( 1 - 8*V_lambda*( lphi1*lphi1 + lphi2*lphi2 )          &
+                                    + 12*V_lambda*V_lambda                                                    &
+                                    * ( lphi1*lphi1 + lphi2*lphi2 ) * ( lphi1*lphi1 + lphi2*lphi2 ) )         &
+                                    + 2 * trk * lKphi2 )
+
 
     ! rhs_lZeta
-    rhs_lZeta = ad1_lZeta - alph * kappa * lZeta + alph * mu*mu * lAphi
+    rhs_lZeta = ad1_lZeta - alph * kappa * lZeta + alph * mu_V*mu_V * lAphi
 
     do a = 1, 3
        rhs_lZeta = rhs_lZeta + alph * d1_lE(a,a)                         &
@@ -967,6 +1179,11 @@ subroutine MagScalar_calc_rhs( CCTK_ARGUMENTS )
 
     rhs_Aphi(i,j,k) = rhs_lAphi
 
+    rhs_phi1(i,j,k)  = rhs_lphi1
+    rhs_phi2(i,j,k)  = rhs_lphi2
+    rhs_Kphi1(i,j,k) = rhs_lKphi1
+    rhs_Kphi2(i,j,k) = rhs_lKphi2
+
   end do
   end do
   end do
@@ -998,5 +1215,11 @@ subroutine MagScalar_calc_rhs_bdry( CCTK_ARGUMENTS )
 
   ierr = NewRad_Apply(cctkGH, Aphi, rhs_Aphi, Aphi0, one, n_Aphi)
   ierr = NewRad_Apply(cctkGH, Zeta, rhs_Zeta, zero, one, n_Zeta)
+
+  ierr = NewRad_Apply(cctkGH, phi1, rhs_phi1, phi1_0, one, n_phi1)
+  ierr = NewRad_Apply(cctkGH, phi2, rhs_phi2, phi2_0, one, n_phi2)
+
+  ierr = NewRad_Apply(cctkGH, Kphi1, rhs_Kphi1, Kphi1_0, one, n_Kphi1)
+  ierr = NewRad_Apply(cctkGH, Kphi2, rhs_Kphi2, Kphi2_0, one, n_Kphi2)
 
 end subroutine MagScalar_calc_rhs_bdry

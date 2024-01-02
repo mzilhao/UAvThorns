@@ -22,4 +22,9 @@ subroutine MagScalar_symmetries( CCTK_ARGUMENTS )
 
   call SetCartSymVN( ierr, cctkGH, (/ 1, 1, 1/), "MagScalarBase::Aphi" )
 
+  call SetCartSymVN( ierr, cctkGH, (/ 1, 1, 1/), "MagScalarBase::phi1" )
+  call SetCartSymVN( ierr, cctkGH, (/ 1, 1, 1/), "MagScalarBase::phi2" )
+  call SetCartSymVN( ierr, cctkGH, (/ 1, 1, 1/), "MagScalarBase::Kphi1" )
+  call SetCartSymVN( ierr, cctkGH, (/ 1, 1, 1/), "MagScalarBase::Kphi2" )
+
 end subroutine MagScalar_symmetries
