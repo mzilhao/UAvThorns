@@ -1,6 +1,6 @@
 # Schedule definitions
 
-STORAGE: Ei[3] Ai[3] Aphi[3] Zeta[3]
+STORAGE: Ei[3] Ai[3] Aphi[3] Zeta[3] phi[3] Kphi[3]
 
 schedule MagScalar_symmetries at BASEGRID
 {
@@ -29,5 +29,9 @@ if (CCTK_EQUALS(initial_MagScalar, "zero"))
     WRITES: MagScalarBase::Az(everywhere), Az_p, Az_p_p
     WRITES: MagScalarBase::Aphi(everywhere), Aphi_p, Aphi_p_p
     WRITES: MagScalarBase::Zeta(everywhere), Zeta_p, Zeta_p_p
+    WRITES: MagScalarBase::phi1(everywhere), phi1_p, phi1_p_p
+    WRITES: MagScalarBase::phi2(everywhere), phi2_p, phi2_p_p
+    WRITES: MagScalarBase::Kphi1(everywhere), Kphi1_p, Kphi1_p_p
+    WRITES: MagScalarBase::Kphi2(everywhere), Kphi2_p, Kphi2_p_p
   } "Set up vacuum MagScalar initial data"
 }

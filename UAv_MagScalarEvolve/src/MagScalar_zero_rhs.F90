@@ -19,4 +19,10 @@ subroutine MagScalar_zero_rhs( CCTK_ARGUMENTS )
 
   rhs_Zeta  = 0
 
+  rhs_phi1    = 0
+  rhs_phi2    = 0
+
+  rhs_Kphi1   = 0
+  rhs_Kphi2   = 0
+
 end subroutine MagScalar_zero_rhs

@@ -68,6 +68,16 @@ CCTK_REAL rhs_Aphi type=gf tags='tensortypealias="Scalar" tensorweight=0 prolong
 
 CCTK_REAL rhs_Zeta type=gf tags='tensortypealias="Scalar" tensorweight=0 prolongation="none" Checkpoint="no"' "right hand sides for Zeta evolution equation"
 
+CCTK_REAL rhs_phi type=gf tags='tensortypealias="Scalar" tensorweight=0 prolongation="none" Checkpoint="no"'
+{
+  rhs_phi1 rhs_phi2
+} "right hand sides for scalar field evolution equations"
+
+CCTK_REAL rhs_Kphi type=gf tags='tensortypealias="Scalar" tensorweight=0 prolongation="none" Checkpoint="no"'
+{
+  rhs_Kphi1 rhs_Kphi2
+} "right hand sides for evolution of conjugated momenta"
+
 # BSSN-like variables
 #---------------------
 CCTK_REAL hmetric type=gf tags='tensortypealias="DD_sym" tensorweight=-0.66666666666666666667 prolongation="none" Checkpoint="no"'

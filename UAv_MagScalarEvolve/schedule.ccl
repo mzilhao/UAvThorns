@@ -3,7 +3,7 @@
 # Schedule MagScalar evolution if evolution_method=MagScalarEvolve
 if (CCTK_EQUALS (evolution_method, "MagScalarEvolve")) {
 
-  STORAGE: rhs_Ei rhs_Ai rhs_Aphi rhs_Zeta
+  STORAGE: rhs_Ei rhs_Ai rhs_Aphi rhs_Zeta rhs_phi rhs_Kphi
   STORAGE: hmetric conf_fac_chi trk
 
   schedule MagScalar_InitSymBound at BASEGRID
@@ -43,6 +43,8 @@ if (CCTK_EQUALS (evolution_method, "MagScalarEvolve")) {
     SYNC: MagScalarBase::Ai
     SYNC: MagScalarBase::Aphi
     SYNC: MagScalarBase::Zeta
+    SYNC: MagScalarBase::phi
+    SYNC: MagScalarBase::Kphi
   } "MoL boundary enforcement for MagScalar variables"
 
   schedule GROUP ApplyBCs as MagScalar_ApplyBCs in MoL_PostStep after MagScalar_Boundaries
