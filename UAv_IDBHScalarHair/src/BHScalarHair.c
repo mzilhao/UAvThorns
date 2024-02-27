@@ -163,6 +163,11 @@ void UAv_IDBHScalarHair(CCTK_ARGUMENTS)
       const CCTK_INT indip2jm2 = i+2 + jm2*NX;
       const CCTK_INT indip2jp1 = i+2 + jp1*NX;
       const CCTK_INT indip2jp2 = i+2 + jp2*NX;
+      
+      const CCTK_INT indip3jm1 = i+3 + jm1*NX;
+      //const CCTK_INT indip3jm2 = i+3 + jm2*NX;
+      const CCTK_INT indip3jp1 = i+3 + jp1*NX;
+      //const CCTK_INT indip3jp2 = i+3 + jp2*NX;
 
 
       const CCTK_REAL lX = X[i];
@@ -194,9 +199,9 @@ void UAv_IDBHScalarHair(CCTK_ARGUMENTS)
         // 2nd derivative with 2nd order accuracy (forward stencils)
         Wbar_X = (2*Wbar_in[ind] - 5*Wbar_in[indip1] + 4*Wbar_in[indip2] - Wbar_in[indip3]) * oodXsq;
 
-        // mixed (1st) derivatives with 2nd order accuracy (central stencils in j and forward in i)
-        Wbar_Xth = ( - 3*Wbar_in[indjp1] + 3*Wbar_in[indjm1] + 4*Wbar_in[indip1jp1] - 4*Wbar_in[indip1jm1]
-                    - Wbar_in[indip2jp1] + Wbar_in[indip2jm1] ) * oodXdth4;
+        // mixed derivatives with 2nd order accuracy (central stencils in j (1st der) and forward in i (2nd der))
+        Wbar_Xth = ( 2*Wbar_in[indjp1] - 2*Wbar_in[indjm1] - 5*Wbar_in[indip1jp1] + 5*Wbar_in[indip1jm1]
+                    + 4*Wbar_in[indip2jp1] - 4*Wbar_in[indip2jm1] - Wbar_in[indip3jp1] + Wbar_in[indip3jm1]) * 2 * oodXdth4;
 
       } else if (i == NX - 1) {
         /* last radial point */
