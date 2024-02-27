@@ -110,13 +110,13 @@ void UAv_IDBHScalarHair(CCTK_ARGUMENTS)
         jp1 = jj+1;
         jp2 = jj+2;
         jm1 = jj-1;
-        jm2 = jj+1;
+        jm2 = jj;
       } else if (jj == Ntheta - 2) {
         j   = jj;
         jm1 = jj-1;
         jm2 = jj-2;
         jp1 = jj+1;
-        jp2 = jj-1;
+        jp2 = jj;
       } else if (jj == Ntheta - 1) {
         j   = jj;
         jm1 = jj-1;
