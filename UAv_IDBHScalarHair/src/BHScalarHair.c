@@ -92,6 +92,7 @@ void UAv_IDBHScalarHair(CCTK_ARGUMENTS)
   const CCTK_REAL oodthsq12  = 1. / (12. * dtheta * dtheta);
   const CCTK_REAL oodXdth4   = 1. / (4.  * dX * dtheta);
   const CCTK_REAL oodXdth144 = 1. / (144. * dX * dtheta);
+  const CCTK_REAL oodXsqdth2 = 1. / (2.  * dX * dX * dtheta);
 
   for (int jj = 0; jj < Ntheta; jj++) {
     for (int i = 0; i < NX; i++) {
@@ -201,7 +202,7 @@ void UAv_IDBHScalarHair(CCTK_ARGUMENTS)
 
         // mixed derivatives with 2nd order accuracy (central stencils in j (1st der) and forward in i (2nd der))
         Wbar_Xth = ( 2*Wbar_in[indjp1] - 2*Wbar_in[indjm1] - 5*Wbar_in[indip1jp1] + 5*Wbar_in[indip1jm1]
-                    + 4*Wbar_in[indip2jp1] - 4*Wbar_in[indip2jm1] - Wbar_in[indip3jp1] + Wbar_in[indip3jm1]) * 2 * oodXdth4;
+                    + 4*Wbar_in[indip2jp1] - 4*Wbar_in[indip2jm1] - Wbar_in[indip3jp1] + Wbar_in[indip3jm1]) * oodXsqdth2;
 
       } else if (i == NX - 1) {
         /* last radial point */
