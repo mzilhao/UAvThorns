@@ -246,19 +246,31 @@ subroutine MagScalar_calc_Tmunu( CCTK_ARGUMENTS )
                 * (1 - 2 * V_lambda * (lphi1*lphi1 + lphi2*lphi2))
 
            ! srcE = rho = n^mu n^nu T_{mu nu}
-           srcE = 4 * (lKphi1 * lKphi1 + lKphi2 * lKphi2) + aux_V
-        
+           srcE = aux_V
+           srcE = srcE + (2 * lKphi1 - q * lAphi * lphi2)*(2 * lKphi1 - q * lAphi * lphi2)  &
+                       + (2 * lKphi2 + q * lAphi * lphi1)*(2 * lKphi2 + q * lAphi * lphi1)
+           
            do a = 1, 3
               do b = 1, 3
-                 srcE = srcE + gu(a,b) * (d1_lphi1(a) * d1_lphi1(b) + &
-                                          d1_lphi2(a) * d1_lphi2(b))
+                 srcE = srcE + gu(a,b) * (d1_lphi1(a) * d1_lphi1(b)              &
+                                          + d1_lphi2(a) * d1_lphi2(b)            &
+                                          + 2 * q * lA(a) * lphi1 * d1_lphi2(b)  &
+                                          - 2 * q * lA(a) * lphi2 * d1_lphi1(b)  &
+                                          + q*q * lA(a) * lA(b) * (lphi1*lphi1 + lphi2*lphi2))
               end do
            end do
 
            ! srcjdi = j_a
            srcjdi = 0
            do a = 1, 3
-              srcjdi(a) = srcjdi(a) + 4 * (lKphi1 * d1_lphi1(a) + lKphi2 * d1_lphi2(a))
+              srcjdi(a) = srcjdi(a) + 2 * (2 * lKphi1 * d1_lphi1(a)              &
+                                           + 2 * lKphi2 * d1_lphi2(a)            &
+                                           + 2 * q * lA(a) * (lKphi2 * lphi1     &
+                                                            - lKphi1 * lphi2)    &
+                                           + q * lAphi * (lphi1 * d1_lphi2(a)    &
+                                                        - lphi2 * d1_lphi1(a))   &
+                                           + q*q * lAphi * lA(a) * (lphi1*lphi1  &
+                                                                   + lphi2*lphi2))
            end do
 
 
@@ -266,18 +278,25 @@ subroutine MagScalar_calc_Tmunu( CCTK_ARGUMENTS )
            aux = 0
            do a = 1, 3
               do b = 1, 3
-                 aux = aux + gu(a,b) * (d1_lphi1(a) * d1_lphi1(b) + &
-                                        d1_lphi2(a) * d1_lphi2(b))
+                 aux = aux + gu(a,b) * (d1_lphi1(a) * d1_lphi1(b) + d1_lphi2(a) * d1_lphi2(b) &
+                                        + 2 * q * lA(a) * lphi1 * d1_lphi2(b)                 &
+                                          - 2 * q * lA(a) * lphi2 * d1_lphi1(b)               &
+                                          + q*q * lA(a) * lA(b) * (lphi1*lphi1 + lphi2*lphi2))
               end do
            end do
 
            srcSij = 0
            do a = 1, 3
               do b = 1, 3
-                 srcSij(a,b) = srcSij(a,b)                                              &
-                               + 2 * (  d1_lphi1(a) * d1_lphi1(b)                       &
-                                      + d1_lphi2(a) * d1_lphi2(b) )                     &
-                               + gg(a,b) * ( 4 * lKphi1 * lKphi1 + 4 * lKphi2 * lKphi2  &
+                 srcSij(a,b) = srcSij(a,b)                                                      &
+                               + 2 * (  d1_lphi1(a) * d1_lphi1(b) + d1_lphi2(a) * d1_lphi2(b)   &
+                                      - q * lA(b) * (lphi2 * d1_lphi1(a) - lphi1 * d1_lphi2(a)) &
+                                      + q * lA(a) * (lphi1 * d1_lphi2(b) - lphi2 * d1_lphi1(b)) &
+                                      + q*q * lA(a) * lA(b) * (lphi1*lphi1 + lphi2*lphi2))      &
+                               + gg(a,b) * ( (2 * lKphi1 - q * lAphi * lphi2)                   &
+                                             *(2 * lKphi1 - q * lAphi * lphi2)                  &
+                                            + (2 * lKphi2 + q * lAphi * lphi1)                  &
+                                             *(2 * lKphi2 + q * lAphi * lphi1)                  &
                                              - aux_V - aux )
               end do
            end do
@@ -285,25 +304,24 @@ subroutine MagScalar_calc_Tmunu( CCTK_ARGUMENTS )
 
            ! Proca contribution
            
-           srcE = srcE + mu_V*mu_V * lAphi*lAphi
+           
+           srcE = srcE + 0.5 * mu_V*mu_V * lAphi*lAphi
            do a = 1, 3
               do b = 1, 3
-                 srcE = srcE + ( lE(a) * lE(b) + lB(a) * lB(b) ) * gg(a,b)    &
-                             + mu_V*mu_V * lA(a) * lA(b) * gu(a,b)
+                 srcE = srcE + 0.5 * ( lE(a) * lE(b) + lB(a) * lB(b) ) * gg(a,b)    &
+                             + 0.5 * mu_V*mu_V * lA(a) * lA(b) * gu(a,b)
               end do
            end do
-           ! srcE = srcE / pi8
 
            
-           srcjdi = srcjdi + 2 * mu_V*mu_V * lAphi * lA
+           srcjdi = srcjdi + mu_V*mu_V * lAphi * lA
            do a = 1, 3
               do b = 1, 3
                  do m = 1, 3
-                    srcjdi(a) = srcjdi(a) + 2 * eps_lc_d(a,b,m) * lE(b) * lB(m)
+                    srcjdi(a) = srcjdi(a) + eps_lc_d(a,b,m) * lE(b) * lB(m)
                  end do
               end do
            end do
-           ! srcjdi = srcjdi / pi4
 
 
            ! srcSij = S_{a b}
@@ -316,14 +334,13 @@ subroutine MagScalar_calc_Tmunu( CCTK_ARGUMENTS )
               end do
            end do
 
-           srcSij = srcSij + (aux + mu_V*mu_V * lAphi*lAphi) * gg
+           srcSij = srcSij + 0.5 * (aux + mu_V*mu_V * lAphi*lAphi) * gg
            do a = 1, 3
               do b = 1, 3
-                 srcSij(a,b) = srcSij(a,b) - 2 * Ed(a) * Ed(b) - 2 * Bd(a) * Bd(b) &
-                             + 2 * mu_V*mu_V * lA(a) * lA(b)
+                 srcSij(a,b) = srcSij(a,b) - Ed(a) * Ed(b) - Bd(a) * Bd(b) &
+                             + mu_V*mu_V * lA(a) * lA(b)
               end do
            end do
-           ! srcSij = srcSij / pi4
 
            !------------------------------------------
 

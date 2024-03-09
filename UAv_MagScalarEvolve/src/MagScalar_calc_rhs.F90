@@ -36,6 +36,8 @@ subroutine MagScalar_calc_rhs( CCTK_ARGUMENTS )
   CCTK_REAL                cf1(3,3,3), cf2(3,3,3)
   CCTK_REAL                tr_dalp_dphi1, tr_cd2_phi1, tr_dch_dphi1
   CCTK_REAL                tr_dalp_dphi2, tr_cd2_phi2, tr_dch_dphi2
+  CCTK_REAL                tr_A_A, tr_A_dphi1, tr_A_dphi2
+  CCTK_REAL                rho_e, J_i(3)
 
   ! Covaraint derivatives
   CCTK_REAL                cd_lA(3,3), cd_dA(3,3,3)
@@ -94,8 +96,14 @@ subroutine MagScalar_calc_rhs( CCTK_ARGUMENTS )
   !$OMP d1_alph, d1_beta, d1_hh, d1_ch,&
   !$OMP d1_lE, d1_lA, d1_lZeta, d1_lAphi,&
   !$OMP d2_lA, ad1_lE, ad1_lA, ad1_lZeta, ad1_lAphi,&
-  !$OMP d1_f, cf1, cf2, cd_lA, cd_dA,&
+  !$OMP d1_lphi1, d1_lphi2, d1_lKphi1, d1_lKphi2,&
+  !$OMP d2_lphi1, d2_lphi2, ad1_lphi1, ad1_lphi2, ad1_lKphi1, ad1_lKphi2,&
+  !$OMP d1_f, cf1, cf2, cd_lA, cd_dA, cd2_lphi1, cd2_lphi2,&
+  !$OMP tr_dalp_dphi1, tr_cd2_phi1, tr_dch_dphi1,&
+  !$OMP tr_dalp_dphi2, tr_cd2_phi2, tr_dch_dphi2,&
+  !$OMP rho_e, J_i, tr_A_A, tr_A_dphi1, tr_A_dphi2,&
   !$OMP rhs_lE, rhs_lA, rhs_lZeta, rhs_lAphi,&
+  !$OMP rhs_lphi1, rhs_lphi2, rhs_lKphi1, rhs_lKphi2,&
   !$OMP i, j, k,&
   !$OMP di, dj, dk,&
   !$OMP a, b, c, m, n)
@@ -1014,10 +1022,10 @@ subroutine MagScalar_calc_rhs( CCTK_ARGUMENTS )
           cd2_lphi2(a,b)  = cd2_lphi2(a,b) - cf2(m,a,b) * d1_lphi2(m)
        end do
       end do
-    end do
+   end do
 
-    cd_dA = d2_lA
-    do a = 1, 3
+   cd_dA = d2_lA
+   do a = 1, 3
       do b = 1, 3
         do c = 1, 3
           do m = 1, 3
@@ -1026,11 +1034,19 @@ subroutine MagScalar_calc_rhs( CCTK_ARGUMENTS )
            end do
          end do
        end do
-     end do
+    end do
     !-------------------------------------------
 
 
-    !--------- Evolution of E, A, Aphi, Zeta ----------
+    !------------ Definition of Maxwell souces  --------
+    rho_e = -2 * q * (2 * lphi1 * lKphi2 - 2 * lphi2 * lKphi1 + q * lAphi * (lphi1*lphi1 + lphi2*lphi2))
+    do a = 1, 3
+       J_i(a)=-2*q*(lphi1 * d1_lphi2(a) - lphi2 * d1_lphi1(a) + q * lA(a) * (lphi1*lphi1 + lphi2*lphi2))
+    end do
+    !-------------------------------------------
+
+
+    !--------- Evolution of E, A, Aphi         ----------
 
     ! rhs_lE
     rhs_lE  = ad1_lE
@@ -1046,7 +1062,8 @@ subroutine MagScalar_calc_rhs( CCTK_ARGUMENTS )
     do a = 1, 3
        do b = 1, 3
           rhs_lE(a) = rhs_lE(a) + alph * ch**conf_fac_exponent * hu(a,b) * d1_lZeta(b)      &
-                                + alph * mu_V*mu_V * ch**conf_fac_exponent * hu(a,b) * lA(b)
+                                + alph * mu_V*mu_V * ch**conf_fac_exponent * hu(a,b) * lA(b)&
+                                - alph * ch**conf_fac_exponent * hu(a,b) * J_i(b)  
           do c = 1, 3
              do m = 1, 3
                 rhs_lE(a) = rhs_lE(a)                                                       &
@@ -1115,6 +1132,9 @@ subroutine MagScalar_calc_rhs( CCTK_ARGUMENTS )
     tr_cd2_phi2   = 0
     tr_dch_dphi1  = 0
     tr_dch_dphi2  = 0
+    tr_A_A        = 0
+    tr_A_dphi1    = 0
+    tr_A_dphi2    = 0
     do a = 1, 3
       do b = 1, 3
         tr_dalp_dphi1 = tr_dalp_dphi1 + hu(a,b) * d1_alph(a) * d1_lphi1(b)
@@ -1123,6 +1143,9 @@ subroutine MagScalar_calc_rhs( CCTK_ARGUMENTS )
         tr_cd2_phi2   = tr_cd2_phi2   + hu(a,b) * cd2_lphi2(a,b)
         tr_dch_dphi1  = tr_dch_dphi1  + hu(a,b) * d1_ch(a) * d1_lphi1(b)
         tr_dch_dphi2  = tr_dch_dphi2  + hu(a,b) * d1_ch(a) * d1_lphi2(b)
+        tr_A_A        = tr_A_A        + hu(a,b) * lA(a) * lA(b)
+        tr_A_dphi1    = tr_A_dphi1    + hu(a,b) * lA(a) * d1_lphi1(b)
+        tr_A_dphi2    = tr_A_dphi2    + hu(a,b) * lA(a) * d1_lphi2(b)
       end do
     end do
 
@@ -1131,18 +1154,24 @@ subroutine MagScalar_calc_rhs( CCTK_ARGUMENTS )
                                     + mu*mu * lphi1 * ( 1 - 8*V_lambda*( lphi1*lphi1 + lphi2*lphi2 )          &
                                     + 12*V_lambda*V_lambda                                                    &
                                     * ( lphi1*lphi1 + lphi2*lphi2 ) * ( lphi1*lphi1 + lphi2*lphi2 ) )         &
-                                    + 2 * trk * lKphi1 )
+                                    + 2 * trk * lKphi1 )                                                      &
+                 + 0.5d0 * q*q * alph * ( ch * tr_A_A - lAphi*lAphi) * lphi1                                  &
+                 - q * alph * ( - ch * tr_A_dphi2 + 2 * lAphi * lKphi2 )                   
 
     rhs_lKphi2 = rhs_lKphi2 - 0.5d0 * ch * tr_dalp_dphi2                                                      &
                  + 0.5d0 * alph * ( - ch * tr_cd2_phi2 + 0.5d0 * tr_dch_dphi2                                 &
                                     + mu*mu * lphi2 * ( 1 - 8*V_lambda*( lphi1*lphi1 + lphi2*lphi2 )          &
                                     + 12*V_lambda*V_lambda                                                    &
                                     * ( lphi1*lphi1 + lphi2*lphi2 ) * ( lphi1*lphi1 + lphi2*lphi2 ) )         &
-                                    + 2 * trk * lKphi2 )
+                                    + 2 * trk * lKphi2 )                                                      &
+                 + 0.5d0 * q*q * alph * ( ch * tr_A_A - lAphi*lAphi) * lphi2                                  &
+                 - q * alph * ( ch * tr_A_dphi1 - 2 * lAphi * lKphi1 )                  
 
 
+    !--------- Evolution of Zeta ----------
+    
     ! rhs_lZeta
-    rhs_lZeta = ad1_lZeta - alph * kappa * lZeta + alph * mu_V*mu_V * lAphi
+    rhs_lZeta = ad1_lZeta - alph * kappa * lZeta + alph * mu_V*mu_V * lAphi - alph * rho_e
 
     do a = 1, 3
        rhs_lZeta = rhs_lZeta + alph * d1_lE(a,a)                         &

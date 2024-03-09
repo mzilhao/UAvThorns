@@ -72,6 +72,13 @@ CCTK_REAL mu "mass of the scalar fields"
   0:*           :: "any non-negative number"
 } 0
 
+# considering a scalar field coupled to the vectorial field through
+# the covariant derivative operator D_mu = nabla_mu + i q A_mu 
+CCTK_REAL q "charge of the scalar fields"
+{
+  *:*           :: "any number"
+} 0
+
 
 CCTK_INT n_phi1 "n power of outgoing boundary r^n fall off rate for phi1"
 {
