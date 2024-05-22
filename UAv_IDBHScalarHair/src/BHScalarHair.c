@@ -504,13 +504,11 @@ void UAv_IDBHScalarHair(CCTK_ARGUMENTS)
         const CCTK_REAL dW_dr    = dWbar_dr[ind] / rr2 - 2 * Wbar[ind] / rr3;
         const CCTK_REAL d2W_drth = d2Wbar_drth[ind] / rr2 - 2 * dWbar_dth[ind] / rr3;
 
-        // add non-axisymmetric perturbation
-        const CCTK_REAL RR0pert2 = (RR - R0pert)*(RR - R0pert);
-        // horizon location
-        const CCTK_REAL RH = rH * 0.25;
-        const CCTK_REAL pert = 1. + Apert_BH * (x1*x1 - y1*y1)/(mu*mu) * exp( -0.5*RR0pert2/(RH*RH) );
+        // add non-axisymmetric perturbation on conformal factor
+        const CCTK_REAL argpert_cf = (RR - R0pert_conf_fac)/Sigmapert_conf_fac;
+        const CCTK_REAL pert_cf = 1. + Apert_conf_fac * (x1*x1 - y1*y1)*mu*mu * exp( -0.5*argpert_cf*argpert_cf );
 
-        const CCTK_REAL conf_fac = psi4 * pert;
+        const CCTK_REAL conf_fac = psi4 * pert_cf;
 
         // 3-metric
         gxx[ind] = conf_fac * (1. + h_rho2 * sinph * sinph);
@@ -555,7 +553,8 @@ void UAv_IDBHScalarHair(CCTK_ARGUMENTS)
 
 
         // let's add a perturbation to the scalar field as well
-        const CCTK_REAL pert_phi = 1. + Apert_phi * (x1*x1 - y1*y1)/(Rphi_pert*Rphi_pert);
+        const CCTK_REAL argpert_phi = (RR - R0pert_phi)/Sigmapert_phi;
+        const CCTK_REAL pert_phi = 1. + Apert_phi * (x1*x1 - y1*y1)*mu*mu * exp( -0.5*argpert_phi*argpert_phi );
 
         const CCTK_REAL phi0_l = phi0[ind] * pert_phi;
 
