@@ -196,6 +196,9 @@ void UAv_IDBHScalarHair(CCTK_ARGUMENTS)
            since we're interested in dWbar_dr, and since drxdr diverges (here), we
            will use L'Hopital's rule. for that, we will write instead the 2nd
            derivative */
+        /* /!\ For the Boson Star case (rH == 0), then rx == r and drxdr == 1.
+           So we don't need the rule, and we know the result is dWbar_dr == 0.
+           However, this is consistent with the computation below, where drxdr == 0 for i == 0.*/
 
         // 2nd derivative with 2nd order accuracy (forward stencils)
         Wbar_X = (2*Wbar_in[ind] - 5*Wbar_in[indip1] + 4*Wbar_in[indip2] - Wbar_in[indip3]) * oodXsq;
@@ -223,23 +226,30 @@ void UAv_IDBHScalarHair(CCTK_ARGUMENTS)
       }
 
       // from the X coordinate used in the input files to the x coordinate
-      const CCTK_REAL rx = C0*lX/(1. - lX);
-      // from the x coordinate to the metric coordinate r
-      // const CCTK_REAL rr = sqrt(rH*rH + rx*rx);
+      // We need to be careful at X == 1 for radial derivatives (coordinate change is singular)
+      if (i == NX - 1) {
+        dWbar_dr_in[ind]    = 0.; // Sensibly, dWbar_dr_in should vanish (dXdr == 0, Wbar_X bounded)
+        d2Wbar_drth_in[ind] = 0.; // Wbar_Xth is set to 0 above anyway
 
-      // corresponding derivatives
-      const CCTK_REAL dXdrx = 1./(C0 + rx) - rx/((C0 + rx)*(C0 + rx));
-
-      CCTK_REAL drxdr;
-      if (i == 0) { // rx == 0 (X == 0)
-        drxdr = sqrt(rH*rH + rx*rx);
       } else {
-        drxdr = sqrt(rH*rH + rx*rx)/rx;
-      }
-      const CCTK_REAL dXdr = dXdrx * drxdr;
+        const CCTK_REAL rx = C0*lX/(1. - lX);
+        // from the x coordinate to the metric coordinate r
+        // const CCTK_REAL rr = sqrt(rH*rH + rx*rx);
 
-      dWbar_dr_in[ind]    = dXdr * Wbar_X;
-      d2Wbar_drth_in[ind] = dXdr * Wbar_Xth;
+        // corresponding derivatives
+        const CCTK_REAL dXdrx = 1./(C0 + rx) - rx/((C0 + rx)*(C0 + rx));
+
+        CCTK_REAL drxdr;
+        if (i == 0) { // rx == 0 (X == 0)
+          drxdr = sqrt(rH*rH + rx*rx);
+        } else {
+          drxdr = sqrt(rH*rH + rx*rx)/rx;
+        }
+        const CCTK_REAL dXdr = dXdrx * drxdr;
+
+        dWbar_dr_in[ind]    = dXdr * Wbar_X;
+        d2Wbar_drth_in[ind] = dXdr * Wbar_Xth;
+      }
 
       dWbar_dth_in[ind]   = Wbar_th;
       d2Wbar_dth2_in[ind] = Wbar_thth;
