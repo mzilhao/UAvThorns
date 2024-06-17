@@ -567,7 +567,19 @@ void UAv_IDBHScalarHair(CCTK_ARGUMENTS)
         const CCTK_REAL alph = exp(F0[ind]) * (RR - 0.25*rH) / (RR + 0.25*rH);
 
         // if at R ~ rH/4 we need to regularize the division by R - rH/4
-        if ( fabs(den) < sqrt(dxsq + dysq + dzsq) * 0.125 ) {
+        if ( mm = 0 ) {
+          if ( fabs(den) < sqrt(dxsq + dysq + dzsq) * 0.125 ) {
+          const CCTK_REAL drdR = (1. - 0.25*0.25 * rH*rH / RR2);
+          const CCTK_REAL reg  = exp(-F0[ind]) * (RR + 0.25*rH) * drdR * dW_dr;
+
+          Kphi1[ind] =  0.5 * reg * phi2[ind];
+          Kphi2[ind] = -0.5 * reg * phi1[ind];
+        } else {
+          Kphi1[ind] = 0.5 * (W - OmegaH) / alph * phi2[ind];
+          Kphi2[ind] = 0.5 * (OmegaH - W) / alph * phi1[ind];
+        }
+        } else {
+          if ( fabs(den) < sqrt(dxsq + dysq + dzsq) * 0.125 ) {
           const CCTK_REAL drdR = (1. - 0.25*0.25 * rH*rH / RR2);
           const CCTK_REAL reg  = exp(-F0[ind]) * (RR + 0.25*rH) * drdR * dW_dr;
 
@@ -577,7 +589,8 @@ void UAv_IDBHScalarHair(CCTK_ARGUMENTS)
           Kphi1[ind] = 0.5 * mm * (W - OmegaH) / alph * phi2[ind];
           Kphi2[ind] = 0.5 * mm * (OmegaH - W) / alph * phi1[ind];
         }
-
+        }
+        
         // lapse
         if (CCTK_EQUALS(initial_lapse, "psi^n"))
           alp[ind] = pow(psi1, initial_lapse_psi_exponent);
