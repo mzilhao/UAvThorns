@@ -37,6 +37,11 @@ REAL C0 "parameter for R to X coordinate transformation"
   0:* :: "greater than zero"
 } 1.0
 
+INT norm "0 for G=1 and 1 for 4PIG=1"
+{
+  0:* :: "0 or 1"
+} 1.0
+
 INT mm "azimuthal number of the solution. mm=0 for solutions with spherical symmetry, and mm=1,2,3 for current rotating solutions"
 {
   0:3 :: "0, 1, 2 or 3"

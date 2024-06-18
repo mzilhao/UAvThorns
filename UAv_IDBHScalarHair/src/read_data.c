@@ -42,17 +42,17 @@ void UAv_ID_read_data(CCTK_INT *NF_p, CCTK_INT *NX_p, CCTK_REAL Xtmp[], CCTK_REA
     CCTK_VInfo(CCTK_THORNSTRING, "Reading data file %s", infilename);
   }
 
-  char flag[100]; // Adjust size as needed
+  // char flag[100]; // Adjust size as needed
 
-  // Read the flag
-  fscanf(infile, "%s\n", flag);
+  // // Read the flag
+  // fscanf(infile, "%s\n", flag);
 
-  // Check the flag and act accordingly
-  if (strcmp(flag, "#4PIG=1") == 0) {
-      factor = 0;
-  } else if (strcmp(flag, "#G=1") == 0) {
-      factor = 1;
-  }
+  // // Check the flag and act accordingly
+  // if (strcmp(flag, "#4PIG=1") == 0) {
+  //     factor = 0;
+  // } else if (strcmp(flag, "#G=1") == 0) {
+  //     factor = 1;
+  // }
 
 
   /* read data from input file */
@@ -83,7 +83,7 @@ void UAv_ID_read_data(CCTK_INT *NF_p, CCTK_INT *NX_p, CCTK_REAL Xtmp[], CCTK_REA
     // take into account different normalization used for the stress-energy
     // tensor in the input files, which assumes 4 pi G = 1, whereas within ET it
     // is generally assumed that G = 1.
-    if (factor == 0 ) {
+    if (norm == 1) {
     phi0[NF] *= 0.5/sqrt(M_PI);
   } 
     NF++;
