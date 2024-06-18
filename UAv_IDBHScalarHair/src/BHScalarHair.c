@@ -567,7 +567,7 @@ void UAv_IDBHScalarHair(CCTK_ARGUMENTS)
         const CCTK_REAL alph = exp(F0[ind]) * (RR - 0.25*rH) / (RR + 0.25*rH);
 
         // if at R ~ rH/4 we need to regularize the division by R - rH/4
-        if ( mm = 0 ) {
+        if ( mm == 0 ) {
           if ( fabs(den) < sqrt(dxsq + dysq + dzsq) * 0.125 ) {
           const CCTK_REAL drdR = (1. - 0.25*0.25 * rH*rH / RR2);
           const CCTK_REAL reg  = exp(-F0[ind]) * (RR + 0.25*rH) * drdR * dW_dr;
