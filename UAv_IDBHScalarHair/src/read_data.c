@@ -49,9 +49,9 @@ void UAv_ID_read_data(CCTK_INT *NF_p, CCTK_INT *NX_p, CCTK_REAL Xtmp[], CCTK_REA
 
   // Check the flag and act accordingly
   if (strcmp(flag, "#4PIG=1") == 0) {
-      factor = 0
+      factor = 0;
   } else if (strcmp(flag, "#G=1") == 0) {
-      factor = 1
+      factor = 1;
   }
 
 
