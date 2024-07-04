@@ -444,8 +444,8 @@ void UAv_IDBHScalarHair(CCTK_ARGUMENTS)
 
         // from (quasi-)isotropic coordinate R to the metric coordinate r
         const CCTK_REAL rr = RR * (1. + 0.25 * rH / RR) * (1. + 0.25 * rH / RR);
-        const CCTK_REAL rr2 = rr*rr;
-        const CCTK_REAL rr3 = rr*rr2;
+        const CCTK_REAL rrP = pow(rr, Wbar_r_power);
+        const CCTK_REAL rrPp1 = rr*rrP;
 
         /*
         const CCTK_REAL rho2 = x1*x1 + y1*y1;
@@ -494,11 +494,11 @@ void UAv_IDBHScalarHair(CCTK_ARGUMENTS)
 
         const CCTK_REAL h_rho2 = exp(2. * (F2[ind] - F1[ind])) - 1.;
 
-        // from Wbar to W function
-        const CCTK_REAL W        = Wbar[ind] / rr2;
-        const CCTK_REAL dW_dth   = dWbar_dth[ind] / rr2;
-        const CCTK_REAL dW_dr    = dWbar_dr[ind] / rr2 - 2 * Wbar[ind] / rr3;
-        const CCTK_REAL d2W_drth = d2Wbar_drth[ind] / rr2 - 2 * dWbar_dth[ind] / rr3;
+        // from Wbar to W function, Wbar = r^p * W
+        const CCTK_REAL W        = Wbar[ind] / rrP;
+        const CCTK_REAL dW_dth   = dWbar_dth[ind] / rrP;
+        const CCTK_REAL dW_dr    = dWbar_dr[ind] / rrP - 2 * Wbar[ind] / rrPp1;
+        const CCTK_REAL d2W_drth = d2Wbar_drth[ind] / rrP - 2 * dWbar_dth[ind] / rrPp1;
 
         // add non-axisymmetric perturbation on conformal factor
         const CCTK_REAL argpert_cf = (RR - R0pert_conf_fac)/Sigmapert_conf_fac;
