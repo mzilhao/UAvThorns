@@ -497,8 +497,8 @@ void UAv_IDBHScalarHair(CCTK_ARGUMENTS)
         // from Wbar to W function, Wbar = r^p * W
         const CCTK_REAL W        = Wbar[ind] / rrP;
         const CCTK_REAL dW_dth   = dWbar_dth[ind] / rrP;
-        const CCTK_REAL dW_dr    = dWbar_dr[ind] / rrP - 2 * Wbar[ind] / rrPp1;
-        const CCTK_REAL d2W_drth = d2Wbar_drth[ind] / rrP - 2 * dWbar_dth[ind] / rrPp1;
+        const CCTK_REAL dW_dr    = dWbar_dr[ind] / rrP - Wbar_r_power * Wbar[ind] / rrPp1;
+        const CCTK_REAL d2W_drth = d2Wbar_drth[ind] / rrP - Wbar_r_power * dWbar_dth[ind] / rrPp1;
 
         // add non-axisymmetric perturbation on conformal factor
         const CCTK_REAL argpert_cf = (RR - R0pert_conf_fac)/Sigmapert_conf_fac;
