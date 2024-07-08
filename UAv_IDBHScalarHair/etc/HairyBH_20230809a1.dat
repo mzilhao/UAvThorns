@@ -5,6 +5,9 @@
 # - m = 1
 # - c = 1 (radial coord compactification parameter)
 #
+# Convention for Wbar = r^p * W
+# - p = 2
+#
 # Physical quantities
 # - M = 1.27481
 # - J = 1.32573

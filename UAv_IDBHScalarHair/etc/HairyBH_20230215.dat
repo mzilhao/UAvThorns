@@ -4,6 +4,9 @@
 # - Omega_H = 0.99793
 # - m = 1
 #
+# Convention for Wbar = r^p * W
+# - p = 2
+#
 # Physical quantities
 # - M = 0.127692
 # - J = 0.00813421
