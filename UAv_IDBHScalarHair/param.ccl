@@ -8,20 +8,23 @@ SHARES: ADMBase
 EXTENDS KEYWORD initial_data
 {
   "Kerr_test" :: "test with Kerr data"
-  "HairyBH"   :: "HairyBH initial lapse profile"
+  "HairyBH"   :: "HairyBH initial data"
+  "ScalarBS"  :: "Scalar boson star initial data"
 }
 
 EXTENDS KEYWORD initial_lapse
 {
   "Kerr_test" :: "test with Kerr data"
   "HairyBH"   :: "HairyBH initial lapse profile"
+  "ScalarBS"  :: "Scalar boson star initial lapse profile"
   "psi^n"     :: "psi^n initial lapse profile"
 }
 
 EXTENDS KEYWORD initial_shift
 {
   "Kerr_test" :: "test with Kerr data"
-  "HairyBH"   :: "HairyBH initial lapse profile"
+  "HairyBH"   :: "HairyBH initial shift profile"
+  "ScalarBS"  :: "Scalar boson star initial shift profile"
 }
 
 
@@ -53,12 +56,17 @@ INT maxNF "maximum number of lines allowed in the input file"
 } 100000
 
 
-REAL rH "Horizon radius parameter"
+REAL rH "Horizon radius parameter. Ignored for the Scalar Boson Star."
 {
   0:* :: "non-negative"
 } 0.0
 
-REAL OmegaH "Horizon angular velocity"
+REAL OmegaH "Horizon angular velocity. Ignored for the Scalar Boson Star."
+{
+  0:* :: "non-negative"
+} 0.0
+
+REAL omega_BS "Scalar field angular frequency for the Boson Star. Ignored for the Hairy Black Hole."
 {
   0:* :: "non-negative"
 } 0.0

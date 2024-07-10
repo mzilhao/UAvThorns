@@ -81,8 +81,6 @@ void UAv_IDBHScalarHair(CCTK_ARGUMENTS)
 
   // now we need to take the derivatives of the Wbar function and store their values
 
-  // TODO: cleanup of quantities that are not needed anymore
-
   CCTK_REAL *dWbar_dr_in, *dWbar_dth_in, *d2Wbar_drth_in;
   dWbar_dr_in    = (CCTK_REAL *) malloc(NF * sizeof(CCTK_REAL));
   dWbar_dth_in   = (CCTK_REAL *) malloc(NF * sizeof(CCTK_REAL));
@@ -195,9 +193,6 @@ void UAv_IDBHScalarHair(CCTK_ARGUMENTS)
            since we're interested in dWbar_dr, and since drxdr diverges (here), we
            will use L'Hopital's rule. for that, we will write instead the 2nd
            derivative */
-        /* /!\ For the Boson Star case (rH == 0), then rx == r and drxdr == 1.
-           So we don't need the rule, and we know the result is dWbar_dr == 0.
-           However, this is consistent with the computation below, where drxdr == 0 for i == 0.*/
 
         // 2nd derivative with 2nd order accuracy (forward stencils)
         Wbar_X = (2*Wbar_in[ind] - 5*Wbar_in[indip1] + 4*Wbar_in[indip2] - Wbar_in[indip3]) * oodXsq;
@@ -424,6 +419,10 @@ void UAv_IDBHScalarHair(CCTK_ARGUMENTS)
      3-metric, lapse and scalar fields */
 
   const CCTK_REAL tt = cctk_time;
+  const CCTK_REAL omega = mm * OmegaH;
+
+  const CCTK_REAL coswt = cos(omega * tt);
+  const CCTK_REAL sinwt = sin(omega * tt);
 
   for (int k = 0; k < cctk_lsh[2]; ++k) {
     for (int j = 0; j < cctk_lsh[1]; ++j) {
@@ -568,11 +567,9 @@ void UAv_IDBHScalarHair(CCTK_ARGUMENTS)
 
         const CCTK_REAL phi0_l = phi0[ind] * pert_phi;
 
-        const CCTK_REAL omega = mm * OmegaH;
-
         // scalar fields
-        phi1[ind]  = phi0_l * (cos(omega * tt) * cosmph + sin(omega * tt) * sinmph);
-        phi2[ind]  = phi0_l * (cos(omega * tt) * sinmph - sin(omega * tt) * cosmph);
+        phi1[ind]  = phi0_l * (coswt * cosmph + sinwt * sinmph);
+        phi2[ind]  = phi0_l * (coswt * sinmph - sinwt * cosmph);
 
         const CCTK_REAL alph = exp(F0[ind]) * (RR - 0.25*rH) / (RR + 0.25*rH);
 
