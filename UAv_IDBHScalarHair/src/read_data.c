@@ -64,9 +64,13 @@ void UAv_ID_read_data(CCTK_INT *NF_p, CCTK_INT *NX_p, CCTK_REAL Xtmp[], CCTK_REA
            &Xtmp[NF], &thtmp[NF], &F1[NF], &F2[NF], &F0[NF], &phi0[NF], &W[NF]);
 
     // take into account different normalization used for the stress-energy
-    // tensor in the input files, which assumes 4 pi G = 1, whereas within ET it
+    // tensor in the input files, which may assume 4 pi G = 1, whereas within ET it
     // is generally assumed that G = 1.
-    phi0[NF] *= 0.5/sqrt(M_PI);
+    if (normalization_Tmunu == 0) {
+      phi0[NF] *= 0.5/sqrt(M_PI);
+    } else if (normalization_Tmunu == 1) {
+      phi0[NF] *= 1;
+    }
 
     NF++;
   }
