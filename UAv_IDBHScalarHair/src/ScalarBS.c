@@ -443,6 +443,10 @@ void UAv_IDScalarBS(CCTK_ARGUMENTS)
 
   /* now we finally write the metric and all 3+1 quantities. first we write the
      3-metric, lapse and scalar fields */
+  /* For the Boson Star, in order to avoid unneeded regularizations and divisions,
+      we express K_ij in terms of dW/drho and dW/dz.
+      For points close to the axis and the origin, K_ij = 0.
+  */
 
   const CCTK_REAL tt = cctk_time;
 
@@ -460,41 +464,16 @@ void UAv_IDScalarBS(CCTK_ARGUMENTS)
         const CCTK_REAL z1  = z[ind] - z0;
 
         // For the Boson Star, r = R, no coordinate change needed.
-        CCTK_REAL rr2 = x1*x1 + y1*y1 + z1*z1;
-        /* TODO: cleanup check this is irrelevant now
-           note that there are divisions by RR in the following expressions.
-           divisions by zero should be avoided by choosing a non-zero value for
-           z0 (for instance) */
-
+        const CCTK_REAL rr2 = x1*x1 + y1*y1 + z1*z1;
         const CCTK_REAL rr  = sqrt(rr2);
 
-        /*
         const CCTK_REAL rho2 = x1*x1 + y1*y1;
         const CCTK_REAL rho  = sqrt(rho2);
-        */
-
-        const CCTK_REAL costh  = z1/rr;
-        const CCTK_REAL costh2 = costh*costh;
-        const CCTK_REAL sinth2 = 1. - costh2;
-        const CCTK_REAL sinth  = sqrt(sinth2);
-
-        /* TODO: cleanup?
-        const CCTK_REAL R_x = x1/RR;   // dR/dx
-        const CCTK_REAL R_y = y1/RR;   // dR/dy
-        const CCTK_REAL R_z = z1/RR;   // dR/dz
-        */
-
-        const CCTK_REAL sinth2ph_x = -y1/rr2; // sin(th)^2 dphi/dx
-        const CCTK_REAL sinth2ph_y =  x1/rr2; // sin(th)^2 dphi/dy
-
-        const CCTK_REAL R2sinth2ph_x = -y1;  // R^2 sin(th)^2 dphi/dx
-        const CCTK_REAL R2sinth2ph_y =  x1;  // R^2 sin(th)^2 dphi/dy
-
-        const CCTK_REAL Rsinthth_x  = z1*x1/rr2; // R sin(th) dth/dx
-        const CCTK_REAL Rsinthth_y  = z1*y1/rr2; // R sin(th) dth/dy
-        const CCTK_REAL Rsinthth_z  = -sinth2;   // R sin(th) dth/dz
+        
 
         const CCTK_REAL ph = atan2(y1, x1);
+        // If x1=y1=0, should return 0? The other metric functions should vanish anyway to make sure that this doesn't matter,
+        // but can this lead to nan depending on the C implementation?
 
         const CCTK_REAL cosph  = cos(ph);
         const CCTK_REAL sinph  = sin(ph);
@@ -502,8 +481,6 @@ void UAv_IDScalarBS(CCTK_ARGUMENTS)
         const CCTK_REAL cosmph = cos(mm*ph);
         const CCTK_REAL sinmph = sin(mm*ph);
 
-        /* TODO: cleanup?. note the division by RR in the following. divisions by zero should be
-           avoided by choosing a non-zero value for z0 (for instance) */
         const CCTK_REAL psi4 = exp(2. * F1[ind]);
         const CCTK_REAL psi2 = sqrt(psi4);
         const CCTK_REAL psi1 = sqrt(psi2);
@@ -525,44 +502,42 @@ void UAv_IDScalarBS(CCTK_ARGUMENTS)
         gzz[ind] = conf_fac;
 
         /*
-          KRph/(R sin(th)^2)  = - 1/2 exp(2F2-F0) (1 + rH/(4R))^6 R dW/dr
-          Kthph/(R sin(th))^3 = - 1/2 exp(2F2-F0) (1 + rH/(4R))^5 dW/dth / sin(th) 1/(R - rH/4)
+          d/drho = rho/r * d/dr  +    z/r^2 * d/dth
+          d/dz   =   z/r * d/dr  -  rho/r^2 * d/dth
+
+          Kxx = 0.5 * 2xy/rho        * exp(2F2-F0) * dW/drho   = 0.5 * rho * sin(2phi) * exp(2F2-F0) * dW/drho
+          Kyy = - Kxx
+          Kzz = 0
+          Kxy =-0.5 * (x^2-y^2)/rho  * exp(2F2-F0) * dW/drho   = 0.5 * rho * cos(2phi) * exp(2F2-F0) * dW/drho
+          Kxz = 0.5 * y * exp(2F2-F0) * dW/dz
+          Kyz =-0.5 * x * exp(2F2-F0) * dW/dz
         */
 
-        // KRph/(R sin(th)^2)
-        const CCTK_REAL KRph_o_Rsinth2 = -0.5 * exp(2. * F2[ind] - F0[ind]) * rr * dW_dr[ind];
+        /*
+          Close to the axis and the origin, Kij = 0.
+          The "coordinate" part of the expressions above behave like rho (or r).
+          Let's first consider a threshold of rho < 1e-8. The sphere r < 1e-8 is included in this cylinder.
+          In this case, we just set d/drho and d/dz = 0 as proxies.
+        */
 
-        // dW/dth / sin(th) 1/(R - rH/4)
-        CCTK_REAL dWdth_o_sinth_den;
+        CCTK_REAL dW_drho, dW_dz;
+        const CCTK_REAL exp_auxi = exp(2. * F2[ind] - F0[ind]);
 
-        // Axis and horizon regularizations
-        //    if at the rho = 0 axis, no need to regularize the division by sin(th), Kij=0 
-        //    (also valid in the vicinity of the horizon straight on the axis).
-        //    We just need to avoid dividing by sinth=0 at machine precision, otherwise for now it seems the normal operation is enough.
-        //    The threshold is chosen such that rho/z1 (~ rho/RR = sinth) < 1e-8, because it enters as a square in the computation of RR.
-        if (fabs(sinth) < 1e-8)
-          dWdth_o_sinth_den = 0.;
-        //    if at R ~ rH/4 we need to regularize the division by R - rH/4. With f(R) = dWdth
-        //    f(R) ~ f(rH/4)  +  df_dR(R=rH/4) * (R-rH/4)  +  1/2 * d2f_dR2(R=rH/4) * (R-rH/4)^2  +  1/6 * d3f_dR3(R=rH/4) * (R-rH/4)^3
-        //         ~     0    +       0                    +  ... !=0
-        //    f(R) / (R-rH/4) ~ [4R/rH * (1-4R/rH) - (4R/rH)^2 * (1-4R/rH)^2] * df_dr(R=rH/4)
-        //                    ~ [...] * df_dr(R)      FURTHER ASSUMING df_dr - df_dr(rH/4) ~ (r(R)-rH)*d2f_dr2(rH/4) should be small 
-        //                                            (at worst like the order 3 above?)
-        //    [...] = eps/(1-eps) - (eps/(1-eps))^2
-  //      else if (fabs(eps) < 1e-4)
-  //        dWdth_o_sinth_den = (eps_o_1meps - eps_o_1meps*eps_o_1meps) * d2W_drth / sinth;
-  //      else
-  //        dWdth_o_sinth_den = dW_dth / (den * sinth);
-        
-        // Kthph/(R sin(th))^3
-        const CCTK_REAL Kthph_o_R3sinth3 = -0.5 * exp(2. * F2[ind] - F0[ind]) * dWdth_o_sinth_den;
+        if (rho < 1e-8) {
+          dW_drho = 0.;
+          dW_dz   = 0.;
+        }
+        else {
+          dW_drho = rho/rr * dW_dr[ind]  +   z1/rr2 * dW_dth[ind];
+          dW_dz   =  z1/rr * dW_dr[ind]  -  rho/rr2 * dW_dth[ind];
+        }
 
         // extrinsic curvature
-        kxx[ind] = 2.*KRph_o_Rsinth2 *  x1 * sinth2ph_x                     +  2.*Kthph_o_R3sinth3 *  Rsinthth_x * R2sinth2ph_x;
-        kxy[ind] =    KRph_o_Rsinth2 * (x1 * sinth2ph_y + y1 * sinth2ph_x)  +     Kthph_o_R3sinth3 * (Rsinthth_x * R2sinth2ph_y + Rsinthth_y * R2sinth2ph_x);
-        kxz[ind] =    KRph_o_Rsinth2 *                    z1 * sinth2ph_x   +     Kthph_o_R3sinth3 *                              Rsinthth_z * R2sinth2ph_x;
-        kyy[ind] = 2.*KRph_o_Rsinth2 *  y1 * sinth2ph_y                     +  2.*Kthph_o_R3sinth3 *  Rsinthth_y * R2sinth2ph_y;
-        kyz[ind] =    KRph_o_Rsinth2 *                    z1 * sinth2ph_y   +     Kthph_o_R3sinth3 *                              Rsinthth_z * R2sinth2ph_y;
+        kxx[ind] =  0.5 * rho * sin(2*ph) * exp_auxi * dW_drho;
+        kxy[ind] = -0.5 * rho * cos(2*ph) * exp_auxi * dW_drho;
+        kxz[ind] =  0.5 *  y1 * exp_auxi * dW_dz;
+        kyy[ind] = -kxx[ind];
+        kyz[ind] = -0.5 *  x1 * exp_auxi * dW_dz;
         kzz[ind] = 0.;
 
           

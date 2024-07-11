@@ -434,7 +434,7 @@ void UAv_IDBHScalarHair(CCTK_ARGUMENTS)
         const CCTK_REAL y1  = y[ind] - y0;
         const CCTK_REAL z1  = z[ind] - z0;
 
-        CCTK_REAL RR2 = x1*x1 + y1*y1 + z1*z1;
+        const CCTK_REAL RR2 = x1*x1 + y1*y1 + z1*z1;
         /* note that there are divisions by RR in the following expressions.
            divisions by zero should be avoided by choosing a non-zero value for
            z0 (for instance) */
