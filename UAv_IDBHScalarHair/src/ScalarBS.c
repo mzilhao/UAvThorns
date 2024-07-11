@@ -79,22 +79,18 @@ void UAv_IDScalarBS(CCTK_ARGUMENTS)
   }
 
 
-  // now we need to take the derivatives of the Wbar function and store their values
+  // now we need to take the derivatives of the Wbar function
+  // Then we convert to W and store the values
 
-  // TODO: cleanup of quantities that are not needed anymore
-
-  CCTK_REAL *dWbar_dr_in, *dWbar_dth_in, *d2Wbar_drth_in;
-  dWbar_dr_in    = (CCTK_REAL *) malloc(NF * sizeof(CCTK_REAL));
-  dWbar_dth_in   = (CCTK_REAL *) malloc(NF * sizeof(CCTK_REAL));
-  d2Wbar_drth_in = (CCTK_REAL *) malloc(NF * sizeof(CCTK_REAL));
+  CCTK_REAL *W_in, *dW_dr_in, *dW_dth_in;
+  W_in        = (CCTK_REAL *) malloc(NF * sizeof(CCTK_REAL));
+  dW_dr_in    = (CCTK_REAL *) malloc(NF * sizeof(CCTK_REAL));
+  dW_dth_in   = (CCTK_REAL *) malloc(NF * sizeof(CCTK_REAL));
 
   const CCTK_REAL oodX       = 1. / dX;
   const CCTK_REAL oodXsq     = oodX * oodX;
   const CCTK_REAL oodX12     = 1. / (12. * dX);
   const CCTK_REAL oodth12    = 1. / (12. * dtheta);
-  const CCTK_REAL oodXdth4   = 1. / (4.  * dX * dtheta);
-  const CCTK_REAL oodXdth144 = 1. / (144. * dX * dtheta);
-  const CCTK_REAL oodXsqdth2 = 1. / (2.  * dX * dX * dtheta);
 
   for (int jj = 0; jj < Ntheta; jj++) {
     for (int i = 0; i < NX; i++) {
@@ -142,35 +138,10 @@ void UAv_IDScalarBS(CCTK_ARGUMENTS)
       const CCTK_INT indip2 = i+2 + j*NX;
       const CCTK_INT indip3 = i+3 + j*NX;
 
-      const CCTK_INT indim2jm1 = i-2 + jm1*NX;
-      const CCTK_INT indim2jm2 = i-2 + jm2*NX;
-      const CCTK_INT indim2jp1 = i-2 + jp1*NX;
-      const CCTK_INT indim2jp2 = i-2 + jp2*NX;
-
-      const CCTK_INT indim1jm1 = i-1 + jm1*NX;
-      const CCTK_INT indim1jm2 = i-1 + jm2*NX;
-      const CCTK_INT indim1jp1 = i-1 + jp1*NX;
-      const CCTK_INT indim1jp2 = i-1 + jp2*NX;
-
       const CCTK_INT indjm1 = i + jm1*NX;
       const CCTK_INT indjm2 = i + jm2*NX;
       const CCTK_INT indjp1 = i + jp1*NX;
       const CCTK_INT indjp2 = i + jp2*NX;
-
-      const CCTK_INT indip1jm1 = i+1 + jm1*NX;
-      const CCTK_INT indip1jm2 = i+1 + jm2*NX;
-      const CCTK_INT indip1jp1 = i+1 + jp1*NX;
-      const CCTK_INT indip1jp2 = i+1 + jp2*NX;
-
-      const CCTK_INT indip2jm1 = i+2 + jm1*NX;
-      const CCTK_INT indip2jm2 = i+2 + jm2*NX;
-      const CCTK_INT indip2jp1 = i+2 + jp1*NX;
-      const CCTK_INT indip2jp2 = i+2 + jp2*NX;
-      
-      const CCTK_INT indip3jm1 = i+3 + jm1*NX;
-      //const CCTK_INT indip3jm2 = i+3 + jm2*NX;
-      const CCTK_INT indip3jp1 = i+3 + jp1*NX;
-      //const CCTK_INT indip3jp2 = i+3 + jp2*NX;
 
 
       const CCTK_REAL lX = X[i];
@@ -182,78 +153,136 @@ void UAv_IDScalarBS(CCTK_ARGUMENTS)
       const CCTK_REAL Wbar_th = (-Wbar_in[indjp2] + 8 * Wbar_in[indjp1] - 8 * Wbar_in[indjm1] + Wbar_in[indjm2]) *
         oodth12;
 
-      CCTK_REAL Wbar_X, Wbar_Xth;
+      CCTK_REAL Wbar_X;
+      CCTK_REAL Wbar_XX = 0.; // Used for r=0 (i==0), if Wbar_r_power == 2.
 
       if (i == 1 || i == NX - 2) {
         // 1st derivative with 2nd order accuracy (central stencils)
         Wbar_X = (-Wbar_in[indim1] + Wbar_in[indip1]) * 0.5 * oodX;
 
-        Wbar_Xth  = ( Wbar_in[indip1jp1] - Wbar_in[indip1jm1] - Wbar_in[indim1jp1] + Wbar_in[indim1jm1] ) * oodXdth4;
-
       } else if (i == 0) {
-        /* this point is X == 0, r == rH, R == rH/4. dWbar_dX goes to zero here. but
-           since we're interested in dWbar_dr, and since drxdr diverges (here), we
-           will use L'Hopital's rule. for that, we will write instead the 2nd
-           derivative */
-        /* /!\ For the Boson Star case (rH == 0), then rx == r and drxdr == 1.
-           So we don't need the rule, and we know the result is dWbar_dr == 0.
-           However, this is consistent with the computation below, where drxdr == 0 for i == 0.*/
+        /* For the Boson Star, there's no issue, dWbar/dX != 0 at X==0, and x and r coordinates coincide. */
 
-        // 2nd derivative with 2nd order accuracy (forward stencils)
-        Wbar_X = (2*Wbar_in[ind] - 5*Wbar_in[indip1] + 4*Wbar_in[indip2] - Wbar_in[indip3]) * oodXsq;
+        // 1st derivative with 2nd order accuracy (forward stencils)
+        Wbar_X =-(Wbar_in[indip2] - 4*Wbar_in[indip1] + 3*Wbar_in[ind]) * 0.5 * oodX;
 
-        // mixed derivatives with 2nd order accuracy (central stencils in j (1st der) and forward in i (2nd der))
-        Wbar_Xth = ( 2*Wbar_in[indjp1] - 2*Wbar_in[indjm1] - 5*Wbar_in[indip1jp1] + 5*Wbar_in[indip1jm1]
-                    + 4*Wbar_in[indip2jp1] - 4*Wbar_in[indip2jm1] - Wbar_in[indip3jp1] + Wbar_in[indip3jm1]) * oodXsqdth2;
-        
+        if (Wbar_r_power == 2) {
+          // If Wbar = r^2 * W, to compute W(r=0), we need to compute Wbar_XX.
+          // 2nd derivative with 2nd order accuracy (forward stencils)
+          Wbar_XX = (2*Wbar_in[ind] - 5*Wbar_in[indip1] + 4*Wbar_in[indip2] - Wbar_in[indip3]) * oodXsq;
+
+        }
+
       } else if (i == NX - 1) {
         /* last radial point */
 
         // 1st derivative with 2nd order accuracy (backward stencils)
         Wbar_X = (Wbar_in[indim2] - 4*Wbar_in[indim1] + 3*Wbar_in[ind]) * 0.5 * oodX;
-        Wbar_Xth = 0.; // we don't actually use this variable at large r, so just
-                    // set it to zero
 
       } else {
         // 4th order accurate stencils
         Wbar_X    = (-Wbar_in[indip2] + 8 * Wbar_in[indip1] - 8 * Wbar_in[indim1] + Wbar_in[indim2]) * oodX12;
-        Wbar_Xth  = (
-            -Wbar_in[indim2jp2] +  8*Wbar_in[indim1jp2] -  8*Wbar_in[indip1jp2] +   Wbar_in[indip2jp2]
-         + 8*Wbar_in[indim2jp1] - 64*Wbar_in[indim1jp1] + 64*Wbar_in[indip1jp1] - 8*Wbar_in[indip2jp1]
-         - 8*Wbar_in[indim2jm1] + 64*Wbar_in[indim1jm1] - 64*Wbar_in[indip1jm1] + 8*Wbar_in[indip2jm1]
-         +   Wbar_in[indim2jm2] -  8*Wbar_in[indim1jm2] +  8*Wbar_in[indip1jm2] -   Wbar_in[indip2jm2] ) * oodXdth144;
-
+      
       }
 
-      // from the X coordinate used in the input files to the x coordinate
-      // We need to be careful at X == 1 for radial derivatives (coordinate change is singular)
-      if (i == NX - 1) {
-        dWbar_dr_in[ind]    = 0.; // Sensibly, dWbar_dr_in should vanish (dXdr == 0, Wbar_X bounded)
-        d2Wbar_drth_in[ind] = 0.; // Wbar_Xth is set to 0 above anyway
+      // From the X coordinate used in the input files to the r coordinate (coincides with x for the Boson Star, rH=0).
+      // We also do the conversion from Wbar to W here, to tackle r = 0 (X = 0).
+
+      // i == 0  <=>  X == 0  <=>  r == 0
+      if (i == 0) {
+        // At r=0 we have dW/dr = 0 and dW/dth = 0
+        dW_dr_in[ind]    = 0.; 
+        dW_dth_in[ind]   = 0.; 
+
+        // For W we need more care depending on the power
+        switch (Wbar_r_power)
+        {
+        case 0:   // Wbar = W
+          W_in[ind]        = Wbar_in[ind];
+          break;
+        
+        case 1:   // Wbar = r * W
+          /*
+          dWbar/dr = W + r * dW/dr
+                   = W + 0 * 0     at r=0
+          
+          dWbar/dr = dWbar/dX * dX/dr
+          dX/dr = C/(C+r)^2 = 1/C  at r=0
+          */
+          W_in[ind]        = Wbar_X / C0;
+          break;
+        
+        case 2:   // Wbar = r^2 * W
+          /*
+          dWbar/dr   = 2r * W + r^2 * dW/dr
+          d2Wbar/dr2 = 2  * W + 4r  * dW/dr + r^2 * d2W/dr2
+                     = 2  * W + 0 + 0        at r=0
+
+          d2Wbar/dr2 = d2Wbar/dX2 * (dX/dr)^2 + dWbar/dX * d2X/dr2
+          dX/dr   =   C/(C+r)^2 =  1/C      at r=0
+          d2X/dr2 = -2C/(C+r)^3 = -2/C^2    at r=0
+
+          W (r=0) = 1/C^2 * [1/2 * d2Wbar/dX^2 (X=0)  -  dWbar/dX (X=0)]
+          */
+          W_in[ind]        = (0.5 * Wbar_XX - Wbar_X)/(C0*C0);
+          break;
+        
+        default:  // As of writing, this should be prevented by the scope of the parameter anyway
+          CCTK_VWarn(0, __LINE__, __FILE__, CCTK_THORNSTRING,
+          "Unknown value of Wbar_r_power: %d. Aborting.", Wbar_r_power);
+          break;
+        }
+      }
+
+      // We need to be careful at X == 1 (r == infty) for radial derivatives (coordinate change is singular)
+      else if (i == NX - 1) {
+        // W -> 0 for r -> infty
+        W_in[ind]        = 0.;
+
+        // Actually, the asymptotic expansion (Appendix B in the construction paper) also gives:
+        dW_dr_in[ind]    = 0.; 
+        dW_dth_in[ind]   = 0.; 
 
       } else {
-        const CCTK_REAL rx = C0*lX/(1. - lX);
-        // from the x coordinate to the metric coordinate r
-        // const CCTK_REAL rr = sqrt(rH*rH + rx*rx);
+        const CCTK_REAL rr = C0*lX/(1. - lX);
 
         // corresponding derivatives
-        const CCTK_REAL dXdrx = 1./(C0 + rx) - rx/((C0 + rx)*(C0 + rx));
+        // const CCTK_REAL dXdr = 1./(C0 + rr) - rr/((C0 + rr)*(C0 + rr));
+        const CCTK_REAL dXdr = C0/((C0 + rr)*(C0 + rr));
 
-        CCTK_REAL drxdr;
-        if (i == 0) { // rx == 0 (X == 0)
-          drxdr = sqrt(rH*rH + rx*rx);
-        } else {
-          drxdr = sqrt(rH*rH + rx*rx)/rx;
+        const CCTK_REAL Wbar_r = dXdr * Wbar_X;
+        
+        // Now translate from Wbar to W
+        switch (Wbar_r_power) // We could put a generic power for the computation here I guess...
+        {
+        case 0:   // Wbar = W
+          W_in[ind]        = Wbar_in[ind];
+          dW_dr_in[ind]    = Wbar_r;
+          dW_dth_in[ind]   = Wbar_th;
+          break;
+        
+        case 1:   // Wbar = r * W
+          W_in[ind]        = Wbar_in[ind] / rr;
+          dW_dr_in[ind]    = (Wbar_r - W_in[ind]) / rr; // dW/dr  =  1/r * dWbar/dr - Wbar / r^2  =  (dWbar/dr - W) / r
+          dW_dth_in[ind]   = Wbar_th / rr;
+          break;
+        
+        case 2:   // Wbar = r^2 * W
+          const CCTK_REAL rr2 = rr*rr;
+          W_in[ind]        = Wbar_in[ind] / rr2;
+          dW_dr_in[ind]    = Wbar_r / rr2 - 2 * W_in[ind] / rr; // dW/dr  =  1/r^2 * dWbar/dr - 2 * Wbar / r^3  =  1/r^2 * dWbar/dr - 2 * W / r
+          dW_dth_in[ind]   = Wbar_th / rr2;
+          break;
+        
+        default:  // As of writing, this should be prevented by the scope of the parameter anyway
+          CCTK_VWarn(0, __LINE__, __FILE__, CCTK_THORNSTRING,
+          "Unknown value of Wbar_r_power: %d. Aborting.", Wbar_r_power);
+          break;
         }
-        const CCTK_REAL dXdr = dXdrx * drxdr;
-
-        dWbar_dr_in[ind]    = dXdr * Wbar_X;
-        d2Wbar_drth_in[ind] = dXdr * Wbar_Xth;
-      }
-
-      dWbar_dth_in[ind]   = Wbar_th;
-    }
-  }
+      } // if/else i==...
+    
+    } // for i
+  } // for jj
 
 
   /* now we need to interpolate onto the actual grid points. first let's store
@@ -274,23 +303,20 @@ void UAv_IDScalarBS(CCTK_ARGUMENTS)
         const CCTK_REAL y1  = y[ind] - y0;
         const CCTK_REAL z1  = z[ind] - z0;
 
-        const CCTK_REAL RR2 = x1*x1 + y1*y1 + z1*z1;
+        const CCTK_REAL rr2 = x1*x1 + y1*y1 + z1*z1;
 
-        CCTK_REAL RR  = sqrt(RR2);
-        /* note that there are divisions by RR in the following expressions.
+        CCTK_REAL rr  = sqrt(rr2);
+        /* TODO: cleanup after check that this isn't relevant anymore.
+          note that there are divisions by RR in the following expressions.
            divisions by zero should be avoided by choosing a non-zero value for
            z0 (for instance) */
 
-        // from (quasi-)isotropic coordinate R to the metric coordinate r
-        const CCTK_REAL rr = RR * (1. + 0.25 * rH / RR) * (1. + 0.25 * rH / RR);
+        /* For the Boson Star, x, r and R coordinates coincide (rH=0). */
+        
+        // From R to the X radial coordinate (used in input files)
+        const CCTK_REAL lX = rr / (C0 + rr);
 
-        // from the metric coordinate r to the x coordinate
-        const CCTK_REAL rx = sqrt(rr*rr - rH*rH);
-
-        // and finally to the X radial coordinate (used in input files)
-        const CCTK_REAL lX = rx / (C0 + rx);
-
-        CCTK_REAL ltheta = acos( z1/RR );
+        CCTK_REAL ltheta = acos( z1/rr );
         if (ltheta > 0.5*M_PI)    // symmetry along the equatorial plane
           ltheta = M_PI - ltheta;
 
@@ -304,8 +330,8 @@ void UAv_IDScalarBS(CCTK_ARGUMENTS)
 
   const CCTK_INT N_dims  = 2;   // 2-D interpolation
 
-  const CCTK_INT N_input_arrays  = 8;
-  const CCTK_INT N_output_arrays = 8;
+  const CCTK_INT N_input_arrays  = 7;
+  const CCTK_INT N_output_arrays = 7;
 
   /* origin and stride of the input coordinates. with this Cactus reconstructs
      the whole X and theta array. */
@@ -335,7 +361,6 @@ void UAv_IDScalarBS(CCTK_ARGUMENTS)
   input_array_type_codes[4] = CCTK_VARIABLE_REAL;
   input_array_type_codes[5] = CCTK_VARIABLE_REAL;
   input_array_type_codes[6] = CCTK_VARIABLE_REAL;
-  input_array_type_codes[7] = CCTK_VARIABLE_REAL;
 
   /* Cactus stores and expects arrays in Fortran order, that is, faster in the
      first index. this is compatible with our input file, where the X coordinate
@@ -344,25 +369,23 @@ void UAv_IDScalarBS(CCTK_ARGUMENTS)
   input_arrays[1] = (const void *) F2_in;
   input_arrays[2] = (const void *) F0_in;
   input_arrays[3] = (const void *) phi0_in;
-  input_arrays[4] = (const void *) Wbar_in;
-  input_arrays[5] = (const void *) dWbar_dr_in;
-  input_arrays[6] = (const void *) dWbar_dth_in;
-  input_arrays[7] = (const void *) d2Wbar_drth_in;
+  input_arrays[4] = (const void *) W_in;
+  input_arrays[5] = (const void *) dW_dr_in;
+  input_arrays[6] = (const void *) dW_dth_in;
 
   /* output arrays */
   void *output_arrays[N_output_arrays];
   CCTK_INT output_array_type_codes[N_output_arrays];
-  CCTK_REAL *F1, *F2, *F0, *phi0, *Wbar;
-  CCTK_REAL *dWbar_dr, *dWbar_dth, *d2Wbar_drth;
+  CCTK_REAL *F1, *F2, *F0, *phi0, *W;
+  CCTK_REAL *dW_dr, *dW_dth;
 
   F1          = (CCTK_REAL *) malloc(N_interp_points * sizeof(CCTK_REAL));
   F2          = (CCTK_REAL *) malloc(N_interp_points * sizeof(CCTK_REAL));
   F0          = (CCTK_REAL *) malloc(N_interp_points * sizeof(CCTK_REAL));
   phi0        = (CCTK_REAL *) malloc(N_interp_points * sizeof(CCTK_REAL));
-  Wbar        = (CCTK_REAL *) malloc(N_interp_points * sizeof(CCTK_REAL));
-  dWbar_dr    = (CCTK_REAL *) malloc(N_interp_points * sizeof(CCTK_REAL));
-  dWbar_dth   = (CCTK_REAL *) malloc(N_interp_points * sizeof(CCTK_REAL));
-  d2Wbar_drth = (CCTK_REAL *) malloc(N_interp_points * sizeof(CCTK_REAL));
+  W           = (CCTK_REAL *) malloc(N_interp_points * sizeof(CCTK_REAL));
+  dW_dr       = (CCTK_REAL *) malloc(N_interp_points * sizeof(CCTK_REAL));
+  dW_dth      = (CCTK_REAL *) malloc(N_interp_points * sizeof(CCTK_REAL));
 
   output_array_type_codes[0] = CCTK_VARIABLE_REAL;
   output_array_type_codes[1] = CCTK_VARIABLE_REAL;
@@ -371,16 +394,14 @@ void UAv_IDScalarBS(CCTK_ARGUMENTS)
   output_array_type_codes[4] = CCTK_VARIABLE_REAL;
   output_array_type_codes[5] = CCTK_VARIABLE_REAL;
   output_array_type_codes[6] = CCTK_VARIABLE_REAL;
-  output_array_type_codes[7] = CCTK_VARIABLE_REAL;
 
   output_arrays[0] = (void *) F1;
   output_arrays[1] = (void *) F2;
   output_arrays[2] = (void *) F0;
   output_arrays[3] = (void *) phi0;
-  output_arrays[4] = (void *) Wbar;
-  output_arrays[5] = (void *) dWbar_dr;
-  output_arrays[6] = (void *) dWbar_dth;
-  output_arrays[7] = (void *) d2Wbar_drth;
+  output_arrays[4] = (void *) W;
+  output_arrays[5] = (void *) dW_dr;
+  output_arrays[6] = (void *) dW_dth;
 
 
   /* handle and settings for the interpolation routine */
@@ -410,7 +431,7 @@ void UAv_IDScalarBS(CCTK_ARGUMENTS)
   free(X_g); free(theta_g);
   free(Xtmp); free(thtmp);
   free(F1_in); free(F2_in); free(F0_in); free(phi0_in); free(Wbar_in);
-  free(dWbar_dr_in); free(dWbar_dth_in); free(d2Wbar_drth_in);
+  free(W_in); free(dW_dr_in); free(dW_dth_in);
 
 
   /* printf("F1 = %g\n", F1[0]); */
@@ -438,42 +459,39 @@ void UAv_IDScalarBS(CCTK_ARGUMENTS)
         const CCTK_REAL y1  = y[ind] - y0;
         const CCTK_REAL z1  = z[ind] - z0;
 
-        CCTK_REAL RR2 = x1*x1 + y1*y1 + z1*z1;
-        /* note that there are divisions by RR in the following expressions.
+        // For the Boson Star, r = R, no coordinate change needed.
+        CCTK_REAL rr2 = x1*x1 + y1*y1 + z1*z1;
+        /* TODO: cleanup check this is irrelevant now
+           note that there are divisions by RR in the following expressions.
            divisions by zero should be avoided by choosing a non-zero value for
            z0 (for instance) */
 
-        const CCTK_REAL RR  = sqrt(RR2);
-
-        // from (quasi-)isotropic coordinate R to the metric coordinate r
-        const CCTK_REAL rr = RR * (1. + 0.25 * rH / RR) * (1. + 0.25 * rH / RR);
-        const CCTK_REAL rrP = pow(rr, Wbar_r_power);
-        const CCTK_REAL rrPp1 = rr*rrP;
+        const CCTK_REAL rr  = sqrt(rr2);
 
         /*
         const CCTK_REAL rho2 = x1*x1 + y1*y1;
         const CCTK_REAL rho  = sqrt(rho2);
         */
 
-        const CCTK_REAL costh  = z1/RR;
+        const CCTK_REAL costh  = z1/rr;
         const CCTK_REAL costh2 = costh*costh;
         const CCTK_REAL sinth2 = 1. - costh2;
         const CCTK_REAL sinth  = sqrt(sinth2);
 
-        /*
+        /* TODO: cleanup?
         const CCTK_REAL R_x = x1/RR;   // dR/dx
         const CCTK_REAL R_y = y1/RR;   // dR/dy
         const CCTK_REAL R_z = z1/RR;   // dR/dz
         */
 
-        const CCTK_REAL sinth2ph_x = -y1/RR2; // sin(th)^2 dphi/dx
-        const CCTK_REAL sinth2ph_y =  x1/RR2; // sin(th)^2 dphi/dy
+        const CCTK_REAL sinth2ph_x = -y1/rr2; // sin(th)^2 dphi/dx
+        const CCTK_REAL sinth2ph_y =  x1/rr2; // sin(th)^2 dphi/dy
 
         const CCTK_REAL R2sinth2ph_x = -y1;  // R^2 sin(th)^2 dphi/dx
         const CCTK_REAL R2sinth2ph_y =  x1;  // R^2 sin(th)^2 dphi/dy
 
-        const CCTK_REAL Rsinthth_x  = z1*x1/RR2; // R sin(th) dth/dx
-        const CCTK_REAL Rsinthth_y  = z1*y1/RR2; // R sin(th) dth/dy
+        const CCTK_REAL Rsinthth_x  = z1*x1/rr2; // R sin(th) dth/dx
+        const CCTK_REAL Rsinthth_y  = z1*y1/rr2; // R sin(th) dth/dy
         const CCTK_REAL Rsinthth_z  = -sinth2;   // R sin(th) dth/dz
 
         const CCTK_REAL ph = atan2(y1, x1);
@@ -492,14 +510,8 @@ void UAv_IDScalarBS(CCTK_ARGUMENTS)
 
         const CCTK_REAL h_rho2 = exp(2. * (F2[ind] - F1[ind])) - 1.;
 
-        // from Wbar to W function, Wbar = r^p * W
-        const CCTK_REAL W        = Wbar[ind] / rrP;
-        const CCTK_REAL dW_dth   = dWbar_dth[ind] / rrP;
-        const CCTK_REAL dW_dr    = dWbar_dr[ind] / rrP - 2 * Wbar[ind] / rrPp1;
-        const CCTK_REAL d2W_drth = d2Wbar_drth[ind] / rrP - 2 * dWbar_dth[ind] / rrPp1;
-
         // add non-axisymmetric perturbation on conformal factor
-        const CCTK_REAL argpert_cf = (RR - R0pert_conf_fac)/Sigmapert_conf_fac;
+        const CCTK_REAL argpert_cf = (rr - R0pert_conf_fac)/Sigmapert_conf_fac;
         const CCTK_REAL pert_cf = 1. + Apert_conf_fac * (x1*x1 - y1*y1)*mu*mu * exp( -0.5*argpert_cf*argpert_cf );
 
         const CCTK_REAL conf_fac = psi4 * pert_cf;
@@ -518,12 +530,7 @@ void UAv_IDScalarBS(CCTK_ARGUMENTS)
         */
 
         // KRph/(R sin(th)^2)
-        const CCTK_REAL KRph_o_Rsinth2 = -0.5 * exp(2. * F2[ind] - F0[ind]) * RR * dW_dr;
-
-        const CCTK_REAL den = RR - 0.25 * rH;
-        const CCTK_REAL eps = den/RR; // epsilon = 1 - rh/(4R) : small parameter close to the horizon
-        const CCTK_REAL eps_o_1meps = eps/(1 - eps);
-
+        const CCTK_REAL KRph_o_Rsinth2 = -0.5 * exp(2. * F2[ind] - F0[ind]) * rr * dW_dr[ind];
 
         // dW/dth / sin(th) 1/(R - rH/4)
         CCTK_REAL dWdth_o_sinth_den;
@@ -542,10 +549,10 @@ void UAv_IDScalarBS(CCTK_ARGUMENTS)
         //                    ~ [...] * df_dr(R)      FURTHER ASSUMING df_dr - df_dr(rH/4) ~ (r(R)-rH)*d2f_dr2(rH/4) should be small 
         //                                            (at worst like the order 3 above?)
         //    [...] = eps/(1-eps) - (eps/(1-eps))^2
-        else if (fabs(eps) < 1e-4)
-          dWdth_o_sinth_den = (eps_o_1meps - eps_o_1meps*eps_o_1meps) * d2W_drth / sinth;
-        else
-          dWdth_o_sinth_den = dW_dth / (den * sinth);
+  //      else if (fabs(eps) < 1e-4)
+  //        dWdth_o_sinth_den = (eps_o_1meps - eps_o_1meps*eps_o_1meps) * d2W_drth / sinth;
+  //      else
+  //        dWdth_o_sinth_den = dW_dth / (den * sinth);
         
         // Kthph/(R sin(th))^3
         const CCTK_REAL Kthph_o_R3sinth3 = -0.5 * exp(2. * F2[ind] - F0[ind]) * dWdth_o_sinth_den;
@@ -561,7 +568,7 @@ void UAv_IDScalarBS(CCTK_ARGUMENTS)
           
 
         // let's add a perturbation to the scalar field as well
-        const CCTK_REAL argpert_phi = (RR - R0pert_phi)/Sigmapert_phi;
+        const CCTK_REAL argpert_phi = (rr - R0pert_phi)/Sigmapert_phi;
         const CCTK_REAL pert_phi = 1. + Apert_phi * (x1*x1 - y1*y1)*mu*mu * exp( -0.5*argpert_phi*argpert_phi );
 
         const CCTK_REAL phi0_l = phi0[ind] * pert_phi;
@@ -573,8 +580,8 @@ void UAv_IDScalarBS(CCTK_ARGUMENTS)
         const CCTK_REAL alph = exp(F0[ind]);
 
         // No regularization needed for the BS, the lapse is non-zero
-        Kphi1[ind] = 0.5 * (mm * W - omega_BS) / alph * phi2[ind];
-        Kphi2[ind] = 0.5 * (omega_BS - mm * W) / alph * phi1[ind];
+        Kphi1[ind] = 0.5 * (mm * W[ind] - omega_BS) / alph * phi2[ind];
+        Kphi2[ind] = 0.5 * (omega_BS - mm * W[ind]) / alph * phi1[ind];
         
 
         // lapse
@@ -588,8 +595,8 @@ void UAv_IDScalarBS(CCTK_ARGUMENTS)
 
         // shift
         if (CCTK_EQUALS(initial_shift, "ScalarBS")) {
-          betax[ind] =  W * y1;
-          betay[ind] = -W * x1;
+          betax[ind] =  W[ind] * y1;
+          betay[ind] = -W[ind] * x1;
           betaz[ind] =  0.;
         }
 
@@ -597,8 +604,8 @@ void UAv_IDScalarBS(CCTK_ARGUMENTS)
     }   /* for j */
   }     /* for k */
 
-  free(F1); free(F2); free(F0); free(phi0); free(Wbar);
-  free(dWbar_dr); free(dWbar_dth); free(d2Wbar_drth);
+  free(F1); free(F2); free(F0); free(phi0); free(W);
+  free(dW_dr); free(dW_dth);
 
   return;
 }

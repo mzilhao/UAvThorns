@@ -37,7 +37,7 @@ STRING infilename "file to read the input data from"
 
 REAL C0 "parameter for R to X coordinate transformation"
 {
-  0:* :: "greater than zero"
+  (0:* :: "greater than zero"
 } 1.0
 
 INT Wbar_r_power "power p in Wbar = r^p * W. For now, p=0,1,2 to make sense with asymptotic behavior. Default is p==2, mostly used in HairyBH initial data."
