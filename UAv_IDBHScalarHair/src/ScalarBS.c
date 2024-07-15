@@ -170,7 +170,6 @@ void UAv_IDScalarBS(CCTK_ARGUMENTS)
           // If Wbar = r^2 * W, to compute W(r=0), we need to compute Wbar_XX.
           // 2nd derivative with 2nd order accuracy (forward stencils)
           Wbar_XX = (2*Wbar_in[ind] - 5*Wbar_in[indip1] + 4*Wbar_in[indip2] - Wbar_in[indip3]) * oodXsq;
-
         }
 
       } else if (i == NX - 1) {
@@ -306,17 +305,12 @@ void UAv_IDScalarBS(CCTK_ARGUMENTS)
         const CCTK_REAL rr2 = x1*x1 + y1*y1 + z1*z1;
 
         CCTK_REAL rr  = sqrt(rr2);
-        /* TODO: cleanup after check that this isn't relevant anymore.
-          note that there are divisions by RR in the following expressions.
-           divisions by zero should be avoided by choosing a non-zero value for
-           z0 (for instance) */
-
         /* For the Boson Star, x, r and R coordinates coincide (rH=0). */
         
-        // From R to the X radial coordinate (used in input files)
+        // From r to the X radial coordinate (used in input files)
         const CCTK_REAL lX = rr / (C0 + rr);
 
-        CCTK_REAL ltheta = acos( z1/rr );
+        CCTK_REAL ltheta = rr < 1e-16 ? 0 : acos( z1/rr );    // There should be at most one point in the grid with rr~0. Not sure about the threshold.
         if (ltheta > 0.5*M_PI)    // symmetry along the equatorial plane
           ltheta = M_PI - ltheta;
 
@@ -538,7 +532,7 @@ void UAv_IDScalarBS(CCTK_ARGUMENTS)
         kxz[ind] =  0.5 *  y1 * exp_auxi * dW_dz;
         kyy[ind] = -kxx[ind];
         kyz[ind] = -0.5 *  x1 * exp_auxi * dW_dz;
-        kzz[ind] = 0.;
+        kzz[ind] =  0.;
 
           
 

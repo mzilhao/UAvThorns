@@ -29,3 +29,8 @@ if (CCTK_Equals(initial_data, "ScalarBS"))
     SYNC: ADMBase::curv
   } "read data from the specified file, assumed to have an equidistant grid in the X coordinate"
 }
+
+schedule UAv_IDBHScalarHair_ParamCheck AT ParamCheck
+{
+  LANG: C
+} "Check UAv_IDBHScalarHair parameters for consistency"
