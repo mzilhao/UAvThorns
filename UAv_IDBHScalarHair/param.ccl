@@ -128,3 +128,9 @@ REAL initial_lapse_psi_exponent "Exponent n for psi^n initial lapse profile"
 {
   (*:*) :: "Should be negative"
 } -2.0
+
+INT normalization_Tmunu "Normalization used for the stress-energy tensor in the input files"
+{
+  0   :: "4 pi G = 1"
+  1   :: "G = 1"
+} 0
