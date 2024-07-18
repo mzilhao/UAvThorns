@@ -88,8 +88,9 @@ void UAv_IDScalarBS(CCTK_ARGUMENTS)
   dW_dth_in   = (CCTK_REAL *) malloc(NF * sizeof(CCTK_REAL));
 
   const CCTK_REAL oodX       = 1. / dX;
-  const CCTK_REAL oodXsq     = oodX * oodX;
+  // const CCTK_REAL oodXsq     = oodX * oodX;
   const CCTK_REAL oodX12     = 1. / (12. * dX);
+  const CCTK_REAL oodXsq12   = oodX * oodX12;
   const CCTK_REAL oodth12    = 1. / (12. * dtheta);
 
   for (int jj = 0; jj < Ntheta; jj++) {
@@ -137,6 +138,8 @@ void UAv_IDScalarBS(CCTK_ARGUMENTS)
       const CCTK_INT indim2 = i-2 + j*NX;
       const CCTK_INT indip2 = i+2 + j*NX;
       const CCTK_INT indip3 = i+3 + j*NX;
+      const CCTK_INT indip4 = i+4 + j*NX;
+      const CCTK_INT indip5 = i+5 + j*NX;
 
       const CCTK_INT indjm1 = i + jm1*NX;
       const CCTK_INT indjm2 = i + jm2*NX;
@@ -156,27 +159,41 @@ void UAv_IDScalarBS(CCTK_ARGUMENTS)
       CCTK_REAL Wbar_X;
       CCTK_REAL Wbar_XX = 0.; // Used for r=0 (i==0), if Wbar_r_power == 2.
 
-      if (i == 1 || i == NX - 2) {
-        // 1st derivative with 2nd order accuracy (central stencils)
-        Wbar_X = (-Wbar_in[indim1] + Wbar_in[indip1]) * 0.5 * oodX;
+      /*
+      Regarding finite differencing orders: plotting W and dW_dr, there were small discontinuities near r=0
+      during tests with the previous 2nd order accuracy for i==0 and i==1.
+      Those vanish when moving to 4th order accuracy.
 
-      } else if (i == 0) {
+      For i==NX-1 and i==NX-2, we keep 2nd order for now. The issue is not appearing as clearly,
+      and they represent points which are physically far, so maybe better to keep the computation more local.
+      */
+
+      if (i == 0) {
         /* For the Boson Star, there's no issue, dWbar/dX != 0 at X==0, and x and r coordinates coincide. */
 
-        // 1st derivative with 2nd order accuracy (forward stencils)
-        Wbar_X =-(Wbar_in[indip2] - 4*Wbar_in[indip1] + 3*Wbar_in[ind]) * 0.5 * oodX;
+        // 1st derivative with 4th order accuracy (forward stencils)
+        Wbar_X =(- 25 * Wbar_in[ind] + 48 * Wbar_in[indip1] - 36 * Wbar_in[indip2] + 16 * Wbar_in[indip3] - 3 * Wbar_in[indip4]) * oodX12;
 
         if (Wbar_r_power == 2) {
           // If Wbar = r^2 * W, to compute W(r=0), we need to compute Wbar_XX.
-          // 2nd derivative with 2nd order accuracy (forward stencils)
-          Wbar_XX = (2*Wbar_in[ind] - 5*Wbar_in[indip1] + 4*Wbar_in[indip2] - Wbar_in[indip3]) * oodXsq;
+          // 2nd derivative with 4th order accuracy (forward stencils)
+          Wbar_XX = (45 * Wbar_in[ind] - 154 * Wbar_in[indip1] + 214 * Wbar_in[indip2] 
+                    - 156 * Wbar_in[indip3] + 61 * Wbar_in[indip4] - 10 * Wbar_in[indip5]) * oodXsq12;
         }
+
+      } else if (i == 1 ) {
+        // 1st derivative, 4th order accuracy
+        Wbar_X = (- 3 * Wbar_in[indim1] - 10 * Wbar_in[ind] + 18 * Wbar_in[indip1] - 6 * Wbar_in[indip2] + Wbar_in[indip3]) * oodX12;
 
       } else if (i == NX - 1) {
         /* last radial point */
 
         // 1st derivative with 2nd order accuracy (backward stencils)
         Wbar_X = (Wbar_in[indim2] - 4*Wbar_in[indim1] + 3*Wbar_in[ind]) * 0.5 * oodX;
+
+      } else if (i == NX - 2) {
+        // 1st derivative with 2nd order accuracy (central stencils)
+        Wbar_X = (-Wbar_in[indim1] + Wbar_in[indip1]) * 0.5 * oodX;
 
       } else {
         // 4th order accurate stencils
