@@ -49,3 +49,31 @@ subroutine MagScalar_Boundaries( CCTK_ARGUMENTS )
        call CCTK_WARN(0, "Failed to register BC for MagScalarBase::Kphi!")
 
 end subroutine MagScalar_Boundaries
+!
+!=============================================================================
+!
+subroutine MagScalar_constraints_boundaries( CCTK_ARGUMENTS )
+
+  implicit none
+  DECLARE_CCTK_ARGUMENTS
+  DECLARE_CCTK_PARAMETERS
+  DECLARE_CCTK_FUNCTIONS
+
+  CCTK_INT ierr
+  CCTK_INT, parameter :: one = 1
+  CCTK_INT bndsize
+
+  if (derivs_order == 6) then
+     bndsize = 5
+  else if (derivs_order == 4) then
+     bndsize = 3
+  else
+     call CCTK_ERROR("derivs_order not yet implemented.")
+  end if
+
+  ierr = Boundary_SelectGroupForBC(cctkGH, CCTK_ALL_FACES, bndsize, -one, &
+       "MagScalarEvolve::gauss", "flat")
+  if (ierr < 0)                                                           &
+       call CCTK_ERROR("Failed to register BC for MagScalarEvolve::gauss!")
+
+end subroutine MagScalar_constraints_boundaries
