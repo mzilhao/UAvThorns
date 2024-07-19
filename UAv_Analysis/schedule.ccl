@@ -1,8 +1,10 @@
 # Schedule definitions for thorn UAv_Analysis
 
 storage: dE_gf_volume[3]
+storage: dJ_gf_volume[3]
 storage: quadrupole_gf_volume[3]
 storage: total_energy[1]
+storage: total_angular_momentum[1]
 storage: quadrupole[1]
 storage: densities[3]
 
@@ -29,6 +31,7 @@ schedule UAv_Analysis_gfs in UAv_Analysis_Group
   LANG: Fortran
   OPTIONS: global loop-local
   SYNC: dE_gf_volume
+  SYNC: dJ_gf_volume
   SYNC: quadrupole_gf_volume
   SYNC: densities
 } "Calculate grid functions"

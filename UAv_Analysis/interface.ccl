@@ -22,6 +22,20 @@ CCTK_REAL total_energy type=scalar timelevels=1 tags='checkpoint="no"'
 
 CCTK_REAL dE_gf_volume type=gf timelevels=3 tags='Prolongation="none" tensortypealias="Scalar" checkpoint="no"' "energy density gridfunction for volume integration"
 
+CCTK_REAL total_angular_momentum type=scalar timelevels=1 tags='checkpoint="no"'
+{
+  total_angular_momentum_x
+  total_angular_momentum_y
+  total_angular_momentum_z
+} "Komar angular momentum (integral computed with respect to rotation around each axis, centered at the origin)"
+
+CCTK_REAL dJ_gf_volume type=gf timelevels=3 tags='Prolongation="none" tensortypealias="D" checkpoint="no"'
+{
+  dJx_gf_volume
+  dJy_gf_volume
+  dJz_gf_volume
+} "angular momentum density J_i gridfunctions for volume integration"
+
 CCTK_REAL quadrupole type=scalar timelevels=1 tags='checkpoint="no"'
 {
   Ixx, Ixy, Ixz
