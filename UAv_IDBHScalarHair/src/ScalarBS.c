@@ -283,7 +283,8 @@ void UAv_IDScalarBS(CCTK_ARGUMENTS)
           dW_dth_in[ind]   = Wbar_th / rr;
           break;
         
-        case 2:   // Wbar = r^2 * W
+        case 2: ; // Wbar = r^2 * W
+          // empty statement after case to prevent compilation error on some gcc versions...
           const CCTK_REAL rr2 = rr*rr;
           W_in[ind]        = Wbar_in[ind] / rr2;
           dW_dr_in[ind]    = Wbar_r / rr2 - 2 * W_in[ind] / rr; // dW/dr  =  1/r^2 * dWbar/dr - 2 * Wbar / r^3  =  1/r^2 * dWbar/dr - 2 * W / r
