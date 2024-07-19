@@ -86,3 +86,8 @@ REAL conf_fac_exponent "Exponent n for hgamma_ij = chi^n gamma_ij conformal deco
 {
   (*:*) :: "1 or 2 are good choices"
 } 1
+
+
+BOOLEAN calculate_constraints "Calculate the EMG constraints?" STEERABLE=always
+{
+} "no"

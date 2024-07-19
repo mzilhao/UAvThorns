@@ -94,3 +94,11 @@ CCTK_REAL trk type=gf tags='tensortypealias="Scalar" tensorweight=0 prolongation
 {
   tracek
 } "Tr(K)"
+
+
+public:
+
+CCTK_REAL gauss type=gf timelevels=3 tags='tensortypealias="Scalar" tensorweight=0'
+{
+  gc
+} "Gauss constraint"
