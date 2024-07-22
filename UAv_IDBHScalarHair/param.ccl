@@ -8,20 +8,23 @@ SHARES: ADMBase
 EXTENDS KEYWORD initial_data
 {
   "Kerr_test" :: "test with Kerr data"
-  "HairyBH"   :: "HairyBH initial lapse profile"
+  "HairyBH"   :: "HairyBH initial data"
+  "ScalarBS"  :: "Scalar boson star initial data"
 }
 
 EXTENDS KEYWORD initial_lapse
 {
   "Kerr_test" :: "test with Kerr data"
   "HairyBH"   :: "HairyBH initial lapse profile"
+  "ScalarBS"  :: "Scalar boson star initial lapse profile"
   "psi^n"     :: "psi^n initial lapse profile"
 }
 
 EXTENDS KEYWORD initial_shift
 {
   "Kerr_test" :: "test with Kerr data"
-  "HairyBH"   :: "HairyBH initial lapse profile"
+  "HairyBH"   :: "HairyBH initial shift profile"
+  "ScalarBS"  :: "Scalar boson star initial shift profile"
 }
 
 
@@ -34,7 +37,7 @@ STRING infilename "file to read the input data from"
 
 REAL C0 "parameter for R to X coordinate transformation"
 {
-  0:* :: "greater than zero"
+  (0:* :: "greater than zero"
 } 1.0
 
 INT Wbar_r_power "power p in Wbar = r^p * W. For now, p=0,1,2 to make sense with asymptotic behavior. Default is p==2, mostly used in HairyBH initial data."
@@ -53,12 +56,17 @@ INT maxNF "maximum number of lines allowed in the input file"
 } 100000
 
 
-REAL rH "Horizon radius parameter"
+REAL rH "Horizon radius parameter. Incompatible with the Scalar Boson Star."
 {
   0:* :: "non-negative"
 } 0.0
 
-REAL OmegaH "Horizon angular velocity"
+REAL OmegaH "Horizon angular velocity. Incompatible with the Scalar Boson Star."
+{
+  0:* :: "non-negative"
+} 0.0
+
+REAL omega_BS "Scalar field angular frequency for the Boson Star. Incompatible with the Hairy Black Hole."
 {
   0:* :: "non-negative"
 } 0.0
