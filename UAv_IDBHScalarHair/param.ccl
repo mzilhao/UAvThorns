@@ -56,17 +56,17 @@ INT maxNF "maximum number of lines allowed in the input file"
 } 100000
 
 
-REAL rH "Horizon radius parameter. Ignored for the Scalar Boson Star."
+REAL rH "Horizon radius parameter. Incompatible with the Scalar Boson Star."
 {
   0:* :: "non-negative"
 } 0.0
 
-REAL OmegaH "Horizon angular velocity. Ignored for the Scalar Boson Star."
+REAL OmegaH "Horizon angular velocity. Incompatible with the Scalar Boson Star."
 {
   0:* :: "non-negative"
 } 0.0
 
-REAL omega_BS "Scalar field angular frequency for the Boson Star. Ignored for the Hairy Black Hole."
+REAL omega_BS "Scalar field angular frequency for the Boson Star. Incompatible with the Hairy Black Hole."
 {
   0:* :: "non-negative"
 } 0.0
