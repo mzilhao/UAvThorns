@@ -133,4 +133,5 @@ INT normalization_Tmunu "Normalization used for the stress-energy tensor in the 
 {
   0   :: "4 pi G = 1"
   1   :: "G = 1"
+  2   :: "G = 1 and Tmunu has factor of 0.5"
 } 0
