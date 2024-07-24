@@ -69,7 +69,9 @@ void UAv_ID_read_data(CCTK_INT *NF_p, CCTK_INT *NX_p, CCTK_REAL Xtmp[], CCTK_REA
     if (normalization_Tmunu == 0) {
       phi0[NF] *= 0.5/sqrt(M_PI);
     } else if (normalization_Tmunu == 1) {
-      phi0[NF] *= 1/sqrt(2.0);
+      phi0[NF] *= 1;
+    } else if (normalization_Tmunu == 2) {
+      phi0[NF] *=1/sqrt(2.0);
     }
 
     NF++;
