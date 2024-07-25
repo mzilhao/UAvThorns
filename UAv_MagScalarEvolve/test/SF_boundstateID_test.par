@@ -27,9 +27,9 @@ ActiveThorns = "
   MoL
   NaNChecker
   NewRad
+  ProcaBase
   ReflectionSymmetry
   ScalarBase
-  ScalarEvolve
   ScalarInit
   Slab
   SpaceMask
@@ -39,6 +39,8 @@ ActiveThorns = "
   SystemStatistics
   Time
   TmunuBase
+  UAv_MagScalarBase
+  UAv_MagScalarEvolve
 "
 #------------------------------------------------------------------------------
 
@@ -109,6 +111,9 @@ ScalarInit::wR                  = 0.408806
 ScalarInit::wI                  = 1.50391d-07
 ScalarInit::n_sum               = 200
 
+# Proca field zero initial data
+ProcaBase::initial_Proca = "zero"
+
 InitBase::initial_data_setup_method   = "init_some_levels"
 Carpet::init_fill_timelevels          = yes
 Carpet::init_3_timelevels             = no
@@ -126,8 +131,8 @@ ADMBase::lapse_prolongation_type	= "none"
 ADMBase::shift_prolongation_type	= "none"
 ADMBase::metric_prolongation_type	= "none"
 
-ScalarBase::evolution_method		= "ScalarEvolve"
-ScalarEvolve::chi_floor                 = 1.0d-06
+MagScalarBase::evolution_method = "MagScalarEvolve"
+MagScalarEvolve::chi_floor      = 1.0d-06
 
 # Spatial finite differencing
 #------------------------------------------------------------------------------

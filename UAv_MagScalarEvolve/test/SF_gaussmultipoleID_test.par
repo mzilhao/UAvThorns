@@ -27,9 +27,9 @@ ActiveThorns = "
   MoL
   NaNChecker
   NewRad
+  ProcaBase
   ReflectionSymmetry
   ScalarBase
-  ScalarEvolve
   ScalarInit
   Slab
   SpaceMask
@@ -39,6 +39,8 @@ ActiveThorns = "
   SystemStatistics
   Time
   TmunuBase
+  UAv_MagScalarBase
+  UAv_MagScalarEvolve
 "
 #------------------------------------------------------------------------------
 
@@ -103,12 +105,15 @@ Exact::exact_model = "Minkowski"
 ScalarBase::initial_scalar      = ID_SF_Gaussian
 ScalarBase::mu                  = 0.0
 ScalarInit::scalar_GaussProfile = single_mode       ## select profile type
-ScalarInit::scalar_Initialize   = "zero_momentum"   ## initialize scalar field and select zero value for momentum  
+ScalarInit::scalar_Initialize   = "zero_momentum"   ## initialize scalar field and select zero value for momentum
 ScalarInit::l0SF                = 1                 ## select multipole l
 ScalarInit::m0SF                = 1                 ## select projection m
 ScalarInit::ampSF               = 1.0               ## select gaussian amplitude
 ScalarInit::r0SF                = 0.0               ## select gaussian peak position
 ScalarInit::widthSF             = 10.0              ## select gaussian width (take both BHs?)
+
+# Proca field zero initial data
+ProcaBase::initial_Proca = "zero"
 
 InitBase::initial_data_setup_method   = "init_some_levels"
 Carpet::init_fill_timelevels          = yes
@@ -127,8 +132,8 @@ ADMBase::lapse_prolongation_type	= "none"
 ADMBase::shift_prolongation_type	= "none"
 ADMBase::metric_prolongation_type	= "none"
 
-ScalarBase::evolution_method		= "ScalarEvolve"
-ScalarEvolve::chi_floor                 = 1.0d-06
+MagScalarBase::evolution_method = "MagScalarEvolve"
+MagScalarEvolve::chi_floor      = 1.0d-06
 
 # Spatial finite differencing
 #------------------------------------------------------------------------------

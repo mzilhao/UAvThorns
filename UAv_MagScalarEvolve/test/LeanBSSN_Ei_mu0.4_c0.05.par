@@ -2,7 +2,6 @@
 #------------------------------------------------------------------------------
 ActiveThorns = "
   ADMBase
- 
   # AEILocalInterp
   # AHFinderDirect
   Boundary
@@ -42,11 +41,12 @@ ActiveThorns = "
   # NPScalars_Proca
   ProcaBase
   Proca_simpleID
-  ProcaEvolve
   # PunctureTracker
   # QuasiLocalMeasures
   ReflectionSymmetry
   # RotatingSymmetry180
+  ScalarBase
+  ScalarInit
   Slab
   SpaceMask
   SphericalSurface
@@ -57,6 +57,8 @@ ActiveThorns = "
   # TerminationTrigger
   Time
   TmunuBase
+  UAv_MagScalarBase
+  UAv_MagScalarEvolve
   Vectors
 "
 #------------------------------------------------------------------------------
@@ -118,6 +120,11 @@ ADMBase::lapse_timelevels             = 3
 ADMBase::shift_timelevels             = 3
 ADMBase::metric_timelevels            = 3
 
+# Scalar field zero initial data
+ScalarBase::mu                  = 0.
+ScalarBase::V_lambda            = 0.
+ScalarBase::initial_scalar      = "ID_SF_Zero"
+
 Proca_simpleID::initial_lapse_psi_exponent  = -2.0
 Proca_simpleID::swap_xz               = "no"
 
@@ -138,7 +145,8 @@ TmunuBase::stress_energy_at_RHS   = yes
 TmunuBase::timelevels             = 1
 TmunuBase::prolongation_type      = "none"
 
-ProcaBase::evolution_method       = "ProcaEvolve"
+MagScalarBase::evolution_method = "MagScalarEvolve"
+MagScalarEvolve::chi_floor      = 1.0d-05
 
 ADMBase::evolution_method               = "LeanBSSNMoL"
 ADMBase::lapse_evolution_method         = "LeanBSSNMoL"
@@ -148,6 +156,7 @@ ADMBase::dtshift_evolution_method       = "LeanBSSNMoL"
 
 LeanBSSNMoL::impose_conf_fac_floor_at_initial  = yes
 LeanBSSNMoL::eta_beta                     = 1
+LeanBSSNMoL::eta_beta_dynamic             = no
 LeanBSSNMoL::conf_fac_floor               = 1.0d-04
 LeanBSSNMoL::derivs_order                 = 4
 LeanBSSNMoL::use_advection_stencils       = yes
@@ -210,10 +219,10 @@ IOASCII::out1D_vars             = "
   ProcaBase::Ai
   ProcaBase::Aphi
   ProcaBase::Zeta
-  ProcaEvolve::rhs_Ei
-  ProcaEvolve::rhs_Ai
-  ProcaEvolve::rhs_Aphi
-  ProcaEvolve::rhs_Zeta
+  UAv_MagScalarEvolve::rhs_Ei
+  UAv_MagScalarEvolve::rhs_Ai
+  UAv_MagScalarEvolve::rhs_Aphi
+  UAv_MagScalarEvolve::rhs_Zeta
 "
 
 CarpetIOASCII::compact_format = yes
