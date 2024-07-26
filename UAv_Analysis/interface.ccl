@@ -18,7 +18,7 @@ USES FUNCTION Boundary_SelectGroupForBC
 
 private:
 
-CCTK_REAL total_energy type=scalar timelevels=1 tags='checkpoint="no"'
+CCTK_REAL total_energy type=scalar timelevels=1 tags='checkpoint="no"' "Komar mass (volume integral). See Gourgoulhon's 3+1 Formalism, sections 8.6.1 and 8.6.2 (Eq. 8.63 and 8.70)."
 
 CCTK_REAL dE_gf_volume type=gf timelevels=3 tags='Prolongation="none" tensortypealias="Scalar" checkpoint="no"' "energy density gridfunction for volume integration"
 
@@ -27,7 +27,7 @@ CCTK_REAL total_angular_momentum type=scalar timelevels=1 tags='checkpoint="no"'
   total_angular_momentum_x
   total_angular_momentum_y
   total_angular_momentum_z
-} "Komar angular momentum (integral computed with respect to rotation around each axis, centered at the origin)"
+} "Komar angular momentum (volume integral computed with respect to rotation around each axis, centered at the origin). See Gourgoulhon's 3+1 Formalism, section 8.6.3 (Eq. 8.75)."
 
 CCTK_REAL dJ_gf_volume type=gf timelevels=3 tags='Prolongation="none" tensortypealias="D" checkpoint="no"'
 {
