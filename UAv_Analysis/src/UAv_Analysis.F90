@@ -23,6 +23,8 @@ subroutine UAv_Analysis_gfs( CCTK_ARGUMENTS )
 
   CCTK_INT type_bits, state_outside
 
+  logical docalc
+
   type_bits     = -1
   state_outside = -1
 
@@ -55,6 +57,18 @@ subroutine UAv_Analysis_gfs( CCTK_ARGUMENTS )
   do k = 1+cctk_nghostzones(3), cctk_lsh(3)-cctk_nghostzones(3)
   do j = 1+cctk_nghostzones(2), cctk_lsh(2)-cctk_nghostzones(2)
   do i = 1+cctk_nghostzones(1), cctk_lsh(1)-cctk_nghostzones(1)
+
+    ! checking if outside the horizon, if asking for it to be excised
+    docalc = .true.
+    if (excise_horizon /= 0) then
+       if (.not. SpaceMask_CheckStateBitsF90(space_mask, i, j, k, type_bits, state_outside)) then
+          docalc = .false.
+       end if
+    end if
+
+    ! if inside the horizon, no need to compute the rest (continue with the next
+    ! iteration of the do loop)
+    if (.not. docalc) cycle
 
     !--------------Get local variables ----------
     gd(1,1) = gxx(i,j,k)
@@ -146,23 +160,17 @@ subroutine UAv_Analysis_gfs( CCTK_ARGUMENTS )
     end do
 
 
-    ! checking if outside the horizon, if asking for it to be excised
-    if (SpaceMask_CheckStateBitsF90(space_mask, i, j, k, type_bits, state_outside) .or. &
-         excise_horizon == 0) then
+    ! dE_gf_volume = (alpha h^ij T_ij + T_tt / alpha - beta^i beta^j T_ij / alpha) sqrt(detgd)
 
-       ! dE_gf_volume = (alpha h^ij T_ij + T_tt / alpha - beta^i beta^j T_ij / alpha) sqrt(detgd)
+    dE_gf_volume(i,j,k)   = (alph * S + aux) * sqrt(detgd)
 
-       dE_gf_volume(i,j,k)   = (alph * S + aux) * sqrt(detgd)
-
-       ! dI_ij = rho * x^i x^j * alpha * sqrt(detgd)
-       dIxx_gf_volume(i,j,k) = alph * rho * x1 * x1 * sqrt(detgd)
-       dIxy_gf_volume(i,j,k) = alph * rho * x1 * y1 * sqrt(detgd)
-       dIxz_gf_volume(i,j,k) = alph * rho * x1 * z1 * sqrt(detgd)
-       dIyy_gf_volume(i,j,k) = alph * rho * y1 * y1 * sqrt(detgd)
-       dIyz_gf_volume(i,j,k) = alph * rho * y1 * z1 * sqrt(detgd)
-       dIzz_gf_volume(i,j,k) = alph * rho * z1 * z1 * sqrt(detgd)
-
-    end if
+    ! dI_ij = rho * x^i x^j * alpha * sqrt(detgd)
+    dIxx_gf_volume(i,j,k) = alph * rho * x1 * x1 * sqrt(detgd)
+    dIxy_gf_volume(i,j,k) = alph * rho * x1 * y1 * sqrt(detgd)
+    dIxz_gf_volume(i,j,k) = alph * rho * x1 * z1 * sqrt(detgd)
+    dIyy_gf_volume(i,j,k) = alph * rho * y1 * y1 * sqrt(detgd)
+    dIyz_gf_volume(i,j,k) = alph * rho * y1 * z1 * sqrt(detgd)
+    dIzz_gf_volume(i,j,k) = alph * rho * z1 * z1 * sqrt(detgd)
 
   end do
   end do
