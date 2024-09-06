@@ -3,7 +3,7 @@
 #include "cctk_Parameters.h"
 #include "cctk_Functions.h"
 
-subroutine Proca_Boundaries( CCTK_ARGUMENTS )
+subroutine ComplexProca_Boundaries( CCTK_ARGUMENTS )
 
   implicit none
   DECLARE_CCTK_ARGUMENTS
@@ -19,43 +19,43 @@ subroutine Proca_Boundaries( CCTK_ARGUMENTS )
   ! enforces all the symmetry BCs.
 
   ierr = Boundary_SelectGroupForBC(cctkGH, CCTK_ALL_FACES, one, -one,      &
-       "ProcaBase::E1i", "none")
+       "ComplexProcaBase::E1i", "none")
   if (ierr < 0)                                                            &
-       call CCTK_WARN(0, "Failed to register BC for ProcaBase::E1i!")
+       call CCTK_WARN(0, "Failed to register BC for ComplexProcaBase::E1i!")
 
   ierr = Boundary_SelectGroupForBC(cctkGH, CCTK_ALL_FACES, one, -one,      &
-       "ProcaBase::A1i", "none")
+       "ComplexProcaBase::A1i", "none")
   if (ierr < 0)                                                            &
-       call CCTK_WARN(0, "Failed to register BC for ProcaBase::A1i!")
+       call CCTK_WARN(0, "Failed to register BC for ComplexProcaBase::A1i!")
 
   ierr = Boundary_SelectVarForBC(cctkGH, CCTK_ALL_FACES, one, -one,        &
-       "ProcaBase::Aphi1", "none")
+       "ComplexProcaBase::Aphi1", "none")
   if (ierr < 0)                                                            &
-       call CCTK_WARN(0, "Failed to register BC for ProcaBase::Aphi1!")
+       call CCTK_WARN(0, "Failed to register BC for ComplexProcaBase::Aphi1!")
 
   ierr = Boundary_SelectVarForBC(cctkGH, CCTK_ALL_FACES, one, -one,        &
-       "ProcaBase::Zeta1", "none")
+       "ComplexProcaBase::Zeta1", "none")
   if (ierr < 0)                                                            &
-       call CCTK_WARN(0, "Failed to register BC for ProcaBase::Zeta1!")
+       call CCTK_WARN(0, "Failed to register BC for ComplexProcaBase::Zeta1!")
 
   ierr = Boundary_SelectGroupForBC(cctkGH, CCTK_ALL_FACES, one, -one,      &
-       "ProcaBase::E2i", "none")
+       "ComplexProcaBase::E2i", "none")
   if (ierr < 0)                                                            &
-       call CCTK_WARN(0, "Failed to register BC for ProcaBase::E2i!")
+       call CCTK_WARN(0, "Failed to register BC for ComplexProcaBase::E2i!")
 
   ierr = Boundary_SelectGroupForBC(cctkGH, CCTK_ALL_FACES, one, -one,      &
-       "ProcaBase::A2i", "none")
+       "ComplexProcaBase::A2i", "none")
   if (ierr < 0)                                                            &
-       call CCTK_WARN(0, "Failed to register BC for ProcaBase::A2i!")
+       call CCTK_WARN(0, "Failed to register BC for ComplexProcaBase::A2i!")
 
   ierr = Boundary_SelectVarForBC(cctkGH, CCTK_ALL_FACES, one, -one,        &
-       "ProcaBase::Aphi2", "none")
+       "ComplexProcaBase::Aphi2", "none")
   if (ierr < 0)                                                            &
-       call CCTK_WARN(0, "Failed to register BC for ProcaBase::Aphi2!")
+       call CCTK_WARN(0, "Failed to register BC for ComplexProcaBase::Aphi2!")
 
   ierr = Boundary_SelectVarForBC(cctkGH, CCTK_ALL_FACES, one, -one,        &
-       "ProcaBase::Zeta2", "none")
+       "ComplexProcaBase::Zeta2", "none")
   if (ierr < 0)                                                            &
-       call CCTK_WARN(0, "Failed to register BC for ProcaBase::Zeta2!")
+       call CCTK_WARN(0, "Failed to register BC for ComplexProcaBase::Zeta2!")
 
-end subroutine Proca_Boundaries
+end subroutine ComplexProca_Boundaries

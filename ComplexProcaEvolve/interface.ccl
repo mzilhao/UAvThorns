@@ -1,7 +1,7 @@
-# Interface definition for thorn ProcaEvolve
+# Interface definition for thorn ComplexProcaEvolve
 
-implements: ProcaEvolve
-inherits: ADMBase Tmunubase ProcaBase Boundary
+implements: ComplexProcaEvolve
+inherits: ADMBase Tmunubase ComplexProcaBase Boundary
 
 
 CCTK_INT FUNCTION                        \

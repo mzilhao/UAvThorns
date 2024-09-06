@@ -6,14 +6,14 @@ USES KEYWORD  recover
 
 restricted:
 
-KEYWORD evolution_method "Proca variables evolution method"
+KEYWORD evolution_method "ComplexProca variables evolution method"
 {
-  "none" :: "Proca variables are not evolved"
+  "none" :: "ComplexProca variables are not evolved"
 } "none"
 
-KEYWORD initial_Proca "initial data for Proca field"
+KEYWORD initial_ComplexProca "initial data for ComplexProca field"
 {
-  "none" :: "Proca variables are not initialized"
+  "none" :: "ComplexProca variables are not initialized"
 } "none"
 
 

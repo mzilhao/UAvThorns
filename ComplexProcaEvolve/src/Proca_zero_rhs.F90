@@ -1,7 +1,7 @@
 #include "cctk_Arguments.h"
 #include "cctk.h"
 
-subroutine Proca_zero_rhs( CCTK_ARGUMENTS )
+subroutine ComplexProca_zero_rhs( CCTK_ARGUMENTS )
 
   implicit none
   DECLARE_CCTK_ARGUMENTS
@@ -30,4 +30,4 @@ subroutine Proca_zero_rhs( CCTK_ARGUMENTS )
 
   rhs_Zeta2  = 0
 
-end subroutine Proca_zero_rhs
+end subroutine ComplexProca_zero_rhs

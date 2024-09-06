@@ -2,7 +2,7 @@
 #include "cctk_Arguments.h"
 #include "cctk_Parameters.h"
 
-subroutine Proca_calc_Tmunu( CCTK_ARGUMENTS )
+subroutine ComplexProca_calc_Tmunu( CCTK_ARGUMENTS )
 
   implicit none
   DECLARE_CCTK_ARGUMENTS
@@ -377,4 +377,4 @@ subroutine Proca_calc_Tmunu( CCTK_ARGUMENTS )
   end do
   !$OMP END PARALLEL DO
 
-end subroutine Proca_calc_Tmunu
+end subroutine ComplexProca_calc_Tmunu

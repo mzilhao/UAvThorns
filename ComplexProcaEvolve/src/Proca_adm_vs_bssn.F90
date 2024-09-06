@@ -1,4 +1,4 @@
-! Proca_adm_vs_bssn.F90 : Functions for converting between ADM and BSSN variables
+! ComplexProca_adm_vs_bssn.F90 : Functions for converting between ADM and BSSN variables
 !
 !=============================================================================
 
@@ -7,7 +7,7 @@
 #include "cctk_Parameters.h"
 #include "cctk_Functions.h"
 
-subroutine Proca_adm2bssn( CCTK_ARGUMENTS )
+subroutine ComplexProca_adm2bssn( CCTK_ARGUMENTS )
 
   implicit none
   DECLARE_CCTK_ARGUMENTS
@@ -99,4 +99,4 @@ subroutine Proca_adm2bssn( CCTK_ARGUMENTS )
   end do
   !$OMP END PARALLEL DO
 
-end subroutine Proca_adm2bssn
+end subroutine ComplexProca_adm2bssn

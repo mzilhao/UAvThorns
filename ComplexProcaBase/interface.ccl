@@ -1,6 +1,6 @@
-# Interface definition for thorn ProcaBase
+# Interface definition for thorn ComplexProcaBase
 
-implements: ProcaBase
+implements: ComplexProcaBase
 
 public:
 

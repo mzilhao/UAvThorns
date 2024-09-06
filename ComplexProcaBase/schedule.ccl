@@ -3,7 +3,7 @@
 
 STORAGE: E1i[3] A1i[3] Aphi1[3] Zeta1[3]  E2i[3] A2i[3] Aphi2[3] Zeta2[3]
 
-schedule proca_symmetries at BASEGRID
+schedule complexproca_symmetries at BASEGRID
 {
   LANG: Fortran
   OPTIONS: Global

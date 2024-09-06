@@ -5,7 +5,7 @@
 #include "cctk_Functions.h"
 
 
-subroutine Proca_calc_rhs( CCTK_ARGUMENTS )
+subroutine ComplexProca_calc_rhs( CCTK_ARGUMENTS )
 
   implicit none
   DECLARE_CCTK_ARGUMENTS
@@ -82,7 +82,7 @@ subroutine Proca_calc_rhs( CCTK_ARGUMENTS )
 
 
   ! convert ADM variables to BSSN-like ones
-  call Proca_adm2bssn(CCTK_PASS_FTOF)
+  call ComplexProca_adm2bssn(CCTK_PASS_FTOF)
 
 
   !$OMP PARALLEL DO COLLAPSE(3) &
@@ -1565,12 +1565,12 @@ subroutine Proca_calc_rhs( CCTK_ARGUMENTS )
   end do
   !$OMP END PARALLEL DO
 
-end subroutine Proca_calc_rhs
+end subroutine ComplexProca_calc_rhs
 !
 !=============================================================================
 !
 
-subroutine Proca_calc_rhs_bdry( CCTK_ARGUMENTS )
+subroutine ComplexProca_calc_rhs_bdry( CCTK_ARGUMENTS )
 
   implicit none
   DECLARE_CCTK_ARGUMENTS
@@ -1603,4 +1603,4 @@ subroutine Proca_calc_rhs_bdry( CCTK_ARGUMENTS )
   ierr = NewRad_Apply(cctkGH, Aphi2, rhs_Aphi2, Aphi02, one, n_Aphi)
   ierr = NewRad_Apply(cctkGH, Zeta2, rhs_Zeta2, zero, one, n_Zeta)
 
-end subroutine Proca_calc_rhs_bdry
+end subroutine ComplexProca_calc_rhs_bdry
