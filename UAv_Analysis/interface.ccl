@@ -53,7 +53,11 @@ CCTK_REAL quadrupole_gf_volume type=gf timelevels=3 tags='Prolongation="none" te
   dIzz_gf_volume
 } "quadrupole moments I_ij gridfunctions for volume integration"
 
-CCTK_REAL densities type=gf timelevels=3 tags='tensortypealias="Scalar" tensorweight=0 Checkpoint="no"'
+CCTK_REAL density_rho type=gf timelevels=3 tags='tensortypealias="Scalar" tensorweight=0 Checkpoint="no"' "Eulerian energy density"
+
+CCTK_REAL density_p type=gf timelevels=3 tags='tensortypealias="D" tensorweight=0 checkpoint="no"'
 {
-  density_rho
-} "energy-momentum densities"
+  density_px
+  density_py
+  density_pz
+} "Eulerian momentum density"

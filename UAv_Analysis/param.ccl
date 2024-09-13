@@ -5,3 +5,11 @@
 BOOLEAN excise_horizon "excise the region inside the AH from the volume integrations?" STEERABLE=ALWAYS
 {
 } "no"
+
+BOOLEAN compute_density_rho "Compute the grid function density_rho" STEERABLE=ALWAYS
+{
+} "no"
+
+BOOLEAN compute_density_p "Compute the grid functions density_p" STEERABLE=ALWAYS
+{
+} "no"

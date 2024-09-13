@@ -6,7 +6,16 @@ storage: quadrupole_gf_volume[3]
 storage: total_energy[1]
 storage: total_angular_momentum[1]
 storage: quadrupole[1]
-storage: densities[3]
+
+# allocate densities if required
+if (compute_density_rho)
+{
+  storage: density_rho[3]
+}
+if (compute_density_p)
+{
+  storage: density_p[3]
+}
 
 schedule UAv_Analysis_RegisterMask at STARTUP
 {
@@ -33,7 +42,8 @@ schedule UAv_Analysis_gfs in UAv_Analysis_Group
   SYNC: dE_gf_volume
   SYNC: dJ_gf_volume
   SYNC: quadrupole_gf_volume
-  SYNC: densities
+  SYNC: density_rho
+  SYNC: density_p
 } "Calculate grid functions"
 
 
@@ -41,7 +51,8 @@ schedule UAv_Analysis_Boundaries after UAv_Analysis_gfs in UAv_Analysis_Group
 {
   LANG: Fortran
   OPTIONS: LEVEL
-  SYNC: densities
+  SYNC: density_rho
+  SYNC: density_p
 } "Enforce symmetry BCs in Analysis"
 
 schedule GROUP ApplyBCs as UAv_Analysis_ApplyBCs after UAv_Analysis_Boundaries in UAv_Analysis_Group

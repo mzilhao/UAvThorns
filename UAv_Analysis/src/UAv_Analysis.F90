@@ -56,7 +56,14 @@ subroutine UAv_Analysis_gfs( CCTK_ARGUMENTS )
   dIyy_gf_volume = 0
   dIyz_gf_volume = 0
   dIzz_gf_volume = 0
-  density_rho    = 0
+  if (compute_density_rho == 1) then
+     density_rho    = 0
+  end if
+  if (compute_density_p == 1) then
+     density_px     = 0
+     density_py     = 0
+     density_pz     = 0
+  end if
 
   do k = 1+cctk_nghostzones(3), cctk_lsh(3)-cctk_nghostzones(3)
   do j = 1+cctk_nghostzones(2), cctk_lsh(2)-cctk_nghostzones(2)
@@ -145,17 +152,25 @@ subroutine UAv_Analysis_gfs( CCTK_ARGUMENTS )
     end do
     rho = rho / ( alph * alph )
 
-    density_rho(i,j,k) = rho
-
+    if (compute_density_rho == 1) then
+      density_rho(i,j,k) = rho
+    end if
+    
     ! momentum density
     do n = 1, 3
-    mom(n) = Tab(4,n)
+      mom(n) = Tab(4,n)
       do m = 1, 3
-        mom(n) = mom(n) - beta(m) * Tab(m,n)
+         mom(n) = mom(n) - beta(m) * Tab(m,n)
       end do
       mom(n) = - mom(n) / alph
     end do
-
+   
+    if (compute_density_p == 1) then
+      density_px(i,j,k) = mom(1)
+      density_py(i,j,k) = mom(2)
+      density_pz(i,j,k) = mom(3)
+    end if
+   
 
     aux = 0
     do m = 1, 3

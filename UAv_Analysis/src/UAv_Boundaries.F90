@@ -14,9 +14,18 @@ subroutine UAv_Analysis_Boundaries( CCTK_ARGUMENTS )
   CCTK_INT, parameter :: one = 1
   CCTK_INT, parameter :: bndsize = 3
 
-  ierr = Boundary_SelectGroupForBC(cctkGH, CCTK_ALL_FACES, bndsize, -one, &
-       "UAv_Analysis::densities", "flat")
-  if (ierr < 0)                                                           &
-       call CCTK_ERROR("Failed to register BC for UAv_Analysis::densities!")
+  if (compute_density_rho == 1) then
+     ierr = Boundary_SelectGroupForBC(cctkGH, CCTK_ALL_FACES, bndsize, -one, &
+          "UAv_Analysis::density_rho", "flat")
+     if (ierr < 0)                                                           &
+          call CCTK_ERROR("Failed to register BC for UAv_Analysis::density_rho!")
+  end if
+
+  if (compute_density_p == 1) then 
+     ierr = Boundary_SelectGroupForBC(cctkGH, CCTK_ALL_FACES, bndsize, -one, &
+          "UAv_Analysis::density_p", "flat")
+     if (ierr < 0)                                                           &
+          call CCTK_ERROR("Failed to register BC for UAv_Analysis::density_p!")
+  end if
 
 end subroutine UAv_Analysis_Boundaries
