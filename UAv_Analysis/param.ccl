@@ -6,6 +6,11 @@ BOOLEAN excise_horizon "excise the region inside the AH from the volume integrat
 {
 } "no"
 
+INT do_analysis_every "Perform the analysis (compute the energy, densities...) every N iterations" STEERABLE=ALWAYS
+{
+    *:*  :: "0 or a negative value means never compute them"
+} 1
+
 BOOLEAN compute_density_rho "Compute the grid function density_rho" STEERABLE=ALWAYS
 {
 } "no"

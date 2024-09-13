@@ -30,7 +30,7 @@ schedule UAv_Analysis_Symmetries at BASEGRID
 } "Register symmetries of the density functions"
 
 
-schedule GROUP UAv_Analysis_Group at CCTK_POSTSTEP after AHFinderDirect_maybe_do_masks
+schedule GROUP UAv_Analysis_Group at ANALYSIS
 {
 } "Compute several diagnostic quantities"
 
@@ -38,7 +38,6 @@ schedule GROUP UAv_Analysis_Group at CCTK_POSTSTEP after AHFinderDirect_maybe_do
 schedule UAv_Analysis_gfs in UAv_Analysis_Group
 {
   LANG: Fortran
-  OPTIONS: global loop-local
   SYNC: dE_gf_volume
   SYNC: dJ_gf_volume
   SYNC: quadrupole_gf_volume
@@ -60,7 +59,7 @@ schedule GROUP ApplyBCs as UAv_Analysis_ApplyBCs after UAv_Analysis_Boundaries i
 } "Apply boundary conditions"
 
 
-schedule UAv_Analysis_IntegrateVol at CCTK_ANALYSIS
+schedule UAv_Analysis_IntegrateVol after UAv_Analysis_ApplyBCs in UAv_Analysis_Group
 {
   LANG: Fortran
   OPTIONS: global

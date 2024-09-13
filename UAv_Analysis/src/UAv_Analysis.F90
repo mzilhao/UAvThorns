@@ -28,7 +28,14 @@ subroutine UAv_Analysis_gfs( CCTK_ARGUMENTS )
 
   type_bits     = -1
   state_outside = -1
-
+  
+  if (do_analysis_every .le. 0) then
+     return
+  end if
+  
+  if (MOD(cctk_iteration, do_analysis_every) .ne. 0 ) then
+     return
+  endif
 
   if (excise_horizon /= 0) then
 
@@ -224,6 +231,14 @@ subroutine UAv_Analysis_IntegrateVol( CCTK_ARGUMENTS )
   CCTK_REAL Jx_int, Jy_int, Jz_int
   CCTK_REAL Ixx_int, Ixy_int, Ixz_int, Iyy_int, Iyz_int, Izz_int
 
+  if (do_analysis_every .le. 0) then
+     return
+  end if
+
+  if (MOD(cctk_iteration, do_analysis_every) .ne. 0 ) then
+     return
+  endif
+  
   call CCTK_ReductionHandle(reduction_handle, 'sum')
   if (reduction_handle < 0) then
      call CCTK_WARN(0, 'Could not obtain a handle for sum reduction')

@@ -14,6 +14,14 @@ subroutine UAv_Analysis_Boundaries( CCTK_ARGUMENTS )
   CCTK_INT, parameter :: one = 1
   CCTK_INT, parameter :: bndsize = 3
 
+  if (do_analysis_every .le. 0) then
+     return
+  end if
+
+  if (MOD(cctk_iteration, do_analysis_every) .ne. 0 ) then
+     return
+  endif
+
   if (compute_density_rho == 1) then
      ierr = Boundary_SelectGroupForBC(cctkGH, CCTK_ALL_FACES, bndsize, -one, &
           "UAv_Analysis::density_rho", "flat")
