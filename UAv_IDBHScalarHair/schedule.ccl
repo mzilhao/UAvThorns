@@ -30,4 +30,5 @@ if (CCTK_Equals(initial_data, "ScalarBS"))
 schedule UAv_IDBHScalarHair_ParamCheck AT ParamCheck
 {
   LANG: C
+  OPTIONS: global
 } "Check UAv_IDBHScalarHair parameters for consistency"

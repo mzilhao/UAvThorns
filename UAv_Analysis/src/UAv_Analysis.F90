@@ -16,6 +16,7 @@ subroutine UAv_Analysis_gfs( CCTK_ARGUMENTS )
   CCTK_REAL gd(3,3), gu(3,3), detgd
 
   CCTK_REAL aux, S, rho
+  CCTK_REAL mom(3)
 
   CCTK_REAL x1, y1, z1
 
@@ -27,7 +28,14 @@ subroutine UAv_Analysis_gfs( CCTK_ARGUMENTS )
 
   type_bits     = -1
   state_outside = -1
-
+  
+  if (do_analysis_every .le. 0) then
+     return
+  end if
+  
+  if (MOD(cctk_iteration, do_analysis_every) .ne. 0 ) then
+     return
+  endif
 
   if (excise_horizon /= 0) then
 
@@ -46,13 +54,23 @@ subroutine UAv_Analysis_gfs( CCTK_ARGUMENTS )
 
 
   dE_gf_volume   = 0
+  dJx_gf_volume  = 0
+  dJy_gf_volume  = 0
+  dJz_gf_volume  = 0
   dIxx_gf_volume = 0
   dIxy_gf_volume = 0
   dIxz_gf_volume = 0
   dIyy_gf_volume = 0
   dIyz_gf_volume = 0
   dIzz_gf_volume = 0
-  density_rho    = 0
+  if (compute_density_rho == 1) then
+     density_rho    = 0
+  end if
+  if (compute_density_p == 1) then
+     density_px     = 0
+     density_py     = 0
+     density_pz     = 0
+  end if
 
   do k = 1+cctk_nghostzones(3), cctk_lsh(3)-cctk_nghostzones(3)
   do j = 1+cctk_nghostzones(2), cctk_lsh(2)-cctk_nghostzones(2)
@@ -141,8 +159,25 @@ subroutine UAv_Analysis_gfs( CCTK_ARGUMENTS )
     end do
     rho = rho / ( alph * alph )
 
-    density_rho(i,j,k) = rho
-
+    if (compute_density_rho == 1) then
+      density_rho(i,j,k) = rho
+    end if
+    
+    ! momentum density
+    do n = 1, 3
+      mom(n) = Tab(4,n)
+      do m = 1, 3
+         mom(n) = mom(n) - beta(m) * Tab(m,n)
+      end do
+      mom(n) = - mom(n) / alph
+    end do
+   
+    if (compute_density_p == 1) then
+      density_px(i,j,k) = mom(1)
+      density_py(i,j,k) = mom(2)
+      density_pz(i,j,k) = mom(3)
+    end if
+   
 
     aux = 0
     do m = 1, 3
@@ -164,6 +199,11 @@ subroutine UAv_Analysis_gfs( CCTK_ARGUMENTS )
 
     dE_gf_volume(i,j,k)   = (alph * S + aux) * sqrt(detgd)
 
+    ! dJz = (-y p_x + x p_y) sqrt(detgd)        + rotations
+    dJz_gf_volume(i,j,k)  = (-y1 * mom(1) + x1 * mom(2)) * sqrt(detgd)
+    dJx_gf_volume(i,j,k)  = (-z1 * mom(2) + y1 * mom(3)) * sqrt(detgd)
+    dJy_gf_volume(i,j,k)  = (-x1 * mom(3) + z1 * mom(1)) * sqrt(detgd)
+    
     ! dI_ij = rho * x^i x^j * alpha * sqrt(detgd)
     dIxx_gf_volume(i,j,k) = alph * rho * x1 * x1 * sqrt(detgd)
     dIxy_gf_volume(i,j,k) = alph * rho * x1 * y1 * sqrt(detgd)
@@ -188,8 +228,17 @@ subroutine UAv_Analysis_IntegrateVol( CCTK_ARGUMENTS )
   CCTK_INT reduction_handle, varid
 
   CCTK_REAL E_int
+  CCTK_REAL Jx_int, Jy_int, Jz_int
   CCTK_REAL Ixx_int, Ixy_int, Ixz_int, Iyy_int, Iyz_int, Izz_int
 
+  if (do_analysis_every .le. 0) then
+     return
+  end if
+
+  if (MOD(cctk_iteration, do_analysis_every) .ne. 0 ) then
+     return
+  endif
+  
   call CCTK_ReductionHandle(reduction_handle, 'sum')
   if (reduction_handle < 0) then
      call CCTK_WARN(0, 'Could not obtain a handle for sum reduction')
@@ -212,6 +261,39 @@ subroutine UAv_Analysis_IntegrateVol( CCTK_ARGUMENTS )
 
   ! TODO: is there a way of doing all components at once?
 
+  ! Jx
+  call CCTK_VarIndex(varid, 'UAv_Analysis::dJx_gf_volume')
+  if (varid < 0) then
+     call CCTK_WARN(0, 'Could not get index to grid array dJx_gf_volume')
+  end if
+  call CCTK_Reduce(ierr, cctkGH, -1, reduction_handle, 1, CCTK_VARIABLE_REAL, &
+       Jx_int, 1, varid)
+  if (ierr < 0) then
+     call CCTK_WARN(0, 'Error while reducing dJx_gf_volume')
+  end if
+  
+  ! Jy
+  call CCTK_VarIndex(varid, 'UAv_Analysis::dJy_gf_volume')
+  if (varid < 0) then
+     call CCTK_WARN(0, 'Could not get index to grid array dJy_gf_volume')
+  end if
+  call CCTK_Reduce(ierr, cctkGH, -1, reduction_handle, 1, CCTK_VARIABLE_REAL, &
+       Jy_int, 1, varid)
+  if (ierr < 0) then
+     call CCTK_WARN(0, 'Error while reducing dJy_gf_volume')
+  end if
+  
+  ! Jz
+  call CCTK_VarIndex(varid, 'UAv_Analysis::dJz_gf_volume')
+  if (varid < 0) then
+     call CCTK_WARN(0, 'Could not get index to grid array dJz_gf_volume')
+  end if
+  call CCTK_Reduce(ierr, cctkGH, -1, reduction_handle, 1, CCTK_VARIABLE_REAL, &
+       Jz_int, 1, varid)
+  if (ierr < 0) then
+     call CCTK_WARN(0, 'Error while reducing dJz_gf_volume')
+  end if
+  
   ! Ixx
   call CCTK_VarIndex(varid, 'UAv_Analysis::dIxx_gf_volume')
   if (varid < 0) then
@@ -281,6 +363,10 @@ subroutine UAv_Analysis_IntegrateVol( CCTK_ARGUMENTS )
 
   ! the multiplication with the volume element needs to be done here
   total_energy = E_int * cctk_delta_space(1) * cctk_delta_space(2) * cctk_delta_space(3)
+  
+  total_angular_momentum_x = Jx_int * cctk_delta_space(1) * cctk_delta_space(2) * cctk_delta_space(3)
+  total_angular_momentum_y = Jy_int * cctk_delta_space(1) * cctk_delta_space(2) * cctk_delta_space(3)
+  total_angular_momentum_z = Jz_int * cctk_delta_space(1) * cctk_delta_space(2) * cctk_delta_space(3)
 
   Ixx = Ixx_int * cctk_delta_space(1) * cctk_delta_space(2) * cctk_delta_space(3)
   Ixy = Ixy_int * cctk_delta_space(1) * cctk_delta_space(2) * cctk_delta_space(3)

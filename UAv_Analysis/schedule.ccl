@@ -1,10 +1,21 @@
 # Schedule definitions for thorn UAv_Analysis
 
 storage: dE_gf_volume[3]
+storage: dJ_gf_volume[3]
 storage: quadrupole_gf_volume[3]
 storage: total_energy[1]
+storage: total_angular_momentum[1]
 storage: quadrupole[1]
-storage: densities[3]
+
+# allocate densities if required
+if (compute_density_rho)
+{
+  storage: density_rho[3]
+}
+if (compute_density_p)
+{
+  storage: density_p[3]
+}
 
 schedule UAv_Analysis_RegisterMask at STARTUP
 {
@@ -18,8 +29,17 @@ schedule UAv_Analysis_Symmetries at BASEGRID
   OPTIONS: Global
 } "Register symmetries of the density functions"
 
+###############################################################################
+# WARNING/NOTE: It seemed it was needed to change the UAv_Analysis_gfs OPTIONS
+# from "global loop-local" to the default "local", for the "do_analysis_every"
+# feature to work properly (specifically, for the output of the density GFs.
+# The integrals total_energy/ang. mom were fine). 
+# It seems to be working fine with AHFinderDirect, even when the latter runs
+# at ANALYSIS, but if in doubt, maybe run AHFinderDirect at POSTSTEP (which
+# is the current default), this should make sure the excision mask is there.
+###############################################################################
 
-schedule GROUP UAv_Analysis_Group at CCTK_POSTSTEP after AHFinderDirect_maybe_do_masks
+schedule GROUP UAv_Analysis_Group at ANALYSIS after AHFinderDirect_maybe_do_masks
 {
 } "Compute several diagnostic quantities"
 
@@ -27,10 +47,11 @@ schedule GROUP UAv_Analysis_Group at CCTK_POSTSTEP after AHFinderDirect_maybe_do
 schedule UAv_Analysis_gfs in UAv_Analysis_Group
 {
   LANG: Fortran
-  OPTIONS: global loop-local
   SYNC: dE_gf_volume
+  SYNC: dJ_gf_volume
   SYNC: quadrupole_gf_volume
-  SYNC: densities
+  SYNC: density_rho
+  SYNC: density_p
 } "Calculate grid functions"
 
 
@@ -38,7 +59,8 @@ schedule UAv_Analysis_Boundaries after UAv_Analysis_gfs in UAv_Analysis_Group
 {
   LANG: Fortran
   OPTIONS: LEVEL
-  SYNC: densities
+  SYNC: density_rho
+  SYNC: density_p
 } "Enforce symmetry BCs in Analysis"
 
 schedule GROUP ApplyBCs as UAv_Analysis_ApplyBCs after UAv_Analysis_Boundaries in UAv_Analysis_Group
@@ -46,7 +68,7 @@ schedule GROUP ApplyBCs as UAv_Analysis_ApplyBCs after UAv_Analysis_Boundaries i
 } "Apply boundary conditions"
 
 
-schedule UAv_Analysis_IntegrateVol at CCTK_ANALYSIS
+schedule UAv_Analysis_IntegrateVol after UAv_Analysis_ApplyBCs in UAv_Analysis_Group
 {
   LANG: Fortran
   OPTIONS: global
