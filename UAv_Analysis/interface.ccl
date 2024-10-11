@@ -61,3 +61,15 @@ CCTK_REAL density_p type=gf timelevels=3 tags='tensortypealias="D" tensorweight=
   density_py
   density_pz
 } "Eulerian momentum density"
+
+CCTK_REAL origin_coordinates type=scalar tags='checkpoint="no"'
+{
+  x0, y0, z0
+} "Coordinates of the origin used in the analysis"
+
+CCTK_INT origin_from_grid_scalar_index type=scalar tags='checkpoint="no"' 
+{
+  origin_from_grid_scalar_index_x
+  origin_from_grid_scalar_index_y
+  origin_from_grid_scalar_index_z
+} "Auxiliary to store the Cactus indices of the grid scalars tracking the origin"

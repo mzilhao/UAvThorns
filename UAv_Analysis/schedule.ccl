@@ -17,17 +17,36 @@ if (compute_density_p)
   storage: density_p[3]
 }
 
+storage: origin_coordinates
+
+# allocate auxiliary index of tracked grid scalars
+if (track_origin_from_grid_scalar) {
+  storage: origin_from_grid_scalar_index
+}
+
+
 schedule UAv_Analysis_RegisterMask at STARTUP
 {
   LANG: C
 } "Register the masks for excision"
 
+schedule UAv_Analysis_ParamCheck AT ParamCheck
+{
+  LANG: C
+  OPTIONS: global
+} "Check UAv_Analysis parameters for consistency"
 
 schedule UAv_Analysis_Symmetries at BASEGRID
 {
   LANG: Fortran
   OPTIONS: Global
 } "Register symmetries of the density functions"
+
+schedule UAv_Initialization at BASEGRID
+{
+  LANG: C
+  OPTIONS: global
+} "Initialize quantities used in the analysis"
 
 ###############################################################################
 # WARNING/NOTE: It seemed it was needed to change the UAv_Analysis_gfs OPTIONS
@@ -43,8 +62,19 @@ schedule GROUP UAv_Analysis_Group at ANALYSIS after AHFinderDirect_maybe_do_mask
 {
 } "Compute several diagnostic quantities"
 
+# Track origin at global-early time (i.e. like coarsest level),
+# to be done before UAv_Analysis_gfs (which is local)
 
-schedule UAv_Analysis_gfs in UAv_Analysis_Group
+if (track_origin_from_grid_scalar)
+{
+  schedule UAv_Track_origin in UAv_Analysis_Group
+  {
+    LANG: C
+    OPTIONS: global-early
+  } "Track the coordinates of the origin used in the analysis"
+}
+
+schedule UAv_Analysis_gfs in UAv_Analysis_Group after UAv_Track_origin
 {
   LANG: Fortran
   SYNC: dE_gf_volume

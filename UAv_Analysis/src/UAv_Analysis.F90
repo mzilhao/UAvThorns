@@ -14,21 +14,14 @@ subroutine UAv_Analysis_gfs( CCTK_ARGUMENTS )
 
   CCTK_REAL alph, beta(3), Tab(4,4)
   CCTK_REAL gd(3,3), gu(3,3), detgd
-  
+
   CCTK_REAL aux, S, rho
   CCTK_REAL mom(3)
   
-  CCTK_REAL x0, y0, z0, x1, y1, z1, xtmp, ytmp, ztmp
-  CCTK_INT gs_index_tmp_x, gs_index_tmp_y, gs_index_tmp_z
-  
-  CCTK_POINTER ori_ptr_x, ori_ptr_y, ori_ptr_z
-  pointer (ori_ptr_x, xtmp)
-  pointer (ori_ptr_y, ytmp)
-  pointer (ori_ptr_z, ztmp)
+  ! names x0, y0, z0 used as members of the thorn
+  ! They are set in dedicated functions, to be called before this routine
+  CCTK_REAL x1, y1, z1
 
-  character*200 grid_scalar
-  CCTK_INT grid_scalar_len
-  
   CCTK_INT  i, j, k, m, n
 
   CCTK_INT type_bits, state_outside
@@ -61,39 +54,7 @@ subroutine UAv_Analysis_gfs( CCTK_ARGUMENTS )
 
   end if
 
-  ! Coordinates of the origin used in angular momentum, quadrupole
-  if (track_origin_from_grid_scalar /= 0) then
-      ! Get the index of variables. This is to check if they change.
-      ! If they change, there's no point in using them, just use CCTK_VarDataPtr with the name directly
-      ! If they don't change, we can store them at initialization and don't bother with CCTK_STRING in Fortran
-      write(*,*) 'Getting variable indices in UAv_Analysis'
-      ! x
-      call CCTK_FortranString(grid_scalar_len, track_origin_source_x, grid_scalar)
-      call CCTK_VarIndex(gs_index_tmp_x, grid_scalar(1:grid_scalar_len))
-      write(*,*) 'Index of x source: ', gs_index_tmp_x
-      ! y
-      call CCTK_FortranString(grid_scalar_len, track_origin_source_y, grid_scalar)
-      call CCTK_VarIndex(gs_index_tmp_y, grid_scalar(1:grid_scalar_len))
-      write(*,*) 'Index of y source: ', gs_index_tmp_y
-      ! z
-      call CCTK_FortranString(grid_scalar_len, track_origin_source_z, grid_scalar)
-      call CCTK_VarIndex(gs_index_tmp_z, grid_scalar(1:grid_scalar_len))
-      write(*,*) 'Index of z source: ', gs_index_tmp_z
-
-      call CCTK_VarDataPtrI(ori_ptr_x, cctkGH, 0, gs_index_tmp_x)
-      call CCTK_VarDataPtrI(ori_ptr_y, cctkGH, 0, gs_index_tmp_y)
-      call CCTK_VarDataPtrI(ori_ptr_z, cctkGH, 0, gs_index_tmp_z)
-      
-      x0 = xtmp
-      y0 = ytmp
-      z0 = ztmp
-  else
-      x0 = origin_x
-      y0 = origin_y
-      z0 = origin_z
-  end if
-
-!   write(*,*) 'Tracking origin in UAv_Analysis'
+!   write(*,*) 'Checking origin coordinates for the analysis in UAv_Analysis'
 !   write(*,*) 'x0 = ', x0
 !   write(*,*) 'y0 = ', y0
 !   write(*,*) 'z0 = ', z0
@@ -282,7 +243,7 @@ subroutine UAv_Analysis_IntegrateVol( CCTK_ARGUMENTS )
 
   if (MOD(cctk_iteration, do_analysis_every) .ne. 0 ) then
      return
-  endif
+  end if
   
   call CCTK_ReductionHandle(reduction_handle, 'sum')
   if (reduction_handle < 0) then
