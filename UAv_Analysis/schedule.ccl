@@ -49,13 +49,18 @@ schedule UAv_Initialization at BASEGRID
 } "Initialize quantities used in the analysis"
 
 ###############################################################################
-# WARNING/NOTE: It seemed it was needed to change the UAv_Analysis_gfs OPTIONS
-# from "global loop-local" to the default "local", for the "do_analysis_every"
-# feature to work properly (specifically, for the output of the density GFs.
-# The integrals total_energy/ang. mom were fine). 
+# WARNING/NOTE:
 # It seems to be working fine with AHFinderDirect, even when the latter runs
 # at ANALYSIS, but if in doubt, maybe run AHFinderDirect at POSTSTEP (which
 # is the current default), this should make sure the excision mask is there.
+#
+# For a discussion about the schedule options, such as "local" versus "global
+# loop-local", as well as the schedule bins, see the users list archives
+# https://lists.einsteintoolkit.org/pipermail/users/2024-September/009456.html
+# and corresponding thread (several back and forth replies).
+# 
+# A possible schedule in EVOL would be
+# schedule GROUP UAv_Analysis_Group in MoL_PseudoEvolution after MoL_PostStep
 ###############################################################################
 
 schedule GROUP UAv_Analysis_Group at ANALYSIS after AHFinderDirect_maybe_do_masks
