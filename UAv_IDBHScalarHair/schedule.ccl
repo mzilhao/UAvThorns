@@ -6,7 +6,6 @@ if (CCTK_Equals(initial_data, "Kerr_test"))
   {
     LANG: C
     OPTIONS: Local
-    SYNC: ADMBase::curv
   } "Test with (exact) Kerr data"
 }
 
@@ -16,7 +15,6 @@ if (CCTK_Equals(initial_data, "HairyBH"))
   {
     LANG: C
     OPTIONS: Local
-    SYNC: ADMBase::curv
   } "read data from the specified file, assumed to have an equidistant grid in the X coordinate"
 }
 
@@ -26,7 +24,6 @@ if (CCTK_Equals(initial_data, "ScalarBS"))
   {
     LANG: C
     OPTIONS: Local
-    SYNC: ADMBase::curv
   } "read data from the specified file, assumed to have an equidistant grid in the X coordinate"
 }
 
