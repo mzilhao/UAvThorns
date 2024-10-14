@@ -17,7 +17,9 @@ subroutine UAv_Analysis_gfs( CCTK_ARGUMENTS )
 
   CCTK_REAL aux, S, rho
   CCTK_REAL mom(3)
-
+  
+  ! names x0, y0, z0 used as members of the thorn
+  ! They are set in dedicated functions, to be called before this routine
   CCTK_REAL x1, y1, z1
 
   CCTK_INT  i, j, k, m, n
@@ -52,6 +54,10 @@ subroutine UAv_Analysis_gfs( CCTK_ARGUMENTS )
 
   end if
 
+!   write(*,*) 'Checking origin coordinates for the analysis in UAv_Analysis'
+!   write(*,*) 'x0 = ', x0
+!   write(*,*) 'y0 = ', y0
+!   write(*,*) 'z0 = ', z0
 
   dE_gf_volume   = 0
   dJx_gf_volume  = 0
@@ -108,9 +114,9 @@ subroutine UAv_Analysis_gfs( CCTK_ARGUMENTS )
     beta(2) = betay(i,j,k)
     beta(3) = betaz(i,j,k)
 
-    x1      = x(i,j,k)
-    y1      = y(i,j,k)
-    z1      = z(i,j,k)
+    x1      = x(i,j,k) - x0
+    y1      = y(i,j,k) - y0
+    z1      = z(i,j,k) - z0
 
     ! stress-energy tensor variables
     Tab = 0
@@ -202,7 +208,7 @@ subroutine UAv_Analysis_gfs( CCTK_ARGUMENTS )
 
     dE_gf_volume(i,j,k)   = (alph * S + aux) * sqrt(detgd)
 
-    ! dJz = (-y p_x + x p_y) sqrt(detgd)        + rotations
+    ! dJz = (-y p_x + x p_y) sqrt(detgd)        + permutations
     dJz_gf_volume(i,j,k)  = (-y1 * mom(1) + x1 * mom(2)) * sqrt(detgd)
     dJx_gf_volume(i,j,k)  = (-z1 * mom(2) + y1 * mom(3)) * sqrt(detgd)
     dJy_gf_volume(i,j,k)  = (-x1 * mom(3) + z1 * mom(1)) * sqrt(detgd)
@@ -261,7 +267,7 @@ subroutine UAv_Analysis_IntegrateVol( CCTK_ARGUMENTS )
 
   if (MOD(cctk_iteration, do_analysis_every) .ne. 0 ) then
      return
-  endif
+  end if
   
   call CCTK_ReductionHandle(reduction_handle, 'sum')
   if (reduction_handle < 0) then
