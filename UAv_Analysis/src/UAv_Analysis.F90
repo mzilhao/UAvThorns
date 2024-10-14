@@ -291,7 +291,7 @@ subroutine UAv_Analysis_IntegrateVol( CCTK_ARGUMENTS )
 
   ! the multiplication with the volume element needs to be done here
   dV = cctk_delta_space(1) * cctk_delta_space(2) * cctk_delta_space(3)
-  do i = 1,num_out_vals
+  do i = 1,num_in_fields
       out_vals(i) = out_vals(i) * dV
   end do
 
