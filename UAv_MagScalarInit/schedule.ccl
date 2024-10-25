@@ -1,10 +1,19 @@
 # Schedule definitions
 
-if (CCTK_Equals(initial_MagScalar, "MagScalar_PulseID"))
+if (CCTK_Equals(initial_data, "MagScalar_PulseID"))
 {
   SCHEDULE MagScalar_InitPulse IN ADMBase_InitialData
   {
     LANG: C
     OPTIONS: Local
   } "simple pulse-like analytic initial data for MagScalar fields"
+}
+
+if (CCTK_Equals(initial_data, "MagScalar_RN"))
+{
+  SCHEDULE MagScalar_RN IN ADMBase_InitialData
+  {
+    LANG: C
+    OPTIONS: Local
+  } "charged BH metric"
 }

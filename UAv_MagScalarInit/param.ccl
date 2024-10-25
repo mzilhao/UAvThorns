@@ -1,14 +1,23 @@
 # Parameter definitions
 
-SHARES: MagScalarBase
+SHARES: ADMBase
 
-EXTENDS KEYWORD initial_MagScalar
+EXTENDS KEYWORD initial_data
 {
   "MagScalar_PulseID" :: "Pulse initial data for MagScalar fields"
+  "MagScalar_RN"      :: "Reissner-Nordstrom"
+}
+
+EXTENDS KEYWORD initial_lapse
+{
+  "psi^n"   :: "psi^n initial lapse profile"
 }
 
 
+
 RESTRICTED:
+
+# parameters for PulseID
 
 REAL Amp "Amplitude of the pulse"
 {
@@ -20,3 +29,35 @@ REAL cAmp "Factor on the exponential"
   *:*           :: "any number"
 } 0.15
 
+
+# parameters for RN initial data
+
+REAL x0 "x coordinate of central point"
+{
+  *:* :: "any real number"
+} 0.0
+
+REAL y0 "y coordinate of central point"
+{
+  *:* :: "any real number"
+} 0.0
+
+REAL z0 "z coordinate of central point"
+{
+  *:* :: "any real number"
+} 0.0
+
+REAL par_m "mass of the BH"
+{
+  0.0:*) :: ""
+} 1.0
+
+REAL par_q "charge of the BH"
+{
+  (*:*) :: ""
+} 0.0
+
+REAL initial_lapse_psi_exponent "Exponent n for psi^-n initial lapse profile"
+{
+  (*:*) :: "Should be negative"
+} -2.0
