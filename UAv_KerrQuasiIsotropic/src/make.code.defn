@@ -1,0 +1,7 @@
+# Main make.code.defn file for thorn UAv_KerrQuasiIsotropic
+
+# Source files in this directory
+SRCS = KerrQI.c
+
+# Subdirectories containing source files
+SUBDIRS = 

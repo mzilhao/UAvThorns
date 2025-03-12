@@ -1,0 +1,21 @@
+# Schedule definitions for thorn UAv_KerrQuasiIsotropic
+
+if (CCTK_Equals(initial_data, "KerrQI"))
+{
+
+  if (schedule_in_ADMBase_InitialData)
+  {
+    SCHEDULE KerrQI IN ADMBase_InitialData
+    {
+      LANG: C
+    } "Create Kerr type initial data, in quasi-isotropic coordinates"
+  }
+  else
+  {
+    SCHEDULE KerrQI AT Initial AFTER ADMBase_InitialData BEFORE ADMBase_PostInitial AFTER HydroBase_Initial before SetTmunu before HydroBase_Prim2ConInitial
+    {
+      LANG: C
+    }  "Create Kerr type initial data, in quasi-isotropic coordinates"
+  }
+
+}

@@ -1,0 +1,5 @@
+# Interface definition for thorn UAv_KerrQuasiIsotropic
+
+IMPLEMENTS: UAv_KerrQuasiIsotropic
+
+INHERITS: ADMBase grid

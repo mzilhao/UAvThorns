@@ -1,0 +1,62 @@
+# Parameter definitions for thorn UAv_KerrQuasiIsotropic
+
+SHARES: ADMBase
+
+EXTENDS KEYWORD initial_data 
+{
+  "KerrQI" :: "Kerr-Newman initial data"
+} 
+
+EXTENDS KEYWORD initial_lapse
+{
+  "psi^n"   :: "psi^n initial lapse profile"
+}
+
+
+private:
+
+REAL mass "mass of the black hole"
+{
+  0:* :: "non-negative"
+} 1.0
+
+REAL spin "spin parameter of the black hole a=J/M"
+{
+  *:* :: "any real number. do make sure an horizon exists, though."
+} 0.0
+
+REAL x0 "x coordinate of Kerr BH"
+{
+  *:* :: "any real number"
+} 0.0
+
+REAL y0 "y coordinate of Kerr BH"
+{
+  *:* :: "any real number"
+} 0.0
+
+REAL z0 "z coordinate of Kerr BH"
+{
+  *:* :: "any real number"
+} 1.e-5
+
+
+REAL R0pert "radius of perturbation"
+{
+  *:* :: "any real number"
+} 0.0
+
+REAL AA "amplitude of the perturbation"
+{
+  0:* :: "non-negative"
+} 0.0
+
+REAL initial_lapse_psi_exponent "Exponent n for psi^n initial lapse profile"
+{
+  (*:*) :: "Should be negative"
+} -2.0
+
+
+BOOLEAN schedule_in_ADMBase_InitialData "Schedule in (instead of after) ADMBase_InitialData"
+{
+} "yes"
