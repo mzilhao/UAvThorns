@@ -389,25 +389,31 @@ void UAv_IDBHScalarHair(CCTK_ARGUMENTS)
         const CCTK_REAL z1  = z[ind] - z0;
 
         const CCTK_REAL RR2 = x1*x1 + y1*y1 + z1*z1;
+        
+        // RR=0 is mapped to infinity, which is X=1
+        // In theory it's the whole sphere, but practically z=0 so theta=0
+        if(RR2 < pow(eps_R, 2)) {
+          X_g[ind]     = 1.;
+          theta_g[ind] = 0.;
+        
+        } else {
 
-        CCTK_REAL RR  = sqrt(RR2);
-        /* note that there are divisions by RR in the following expressions.
-           divisions by zero should be avoided by choosing a non-zero value for
-           z0 (for instance) */
+          const CCTK_REAL RR  = sqrt(RR2);
 
-        // from (quasi-)isotropic coordinate R to the metric coordinate r
-        const CCTK_REAL rr = RR * (1. + 0.25 * rH / RR) * (1. + 0.25 * rH / RR);
+          // from (quasi-)isotropic coordinate R to the metric coordinate r
+          const CCTK_REAL rr = RR * (1. + 0.25 * rH / RR) * (1. + 0.25 * rH / RR);
 
-        // from the metric coordinate r to the x coordinate
-        const CCTK_REAL rx = sqrt(rr*rr - rH*rH);
+          // from the metric coordinate r to the x coordinate
+          const CCTK_REAL rx = sqrt(rr*rr - rH*rH);
 
-        // and finally to the X radial coordinate (used in input files)
-        const CCTK_REAL lX = rx / (C0 + rx);
+          // and finally to the X radial coordinate (used in input files)
+          const CCTK_REAL lX = rx / (C0 + rx);
 
-        const CCTK_REAL ltheta = acos( z1/RR );
+          const CCTK_REAL ltheta = acos( z1/RR );
 
-        X_g[ind]     = lX;
-        theta_g[ind] = ltheta;
+          X_g[ind]     = lX;
+          theta_g[ind] = ltheta;
+        }
       }
     }
   }
@@ -552,10 +558,11 @@ void UAv_IDBHScalarHair(CCTK_ARGUMENTS)
         const CCTK_REAL y1  = y[ind] - y0;
         const CCTK_REAL z1  = z[ind] - z0;
 
-        const CCTK_REAL RR2 = x1*x1 + y1*y1 + z1*z1;
-        /* note that there are divisions by RR in the following expressions.
-           divisions by zero should be avoided by choosing a non-zero value for
-           z0 (for instance) */
+        CCTK_REAL RR2 = x1*x1 + y1*y1 + z1*z1;
+        /* To avoid divisions by RR=0, we use a small value instead.
+           Alternatively, use a non-zero z0 (for instance) */
+        if(RR2 < pow(eps_R, 2)) 
+          RR2 = pow(eps_R, 2);
 
         const CCTK_REAL RR  = sqrt(RR2);
 
@@ -567,6 +574,8 @@ void UAv_IDBHScalarHair(CCTK_ARGUMENTS)
         /*
         const CCTK_REAL rho2 = x1*x1 + y1*y1;
         const CCTK_REAL rho  = sqrt(rho2);
+
+        // TODO: If using rho, should we use eps_R there too?
         */
 
         const CCTK_REAL costh  = z1/RR;
@@ -609,8 +618,6 @@ void UAv_IDBHScalarHair(CCTK_ARGUMENTS)
         const CCTK_REAL cosmph = cos(mm*ph);
         const CCTK_REAL sinmph = sin(mm*ph);
 
-        /* note the division by RR in the following. divisions by zero should be
-           avoided by choosing a non-zero value for z0 (for instance) */
         const CCTK_REAL aux  = 1. + 0.25 * rH/RR;
         const CCTK_REAL aux2 = aux  * aux;
         const CCTK_REAL aux4 = aux2 * aux2;

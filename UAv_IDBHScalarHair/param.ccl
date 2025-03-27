@@ -96,6 +96,11 @@ REAL z0 "z coordinate of central point"
   *:* :: "any real number"
 } 0.0
 
+CCTK_REAL eps_R "floor value for RR"
+{
+  0:*  :: "any small positive value"
+} 1.0d-12
+
 
 REAL Apert_conf_fac "amplitude for conformal factor perturbation"
 {

@@ -52,9 +52,14 @@ void UAv_Kerr_test(CCTK_ARGUMENTS)
         const CCTK_REAL z1  = z[ind] - z0;
 
         const CCTK_REAL rho2 = x1*x1 + y1*y1;
+        // TODO: should we use eps_R there too?
         // const CCTK_REAL rho  = sqrt(rho2);
 
-        const CCTK_REAL RR2 = x1*x1 + y1*y1 + z1*z1;
+        /* To avoid divisions by RR=0, we use a small value instead.
+           Alternatvely, use a non-zero z0 (for instance) */
+        CCTK_REAL RR2 = x1*x1 + y1*y1 + z1*z1;
+        if(RR2 < pow(eps_R, 2)) 
+          RR2 = pow(eps_R, 2);
         const CCTK_REAL RR  = sqrt(RR2);
 
         const CCTK_REAL r  = RR * (1 + 0.25 * rH/RR) * (1 + 0.25 * rH/RR);
@@ -64,9 +69,6 @@ void UAv_Kerr_test(CCTK_ARGUMENTS)
         const CCTK_REAL sinth2 = 1. - costh2;
         const CCTK_REAL sinth  = sqrt(sinth2);
 
-        /* note that there are divisions by RR in the following expressions.
-           divisions by zero should be avoided by choosing a non-zero value for
-           z0 (for instance) */
 
         F1[ind] = (1.0/2.0)*log(pow(-1 + 16*ct/(RR*pow(4 + rH/RR, 2)), 2) + 256*ct*(ct - rH)*pow(z1, 2)/(pow(RR, 4)*pow(4 + rH/RR, 4)));
 
@@ -110,18 +112,33 @@ void UAv_Kerr_test(CCTK_ARGUMENTS)
         const CCTK_REAL y1  = y[ind] - y0;
         const CCTK_REAL z1  = z[ind] - z0;
 
-        const CCTK_REAL RR2 = x1*x1 + y1*y1 + z1*z1;
+        CCTK_REAL RR2 = x1*x1 + y1*y1 + z1*z1;
+        if(RR2 < pow(eps_R, 2)) 
+          RR2 = pow(eps_R, 2);
         const CCTK_REAL RR  = sqrt(RR2);
 
         /*
         const CCTK_REAL rho2 = x1*x1 + y1*y1;
         const CCTK_REAL rho  = sqrt(rho2);
+
+        // TODO: If using rho, should we use eps_R there too?
         */
 
         const CCTK_REAL costh  = z1/RR;
         const CCTK_REAL costh2 = costh*costh;
-        const CCTK_REAL sinth2 = 1. - costh2;
-        const CCTK_REAL sinth  = sqrt(sinth2);
+        /*
+          For some grid points actually on the axis, it occurred that costh = 1-1e-16, resulting in sinth ~ 1.5e-8 instead of 0.
+          Thus we force it in that case. 
+          Even if there is a legit grid point such that theta ~ a few 1e-8, it should mean RR >> rho and the axis treatment should be fine.
+        */
+        CCTK_REAL sinth, sinth2;
+        if (1-costh2 < 1e-15) {
+          sinth2 = 0.;
+          sinth  = 0.;
+        } else {
+          sinth2 = 1. - costh2;
+          sinth  = sqrt(sinth2);
+        }
 
         /*
         const CCTK_REAL R_x = x1/RR;   // dR/dx
@@ -147,8 +164,6 @@ void UAv_Kerr_test(CCTK_ARGUMENTS)
         const CCTK_REAL cosmph = cos(mm*ph);
         const CCTK_REAL sinmph = sin(mm*ph);
 
-        /* note the division by RR in the following. divisions by zero should be
-           avoided by choosing a non-zero value for z0 (for instance) */
         const CCTK_REAL aux  = 1. + 0.25 * rH/RR;
         const CCTK_REAL aux2 = aux  * aux;
         const CCTK_REAL aux4 = aux2 * aux2;
