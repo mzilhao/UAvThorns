@@ -1,5 +1,11 @@
 # Parameter definitions for thorn UAv_Analysis
 
+# Is Multipatch used?
+# Parameter made steerable at recovery in case we don't want to bother anymore
+BOOLEAN is_multipatch "Set to true if multipatch is used. Make sure to set Coordinates::store_volume_form = yes." STEERABLE=RECOVER
+{
+} "no"
+
 # exclude horizon from integration
 
 BOOLEAN excise_horizon "excise the region inside the AH from the volume integrations?" STEERABLE=ALWAYS

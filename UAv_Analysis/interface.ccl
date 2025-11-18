@@ -1,7 +1,7 @@
 # Interface definition for thorn UAv_Analysis
 
 implements: UAv_Analysis
-inherits: ADMBase TmunuBase SphericalSurface SpaceMask
+inherits: ADMBase TmunuBase SphericalSurface SpaceMask Coordinates
 
 USES INCLUDE: SpaceMask.h
 
