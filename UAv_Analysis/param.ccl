@@ -1,10 +1,21 @@
 # Parameter definitions for thorn UAv_Analysis
 
-# Is Multipatch used?
-# Parameter made steerable at recovery in case we don't want to bother anymore
-BOOLEAN is_multipatch "Set to true if multipatch is used. Make sure to set Coordinates::store_volume_form = yes." STEERABLE=RECOVER
-{
-} "no"
+#####################
+###### WARNING ######
+#####################
+# 
+# For multipatch simulations, the computation of volume integrals may require the volume form.
+# However, it is not currently implemented for all types of patch systems (it may not be needed at all for some).
+# To keep things relatively independent from that, we check the presence of a volume form in the Initialization function.
+# We issue a WARNING in case of multipatch usage without volume form storage, but don't abort, 
+# to avoid case splitting and over-explicit dependence.
+# THIS CAN LEAD TO WRONG RESULTS!
+#
+# So far, we don't include an explicit parameter here for multipatch, 
+# with the philosophy (like evolution thorns) that the simulation should figure it out by itself.
+# 
+#####################
+
 
 # exclude horizon from integration
 

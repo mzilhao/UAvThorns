@@ -28,12 +28,9 @@ subroutine UAv_Analysis_gfs( CCTK_ARGUMENTS )
 
   logical docalc
   
-  ! Trick to use multipatch variables if needed, without having to inherit the thorn
-  integer istat
-  logical use_volume_form
+  ! Volume element to be used with multipatch for integration variables
   CCTK_REAL, dimension(cctk_lsh(1),cctk_lsh(2),cctk_lsh(3)) :: volume_form
   pointer (volume_form_ptr, volume_form)
-  ! Volume element to be used with multipatch for integration variables
   CCTK_REAL dV
   
   
@@ -63,15 +60,8 @@ subroutine UAv_Analysis_gfs( CCTK_ARGUMENTS )
 
   end if
 
-  ! Trick to use multipatch variables if needed, without having to inherit the thorn
-  call CCTK_IsFunctionAliased(istat, "MultiPatch_GetDomainSpecification")
-  if (istat == 0) then
-     use_volume_form = .false.
-  else
-     use_volume_form = .true.
-  end if
 
-  if (use_volume_form) then
+  if (use_volume_form > 0) then
      call CCTK_VarDataPtr(volume_form_ptr, cctkGH, 0, "Coordinates::volume_form")
   end if
 
@@ -230,7 +220,7 @@ subroutine UAv_Analysis_gfs( CCTK_ARGUMENTS )
     ! With multipatch we need to multiply by the volume element stored in the corresponding variable
     ! If not, we multiply by it globally in the integration routine
     dV = 1
-    if (use_volume_form) then
+    if (use_volume_form > 0) then
        dV = volume_form(i,j,k)
     end if
 
@@ -327,7 +317,7 @@ subroutine UAv_Analysis_IntegrateVol( CCTK_ARGUMENTS )
   end if
 
   ! the multiplication by the volume element needs to be done here if we don't use multipatch
-  if (is_multipatch == 0) then
+  if (use_volume_form == 0) then
       dV = cctk_delta_space(1) * cctk_delta_space(2) * cctk_delta_space(3)
       do i = 1,num_in_fields
          out_vals(i) = out_vals(i) * dV
