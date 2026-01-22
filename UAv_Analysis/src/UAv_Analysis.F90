@@ -6,6 +6,8 @@
 
 #include "SpaceMask.h"
 
+! For information, see WARNING in param.ccl
+
 subroutine UAv_Analysis_gfs( CCTK_ARGUMENTS )
   implicit none
   DECLARE_CCTK_ARGUMENTS
@@ -33,13 +35,6 @@ subroutine UAv_Analysis_gfs( CCTK_ARGUMENTS )
   pointer (volume_form_ptr, volume_form)
   CCTK_REAL dV
 
-!   ! COMMENT MULTIPATCH LLAMA
-!   ! Test: used to compute the volume element properly with current version of Llama
-!   !       which computes the volume form by default as det(Jacobian)
-!   CCTK_INT map, ierr
-!   CCTK_INT, PARAMETER :: dimensions = 3
-!   CCTK_REAL, dimension(dimensions) :: physical_min, physical_max, interior_min, interior_max, exterior_min, exterior_max, spacing
-  
   
   type_bits     = -1
   state_outside = -1
@@ -70,13 +65,6 @@ subroutine UAv_Analysis_gfs( CCTK_ARGUMENTS )
 
   if (use_volume_form > 0) then
      call CCTK_VarDataPtr(volume_form_ptr, cctkGH, 0, "Coordinates::volume_form")
-   !   ! COMMENT MULTIPATCH LLAMA
-   !   map  = MultiPatch_GetMap(cctkGH)
-   !   ierr = MultiPatch_GetDomainSpecification( map, dimensions, &
-   !        physical_min, physical_max, &
-   !        interior_min, interior_max, &
-   !        exterior_min, exterior_max, &
-   !        spacing )
   end if
 
 
@@ -236,12 +224,6 @@ subroutine UAv_Analysis_gfs( CCTK_ARGUMENTS )
     dV = 1
     if (use_volume_form > 0) then
        dV = volume_form(i,j,k)
-      ! ! COMMENT MULTIPATCH LLAMA
-      ! if (abs(volume_form(i,j,k)) < 1e-12) then
-      !    dV = 0
-      ! else
-      !    dV = spacing(1)*spacing(2)*spacing(3)/abs(volume_form(i,j,k))
-      ! end if
     end if
 
     ! dE_gf_volume = (alpha h^ij T_ij + T_tt / alpha - beta^i beta^j T_ij / alpha) sqrt(detgd)

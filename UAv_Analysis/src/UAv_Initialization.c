@@ -12,49 +12,37 @@ void UAv_Initialization (CCTK_ARGUMENTS) {
   // MULTIPATCH
   // -------------------------------
 
+  // For information, see WARNING in param.ccl
+
+  // Setting the flags has to be done here, cannot be done in PARAMCHECK
+
   // Trick to check multipatch usage without having to inherit the thorn
   *is_multipatch = CCTK_IsFunctionAliased("MultiPatch_GetDomainSpecification");
   
-  // We need to check the volume form in the Initialization function and not in ParamCheck,
-  // because the value of the parameter Coordinates::store_volume_form alone is not enough
-  *use_volume_form = 0; // default: don't use volume form
+  // default (non Llama grid): don't use volume form
+  *use_volume_form = 0; 
 
+  // TODO: If there's ever a flag in Coordinates that indicates that the volume_form is trivial (e.g. is_cartesian),
+  // we could check it and set *use_volume_form = 0 in that case.
 
   if (*is_multipatch > 0) {
-    // If the simulation uses multipatch, make sure that the volume form variable is stored
-    // WARNING: Not all patch systems use the volume form... 
-    //          We issue the warning, but don't abort, to keep the abstraction layer and avoid splitting cases.
+    // If the simulation uses multipatch, make sure that the volume form variable is stored.
+    // Supposedly, this should be handled correctly in Coordinates, 
+    // so this should be redundant with the ParamCheck on store_volume_form.
     CCTK_INT* volume_form_state_ptr = CCTK_VarDataPtr(cctkGH, 0, "Coordinates::volume_form_state");
-    //CCTK_VINFO("volume_form_state = %d", *volume_form_state_ptr);
+    // CCTK_VINFO("volume_form_state = %d", *volume_form_state_ptr);
     
     if (volume_form_state_ptr != NULL) {
-      // -1 is the "error" return value of ParameterGetType() (see repos/flesh/src/main/Parameters.c and repos/flesh/src/include/cctk_Parameter.h)
-      CCTK_INT type = -1; 
-
-      const CCTK_INT* store_volume_form_ptr = CCTK_ParameterGet("store_volume_form", "Coordinates", &type);
-      if (store_volume_form_ptr == NULL || type != PARAMETER_BOOLEAN) {
-        CCTK_ERROR("Problem acquiring pointer to Coordinates::store_volume_form parameter.");
+      // No volume form actually stored (should not happen if ParamCheck passed)
+      if (*volume_form_state_ptr != 1) {
+        CCTK_ERROR("The patch system that you are using does not store the volume form, although you set Coordinates::store_volume_form = yes. "     
+                   "UAv_Analysis thorn will not be able to use the volume form for integrations. " 
+                   "There is likely a problem in thorn Coordinates.");
       }
-      // Coordinates::store_volume_form = yes
-      else if (*store_volume_form_ptr) {
-        // No volume form actually stored
-        // TODO/WARNING: the variable might be uninitialized in that case? 
-        //               It indeed happens that it is polluted and has 1 in memory, which causes the wrong behavior>>>
-        if (*volume_form_state_ptr != 1) {
-          CCTK_WARN(1, "The patch system that you are using does not store the volume form, although you set Coordinates::store_volume_form = yes. "     
-                       "UAv_Analysis thorn will not be able to use the volume form for integrations, so results may be incorrect.");
-        }
-        // else, we're good to go
-        else {
-          CCTK_INFO("Using volume form from multipatch system for integrations in UAv_Analysis.");
-          *use_volume_form = 1;
-        }
-      }
-      // Coordinates::store_volume_form = no
+      // else, we're good to go
       else {
-        CCTK_WARN(1, "You are using a multipatch system, but you set Coordinates::store_volume_form = no. "   
-                     "UAv_Analysis thorn will not be able to use the volume form for integrations, so results may be incorrect." 
-                     "If your patch system allows volume form computation/storage, please set Coordinates::store_volume_form = yes.");
+        CCTK_INFO("Using volume form from multipatch system for integrations in UAv_Analysis.");
+        *use_volume_form = 1;
       }
     }
     else {

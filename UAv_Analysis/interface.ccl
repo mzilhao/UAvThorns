@@ -15,26 +15,10 @@ CCTK_INT FUNCTION                        \
          CCTK_STRING IN bc_name)
 USES FUNCTION Boundary_SelectGroupForBC
 
-CCTK_INT FUNCTION                          \
-    MultiPatch_GetDomainSpecification      \
-        (CCTK_INT IN map,                  \
-         CCTK_INT IN size,                 \
-         CCTK_REAL OUT ARRAY physical_min, \
-         CCTK_REAL OUT ARRAY physical_max, \
-         CCTK_REAL OUT ARRAY interior_min, \
-         CCTK_REAL OUT ARRAY interior_max, \
-         CCTK_REAL OUT ARRAY exterior_min, \
-         CCTK_REAL OUT ARRAY exterior_max, \
-         CCTK_REAL OUT ARRAY spacing)
-USES FUNCTION MultiPatch_GetDomainSpecification
-
-CCTK_INT FUNCTION                         \
-    MultiPatch_GetMap                     \
-        (CCTK_POINTER_TO_CONST IN cctkGH)
-USES FUNCTION MultiPatch_GetMap
 
 private:
 
+# For information about multipatch/Llama behavior, see WARNING in param.ccl
 # Two separate flags, in case later we implement something with derivatives that use the jacobian, for example
 CCTK_INT is_multipatch type=scalar timelevels=1 tags='checkpoint="no"' "Flag to know if the simulation uses a multipatch grid."
 

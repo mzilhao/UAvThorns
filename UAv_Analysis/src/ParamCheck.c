@@ -10,6 +10,38 @@ void UAv_Analysis_ParamCheck(CCTK_ARGUMENTS){
   DECLARE_CCTK_ARGUMENTS;
   DECLARE_CCTK_PARAMETERS;
 
+  // -------------------------------
+  // MULTIPATCH
+  // -------------------------------
+  
+  // For information, see WARNING in param.ccl
+
+  // For multipatch / Llama grids, we need the volume form computed in Coordinates
+  // This is activated by the parameter Coordinates::store_volume_form = yes
+
+  // Trick to check multipatch usage without having to inherit the thorn
+  if( CCTK_IsFunctionAliased("MultiPatch_GetDomainSpecification") ) {
+    
+    // -1 is the "error" return value of ParameterGetType() (see repos/flesh/src/main/Parameters.c and repos/flesh/src/include/cctk_Parameter.h)
+    CCTK_INT type = -1; 
+    const CCTK_INT* store_volume_form_ptr = CCTK_ParameterGet("store_volume_form", "Coordinates", &type);
+
+    if (store_volume_form_ptr == NULL || type != PARAMETER_BOOLEAN) {
+      CCTK_ERROR("Problem acquiring pointer to Coordinates::store_volume_form parameter.");
+    }
+    else if (!(*store_volume_form_ptr)) {
+      CCTK_VPARAMWARN("You are using a multipatch system, but you set Coordinates::store_volume_form = no. "   
+                      "UAv_Analysis thorn needs to use the volume form for integrations. " 
+                      "Please set Coordinates::store_volume_form = yes.");
+    }
+    // else, we're good to go
+  }
+
+
+  // -------------------------------
+  // ORIGIN TRACKING
+  // -------------------------------
+
   // Check validity of grid scalars provided
   if (track_origin_from_grid_scalar) {
     CCTK_INT index;
