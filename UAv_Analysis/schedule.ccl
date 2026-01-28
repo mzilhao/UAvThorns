@@ -44,9 +44,8 @@ schedule UAv_Analysis_Symmetries at BASEGRID
   OPTIONS: Global
 } "Register symmetries of the density functions"
 
-# In case of a multipatch grid, we need to run this after the variable Coordinates::volume_form_storage has been set
-# We can't just use the value of the parameter Coordinates::store_volume_form and check at ParamCheck, 
-# because some patch systems don't take it into account
+# Initialize flags etc.
+# For Multipatch, the after command may not be needed for now in the end, but seems safer
 schedule UAv_Initialization at BASEGRID after MultiPatch_SpatialCoordinates
 {
   LANG: C
