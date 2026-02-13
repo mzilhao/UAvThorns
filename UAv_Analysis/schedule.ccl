@@ -1,5 +1,7 @@
 # Schedule definitions for thorn UAv_Analysis
 
+storage: is_multipatch[1]
+storage: use_volume_form[1]
 storage: dE_gf_volume[3]
 storage: dJ_gf_volume[3]
 storage: quadrupole_gf_volume[3]
@@ -42,7 +44,9 @@ schedule UAv_Analysis_Symmetries at BASEGRID
   OPTIONS: Global
 } "Register symmetries of the density functions"
 
-schedule UAv_Initialization at BASEGRID
+# Initialize flags etc.
+# For Multipatch, the after command may not be needed for now in the end, but seems safer
+schedule UAv_Initialization at BASEGRID after MultiPatch_SpatialCoordinates
 {
   LANG: C
   OPTIONS: global

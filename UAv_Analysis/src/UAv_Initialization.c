@@ -7,6 +7,55 @@ void UAv_Initialization (CCTK_ARGUMENTS) {
   DECLARE_CCTK_ARGUMENTS;
   DECLARE_CCTK_PARAMETERS;
 
+
+  // -------------------------------
+  // MULTIPATCH
+  // -------------------------------
+
+  // For information, see WARNING in param.ccl
+
+  // Setting the flags has to be done here, cannot be done in PARAMCHECK
+
+  // Trick to check multipatch usage without having to inherit the thorn
+  *is_multipatch = CCTK_IsFunctionAliased("MultiPatch_GetDomainSpecification");
+  
+  // default (non Llama grid): don't use volume form
+  *use_volume_form = 0; 
+
+  // TODO: If there's ever a flag in Coordinates that indicates that the volume_form is trivial (e.g. is_cartesian),
+  // we could check it and set *use_volume_form = 0 in that case.
+
+  if (*is_multipatch > 0) {
+    // If the simulation uses multipatch, make sure that the volume form variable is stored.
+    // Supposedly, this should be handled correctly in Coordinates, 
+    // so this should be redundant with the ParamCheck on store_volume_form.
+    CCTK_INT* volume_form_state_ptr = CCTK_VarDataPtr(cctkGH, 0, "Coordinates::volume_form_state");
+    // CCTK_VINFO("volume_form_state = %d", *volume_form_state_ptr);
+    
+    if (volume_form_state_ptr != NULL) {
+      // No volume form actually stored (should not happen if ParamCheck passed)
+      if (*volume_form_state_ptr != 1) {
+        CCTK_ERROR("The patch system that you are using does not store the volume form, although you set Coordinates::store_volume_form = yes. "     
+                   "UAv_Analysis thorn will not be able to use the volume form for integrations. " 
+                   "There is likely a problem in thorn Coordinates.");
+      }
+      // else, we're good to go
+      else {
+        CCTK_INFO("Using volume form from multipatch system for integrations in UAv_Analysis.");
+        *use_volume_form = 1;
+      }
+    }
+    else {
+      CCTK_ERROR("Problem acquiring pointer to Coordinates::volume_form_state variable.");
+    }
+  }
+
+
+  // -------------------------------
+  // ORIGIN TRACKING
+  // -------------------------------
+
+  // Initialize origin tracking if needed
   if (track_origin_from_grid_scalar) {
     // Get the index of variables. It's not supposed to change during the simulation (I think).
     // Validity of parameters should have been checked in ParamCheck.

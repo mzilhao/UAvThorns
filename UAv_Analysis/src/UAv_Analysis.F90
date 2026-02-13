@@ -6,6 +6,8 @@
 
 #include "SpaceMask.h"
 
+! For information, see WARNING in param.ccl
+
 subroutine UAv_Analysis_gfs( CCTK_ARGUMENTS )
   implicit none
   DECLARE_CCTK_ARGUMENTS
@@ -27,7 +29,15 @@ subroutine UAv_Analysis_gfs( CCTK_ARGUMENTS )
   CCTK_INT type_bits, state_outside
 
   logical docalc
+  
+  ! Volume element to be used with multipatch for integration variables
+  CCTK_REAL, dimension(cctk_lsh(1),cctk_lsh(2),cctk_lsh(3)) :: volume_form
+  pointer (volume_form_ptr, volume_form)
+  CCTK_REAL dV
+  ! Cartesian volume element used without multipatch
+  CCTK_REAL dV_cart
 
+  
   type_bits     = -1
   state_outside = -1
   
@@ -53,6 +63,15 @@ subroutine UAv_Analysis_gfs( CCTK_ARGUMENTS )
      end if
 
   end if
+
+
+  if (use_volume_form > 0) then
+     call CCTK_VarDataPtr(volume_form_ptr, cctkGH, 0, "Coordinates::volume_form")
+  end if
+  ! If not using multipatch, we multiply by the coarse Cartesian volume element
+  ! (mesh refinement is tackled by sum reduction; lower case cctk_delta_space is the base level spacing)
+  dV_cart = cctk_delta_space(1) * cctk_delta_space(2) * cctk_delta_space(3)
+
 
 !   write(*,*) 'Checking origin coordinates for the analysis in UAv_Analysis'
 !   write(*,*) 'x0 = ', x0
@@ -204,22 +223,30 @@ subroutine UAv_Analysis_gfs( CCTK_ARGUMENTS )
     end do
 
 
+    ! With multipatch we need to multiply by the volume element stored in the corresponding variable
+    ! Else, just use the standard Cartesian one
+    if (use_volume_form > 0) then
+       dV = volume_form(i,j,k)
+    else
+       dV = dV_cart
+    end if
+
     ! dE_gf_volume = (alpha h^ij T_ij + T_tt / alpha - beta^i beta^j T_ij / alpha) sqrt(detgd)
 
-    dE_gf_volume(i,j,k)   = (alph * S + aux) * sqrt(detgd)
+    dE_gf_volume(i,j,k)   = (alph * S + aux) * sqrt(detgd) * dV
 
     ! dJz = (-y p_x + x p_y) sqrt(detgd)        + permutations
-    dJz_gf_volume(i,j,k)  = (-y1 * mom(1) + x1 * mom(2)) * sqrt(detgd)
-    dJx_gf_volume(i,j,k)  = (-z1 * mom(2) + y1 * mom(3)) * sqrt(detgd)
-    dJy_gf_volume(i,j,k)  = (-x1 * mom(3) + z1 * mom(1)) * sqrt(detgd)
+    dJz_gf_volume(i,j,k)  = (-y1 * mom(1) + x1 * mom(2)) * sqrt(detgd) * dV
+    dJx_gf_volume(i,j,k)  = (-z1 * mom(2) + y1 * mom(3)) * sqrt(detgd) * dV
+    dJy_gf_volume(i,j,k)  = (-x1 * mom(3) + z1 * mom(1)) * sqrt(detgd) * dV
     
     ! dI_ij = rho * x^i x^j * alpha * sqrt(detgd)
-    dIxx_gf_volume(i,j,k) = alph * rho * x1 * x1 * sqrt(detgd)
-    dIxy_gf_volume(i,j,k) = alph * rho * x1 * y1 * sqrt(detgd)
-    dIxz_gf_volume(i,j,k) = alph * rho * x1 * z1 * sqrt(detgd)
-    dIyy_gf_volume(i,j,k) = alph * rho * y1 * y1 * sqrt(detgd)
-    dIyz_gf_volume(i,j,k) = alph * rho * y1 * z1 * sqrt(detgd)
-    dIzz_gf_volume(i,j,k) = alph * rho * z1 * z1 * sqrt(detgd)
+    dIxx_gf_volume(i,j,k) = alph * rho * x1 * x1 * sqrt(detgd) * dV
+    dIxy_gf_volume(i,j,k) = alph * rho * x1 * y1 * sqrt(detgd) * dV
+    dIxz_gf_volume(i,j,k) = alph * rho * x1 * z1 * sqrt(detgd) * dV
+    dIyy_gf_volume(i,j,k) = alph * rho * y1 * y1 * sqrt(detgd) * dV
+    dIyz_gf_volume(i,j,k) = alph * rho * y1 * z1 * sqrt(detgd) * dV
+    dIzz_gf_volume(i,j,k) = alph * rho * z1 * z1 * sqrt(detgd) * dV
 
   end do
   end do
@@ -241,7 +268,6 @@ subroutine UAv_Analysis_IntegrateVol( CCTK_ARGUMENTS )
   CCTK_INT reduction_handle, varid(num_in_fields)
 
   CCTK_INT i
-  CCTK_REAL dV
 
   character(len=*), PARAMETER :: thorn_str = "UAv_Analysis::"
   CCTK_INT, PARAMETER :: thorn_strlen = LEN(thorn_str), var_strlen = 14 ! 14 for dIxy_gf_volume (largest so far)
@@ -294,12 +320,6 @@ subroutine UAv_Analysis_IntegrateVol( CCTK_ARGUMENTS )
   if (ierr < 0) then
      call CCTK_WARN(0, 'Error while reducing the auxiliary XX_gf_volume grid functions.')
   end if
-
-  ! the multiplication with the volume element needs to be done here
-  dV = cctk_delta_space(1) * cctk_delta_space(2) * cctk_delta_space(3)
-  do i = 1,num_in_fields
-      out_vals(i) = out_vals(i) * dV
-  end do
 
   total_energy = out_vals(1)
 
