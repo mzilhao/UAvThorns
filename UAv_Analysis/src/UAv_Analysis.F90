@@ -34,6 +34,8 @@ subroutine UAv_Analysis_gfs( CCTK_ARGUMENTS )
   CCTK_REAL, dimension(cctk_lsh(1),cctk_lsh(2),cctk_lsh(3)) :: volume_form
   pointer (volume_form_ptr, volume_form)
   CCTK_REAL dV
+  ! Cartesian volume element used without multipatch
+  CCTK_REAL dV_cart
 
   
   type_bits     = -1
@@ -66,7 +68,9 @@ subroutine UAv_Analysis_gfs( CCTK_ARGUMENTS )
   if (use_volume_form > 0) then
      call CCTK_VarDataPtr(volume_form_ptr, cctkGH, 0, "Coordinates::volume_form")
   end if
-
+  ! If not using multipatch, we multiply by the coarse Cartesian volume element
+  ! (mesh refinement is tackled by sum reduction; lower case cctk_delta_space is the base level spacing)
+  dV_cart = cctk_delta_space(1) * cctk_delta_space(2) * cctk_delta_space(3)
 
 
 !   write(*,*) 'Checking origin coordinates for the analysis in UAv_Analysis'
@@ -220,10 +224,11 @@ subroutine UAv_Analysis_gfs( CCTK_ARGUMENTS )
 
 
     ! With multipatch we need to multiply by the volume element stored in the corresponding variable
-    ! If not, we multiply by it globally in the integration routine
-    dV = 1
+    ! Else, just use the standard Cartesian one
     if (use_volume_form > 0) then
        dV = volume_form(i,j,k)
+    else
+       dV = dV_cart
     end if
 
     ! dE_gf_volume = (alpha h^ij T_ij + T_tt / alpha - beta^i beta^j T_ij / alpha) sqrt(detgd)
@@ -263,8 +268,6 @@ subroutine UAv_Analysis_IntegrateVol( CCTK_ARGUMENTS )
   CCTK_INT reduction_handle, varid(num_in_fields)
 
   CCTK_INT i
-  ! Volume element to be used WITHOUT multipatch for integration variables, here it is global
-  CCTK_REAL dV
 
   character(len=*), PARAMETER :: thorn_str = "UAv_Analysis::"
   CCTK_INT, PARAMETER :: thorn_strlen = LEN(thorn_str), var_strlen = 14 ! 14 for dIxy_gf_volume (largest so far)
@@ -316,14 +319,6 @@ subroutine UAv_Analysis_IntegrateVol( CCTK_ARGUMENTS )
        varid(5), varid(6), varid(7), varid(8), varid(9), varid(10)) ! I_ij
   if (ierr < 0) then
      call CCTK_WARN(0, 'Error while reducing the auxiliary XX_gf_volume grid functions.')
-  end if
-
-  ! the multiplication by the volume element needs to be done here if we don't use multipatch
-  if (use_volume_form == 0) then
-      dV = cctk_delta_space(1) * cctk_delta_space(2) * cctk_delta_space(3)
-      do i = 1,num_in_fields
-         out_vals(i) = out_vals(i) * dV
-      end do
   end if
 
   total_energy = out_vals(1)
