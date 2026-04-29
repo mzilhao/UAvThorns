@@ -1,0 +1,9 @@
+# Schedule definitions for thorn TargetTracker
+
+storage: target_loc[1]
+
+schedule TargetTracker_SetSurfaces at ANALYSIS
+{
+  LANG: C
+  OPTIONS: global
+} "Update tracked points coordinates"
