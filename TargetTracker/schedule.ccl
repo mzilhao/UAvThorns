@@ -1,8 +1,22 @@
 # Schedule definitions for thorn TargetTracker
 
+storage: is_active[1]
 storage: target_loc[1]
+storage: target_ids[1]
 
-schedule TargetTracker_SetSurfaces at ANALYSIS
+schedule TargetTracker_ParamCheck AT ParamCheck
+{
+  LANG: C
+  OPTIONS: global
+} "Check TargetTracker parameters for consistency"
+
+schedule TargetTracker_Initialization at BASEGRID
+{
+  LANG: C
+  OPTIONS: global
+} "Initialize TargetTracker quantities"
+
+schedule TargetTracker_SetSurfaces at ANALYSIS after Trigger_Check
 {
   LANG: C
   OPTIONS: global
