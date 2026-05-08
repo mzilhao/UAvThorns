@@ -27,8 +27,11 @@ inline void TargetActivationCondition(CCTK_ARGUMENTS, CCTK_INT itarget) {
     DECLARE_CCTK_ARGUMENTS;
     DECLARE_CCTK_PARAMETERS;
 
+    // Update value of internal is_tracked flag based on track parameter (which is STEERABLE=ALWAYS)
+    is_tracked[itarget] = track[itarget];
+
     is_active[itarget] = ( 
-        track[itarget]
+        is_tracked[itarget]
         // &&  track_every[itarget] > 0     // Should be satisfied by construction
         &&  (cctk_time >= start_tracking_after_time[itarget])
         &&  (cctk_time <= stop_tracking_after_time[itarget])

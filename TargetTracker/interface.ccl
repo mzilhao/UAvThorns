@@ -5,9 +5,11 @@ inherits: SphericalSurface
 
 private:
 
+CCTK_INT is_tracked[nmax_targets] type=scalar timelevels=1 tags='checkpoint="yes"' "Flag to reflect parameter track (for recovery)"
+
 CCTK_INT is_active[nmax_targets] type=scalar timelevels=1 tags='checkpoint="yes"' "Flag to know which tracker is active"
 
-CCTK_REAL target_loc[nmax_targets] type=scalar timelevels=1
+CCTK_REAL target_loc[nmax_targets] type=scalar timelevels=1 tags='checkpoint="yes"'
 {
   target_loc_x
   target_loc_y

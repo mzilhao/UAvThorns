@@ -7,6 +7,10 @@ INT nmax_targets "crutch parameter for the maximum number of targets"
   10
 } 10
 
+BOOLEAN force_params_at_recovery[10] "When recovering from a checkpoint, set the surfaces with values from the parameter file, instead of the checkpoint. See documentation for caveats." STEERABLE=RECOVER
+{
+} "no"
+
 BOOLEAN track[10] "Track this target" STEERABLE=ALWAYS
 {
 } "no"
@@ -35,22 +39,22 @@ STRING target_z[10] "Grid scalar that is tracked: z component" STEERABLE=ALWAYS
   "[a-zA-Z_][a-zA-Z0-9_]*[:][:][a-zA-Z_][a-zA-Z0-9_]*\[[0-9][0-9]*\]" :: "name of a grid scalar with index"
 } "fixed"
 
-INT track_every[10] "Track target every N iterations. Use parameter `track` to (de)activate tracking. In-run updates of other steerable parameters will occur after the iteration number is checked." STEERABLE=ALWAYS
+INT track_every[10] "Track target every N iterations. Use parameter `track` to (de)activate tracking. In-run updates of other steerable parameters will occur after the iteration number is checked." STEERABLE=RECOVER
 {
   1:* :: "Any positive integer"
 } 1
 
-REAL start_tracking_after_time[10] "Start tracking at the given time" STEERABLE=ALWAYS
+REAL start_tracking_after_time[10] "Start tracking at the given time" STEERABLE=RECOVER
 {
   *:* :: "after this time (inclusively)"
 } 0.0
 
-REAL stop_tracking_after_time[10] "Stop tracking after the given time" STEERABLE=ALWAYS
+REAL stop_tracking_after_time[10] "Stop tracking after the given time" STEERABLE=RECOVER
 {
   *:* :: "after this time (exclusively)"
 } 1e+99
 
-INT which_surface_to_store_info[10] "A spherical surface index where we can store the target location. Make sure you have created the surface!" STEERABLE=ALWAYS
+INT which_surface_to_store_info[10] "A spherical surface index where we can store the target location. Make sure you have created the surface!"
 {
   -1  :: "don't store target location"
   0:* :: "any spherical surface index"

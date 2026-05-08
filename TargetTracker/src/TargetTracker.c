@@ -179,7 +179,7 @@ void TargetTracker_SetSurfaces(CCTK_ARGUMENTS)
                 sf_centroid_z[sn] = target_loc_z[itarget];
 
                 sf_active[sn] = 1;
-                sf_valid[sn] = 1;
+                sf_valid[sn]  = 1;
 
                 if (verbose) {
                     CCTK_VINFO("Setting spherical surface %d centroid from target #%d to (%g,%g,%g)",
