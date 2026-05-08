@@ -15,14 +15,10 @@ void TargetTracker_SetSurfaces(CCTK_ARGUMENTS);
 CCTK_INT UpdateTargetStatus(CCTK_ARGUMENTS, CCTK_INT itarget);
 
 // Helper function to check a change of target for one dimension (x, y, z)
-void TargetChangeOneDim (CCTK_ARGUMENTS, CCTK_INT itarget, 
-                            CCTK_INT *const ptr_current_id, const char* tgt_name, 
-                            const char* dim_name);
+void TargetChangeOneDim (CCTK_ARGUMENTS, struct TargetInfoBundleOneDim bundle);
 
 // Helper function to get data for pointer in one dimension (x, y, z)
-CCTK_INT TargetGetDataOneDim (CCTK_ARGUMENTS, CCTK_INT itarget,
-                            CCTK_INT tgt_id, const char* tgt_name,
-                            CCTK_REAL *const ptr_target_loc, const char* dim_name);
+CCTK_INT TargetGetDataOneDim (CCTK_ARGUMENTS, const struct TargetInfoBundleOneDim bundle, CCTK_REAL *const ptr_target_loc);
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -47,9 +43,12 @@ CCTK_INT UpdateTargetStatus(CCTK_ARGUMENTS, CCTK_INT itarget) {
     
     // Check if target has changed and is valid
     if (is_active[itarget]) {
-        TargetChangeOneDim(CCTK_PASS_CTOC, itarget, &target_id_x[itarget], target_x[itarget], "x");
-        TargetChangeOneDim(CCTK_PASS_CTOC, itarget, &target_id_y[itarget], target_y[itarget], "y");
-        TargetChangeOneDim(CCTK_PASS_CTOC, itarget, &target_id_z[itarget], target_z[itarget], "z");
+        struct TargetInfoBundleOneDim bundle_x = {itarget, &target_id_x[itarget], target_x[itarget], "x"};
+        TargetChangeOneDim(CCTK_PASS_CTOC, bundle_x);
+        struct TargetInfoBundleOneDim bundle_y = {itarget, &target_id_y[itarget], target_y[itarget], "y"};
+        TargetChangeOneDim(CCTK_PASS_CTOC, bundle_y);
+        struct TargetInfoBundleOneDim bundle_z = {itarget, &target_id_z[itarget], target_z[itarget], "z"};
+        TargetChangeOneDim(CCTK_PASS_CTOC, bundle_z);
     }
     
     return is_active[itarget];
@@ -59,11 +58,15 @@ CCTK_INT UpdateTargetStatus(CCTK_ARGUMENTS, CCTK_INT itarget) {
 ///////////////////////////////////////////////////////////////////////////////
 // Helper function to check a change of target for one dimension (x, y, z)
 ///////////////////////////////////////////////////////////////////////////////
-void TargetChangeOneDim (CCTK_ARGUMENTS, CCTK_INT itarget, 
-                            CCTK_INT *const ptr_current_id, const char* tgt_name, 
-                            const char* dim_name) {
+void TargetChangeOneDim (CCTK_ARGUMENTS, struct TargetInfoBundleOneDim bundle) {
     DECLARE_CCTK_ARGUMENTS;
     DECLARE_CCTK_PARAMETERS;
+
+    // Unpack bundle
+    const CCTK_INT itarget    = bundle.itarget;
+    CCTK_INT* ptr_current_id  = bundle.ptr_current_id;
+    const char* tgt_name      = bundle.tgt_name;
+    const char* dim_name      = bundle.dim_name;
 
     // "New" target
     CCTK_INT tgt_id = CCTK_VarIndex(tgt_name);
@@ -107,11 +110,15 @@ void TargetChangeOneDim (CCTK_ARGUMENTS, CCTK_INT itarget,
 // Helper function to get data for pointer in one dimension (x, y, z)
 // Returns 0 if no error, 1 if error (and deactivates target and triggers termination).
 ////////////////////////////////////////////////////////////////////////////////
-CCTK_INT TargetGetDataOneDim (CCTK_ARGUMENTS, CCTK_INT itarget,
-                            CCTK_INT tgt_id, const char* tgt_name,
-                            CCTK_REAL *const ptr_target_loc, const char* dim_name) {
+CCTK_INT TargetGetDataOneDim (CCTK_ARGUMENTS, const struct TargetInfoBundleOneDim bundle, CCTK_REAL *const ptr_target_loc) {
     DECLARE_CCTK_ARGUMENTS;
     DECLARE_CCTK_PARAMETERS;
+
+    // Unpack bundle
+    const CCTK_INT itarget    = bundle.itarget;
+    const CCTK_INT tgt_id     = *bundle.ptr_current_id;
+    const char* tgt_name      = bundle.tgt_name;
+    const char* dim_name      = bundle.dim_name;
 
     // A negative index here should mean fixed target (and not an error):
     // keep current position in that case
@@ -151,9 +158,12 @@ void TargetTracker_SetSurfaces(CCTK_ARGUMENTS)
             
             CCTK_INT target_err = 0;
             // Get target position for each dimension and check for errors
-            target_err += TargetGetDataOneDim(CCTK_PASS_CTOC, itarget, target_id_x[itarget], target_x[itarget], &target_loc_x[itarget], "x");
-            target_err += TargetGetDataOneDim(CCTK_PASS_CTOC, itarget, target_id_y[itarget], target_y[itarget], &target_loc_y[itarget], "y");
-            target_err += TargetGetDataOneDim(CCTK_PASS_CTOC, itarget, target_id_z[itarget], target_z[itarget], &target_loc_z[itarget], "z");
+            struct TargetInfoBundleOneDim bundle_x = {itarget, &target_id_x[itarget], target_x[itarget], "x"};
+            target_err += TargetGetDataOneDim(CCTK_PASS_CTOC, bundle_x, &target_loc_x[itarget]);
+            struct TargetInfoBundleOneDim bundle_y = {itarget, &target_id_y[itarget], target_y[itarget], "y"};
+            target_err += TargetGetDataOneDim(CCTK_PASS_CTOC, bundle_y, &target_loc_y[itarget]);
+            struct TargetInfoBundleOneDim bundle_z = {itarget, &target_id_z[itarget], target_z[itarget], "z"};
+            target_err += TargetGetDataOneDim(CCTK_PASS_CTOC, bundle_z, &target_loc_z[itarget]);
 
             // An error will trigger termination at the end of the time step.
             if (target_err > 0) {

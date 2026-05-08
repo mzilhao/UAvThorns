@@ -7,6 +7,16 @@
  * Contains helper functions for the TargetTracker thorn.
  */
 
+/////////////////////////////////////////////////////////////////////////////////
+// Helper struc to pass arguments to functions
+//////////////////////////////////////////////////////////////////////////////////
+struct TargetInfoBundleOneDim {
+    CCTK_INT itarget;
+    CCTK_INT* ptr_current_id;
+    const char* tgt_name;
+    const char* dim_name;
+};
+
 ////////////////////////////////////////////////////////////////////////////////
 // Helper function for factorization and consistency.
 // Gives the condition for a target to be active based on the current parameters
