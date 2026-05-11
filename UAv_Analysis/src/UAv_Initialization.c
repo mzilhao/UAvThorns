@@ -55,35 +55,47 @@ void UAv_Initialization (CCTK_ARGUMENTS) {
   // ORIGIN TRACKING
   // -------------------------------
 
+  // We can already initialize the coordinates
+  *x0 = origin_x;
+  *y0 = origin_y;
+  *z0 = origin_z;
+
   // Initialize origin tracking if needed
+  // origin_from_grid_scalar_index not allocated in schedule.ccl if track_origin_from_grid_scalar = no
   if (track_origin_from_grid_scalar) {
     // Get the index of variables. It's not supposed to change during the simulation (I think).
     // Validity of parameters should have been checked in ParamCheck.
-    // Seems a bit redundant to do this affectation here and not in ParamCheck, but more in the logic.
-    
+    // Since validity has been checked, a negative value here should mean "fixed".
+
     // x source
     *origin_from_grid_scalar_index_x = CCTK_VarIndex (track_origin_source_x);
     // y source
     *origin_from_grid_scalar_index_y = CCTK_VarIndex (track_origin_source_y);
     // z source
     *origin_from_grid_scalar_index_z = CCTK_VarIndex (track_origin_source_z);
-
-    CCTK_VINFO("Tracking origin used in the analysis with grid scalars.");
-    CCTK_VINFO("x0 = %s", track_origin_source_x);
-    CCTK_VINFO("y0 = %s", track_origin_source_y);
-    CCTK_VINFO("z0 = %s", track_origin_source_z);
   }
-  else { // no tracking from grid scalar
-    // origin_from_grid_scalar_index not allocated in schedule.ccl in that case
-
-    // We can already initialize the coordinates
-    *x0 = origin_x;
-    *y0 = origin_y;
-    *z0 = origin_z;
-
-    CCTK_VINFO("Using fixed origin in the analysis.");
-    CCTK_VINFO("x0 = %g", *x0);
-    CCTK_VINFO("y0 = %g", *y0);
-    CCTK_VINFO("z0 = %g", *z0);
+  
+  // Info
+  CCTK_VINFO("Origin used in the analysis:");
+  // x
+  if (track_origin_from_grid_scalar && *origin_from_grid_scalar_index_x >= 0) {
+    CCTK_VINFO("x0: %s", track_origin_source_x);
+  }
+  else {
+    CCTK_VINFO("x0 = %g (fixed)", *x0);
+  }
+  // y
+  if (track_origin_from_grid_scalar && *origin_from_grid_scalar_index_y >= 0) {
+    CCTK_VINFO("y0: %s", track_origin_source_y);
+  }
+  else {
+    CCTK_VINFO("y0 = %g (fixed)", *y0);
+  }
+  // z
+  if (track_origin_from_grid_scalar && *origin_from_grid_scalar_index_z >= 0) {
+    CCTK_VINFO("z0: %s", track_origin_source_z);
+  }
+  else {
+    CCTK_VINFO("z0 = %g (fixed)", *z0);
   }
 }
