@@ -17,7 +17,7 @@ subroutine UAv_Analysis_gfs( CCTK_ARGUMENTS )
   CCTK_REAL alph, beta(3), Tab(4,4)
   CCTK_REAL gd(3,3), gu(3,3), detgd
 
-  CCTK_REAL aux, S, rho
+  CCTK_REAL S, rho
   CCTK_REAL mom(3)
   
   ! names x0, y0, z0 used as members of the thorn
@@ -207,14 +207,6 @@ subroutine UAv_Analysis_gfs( CCTK_ARGUMENTS )
     end if
    
 
-    aux = 0
-    do m = 1, 3
-      do n = 1, 3
-        aux = aux + beta(m) * beta(n) * Tab(m,n)
-      end do
-    end do
-    aux = (Tab(4,4) - aux) / alph
-
     S = 0
     do m = 1, 3
        do n = 1, 3
@@ -231,9 +223,10 @@ subroutine UAv_Analysis_gfs( CCTK_ARGUMENTS )
        dV = dV_cart
     end if
 
-    ! dE_gf_volume = (alpha h^ij T_ij + T_tt / alpha - beta^i beta^j T_ij / alpha) sqrt(detgd)
+    ! dE = (alpha h^ij T_ij + T_tt / alpha - beta^i beta^j T_ij / alpha) sqrt(detgd)
+    !              = (alpha * (rho + S) - 2 p_i beta^i) sqrt(detgd)
 
-    dE_gf_volume(i,j,k)   = (alph * S + aux) * sqrt(detgd) * dV
+    dE_gf_volume(i,j,k)   = (alph * (rho + S) - 2 * sum(beta * mom)) * sqrt(detgd) * dV
 
     ! dJz = (-y p_x + x p_y) sqrt(detgd)        + permutations
     dJz_gf_volume(i,j,k)  = (-y1 * mom(1) + x1 * mom(2)) * sqrt(detgd) * dV
