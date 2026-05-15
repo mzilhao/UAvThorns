@@ -82,6 +82,10 @@ subroutine UAv_Analysis_gfs( CCTK_ARGUMENTS )
   dJx_gf_volume  = 0
   dJy_gf_volume  = 0
   dJz_gf_volume  = 0
+  drho_gf_volume = 0
+  dCoM_Tmunu_gf_volume_x = 0
+  dCoM_Tmunu_gf_volume_y = 0
+  dCoM_Tmunu_gf_volume_z = 0
   dIxx_gf_volume = 0
   dIxy_gf_volume = 0
   dIxz_gf_volume = 0
@@ -233,6 +237,16 @@ subroutine UAv_Analysis_gfs( CCTK_ARGUMENTS )
     dJx_gf_volume(i,j,k)  = (-z1 * mom(2) + y1 * mom(3)) * sqrt(detgd) * dV
     dJy_gf_volume(i,j,k)  = (-x1 * mom(3) + z1 * mom(1)) * sqrt(detgd) * dV
     
+    ! drho = rho * alpha * sqrt(detgd)
+    drho_gf_volume(i,j,k) = alph * rho * sqrt(detgd) * dV
+
+    ! dCoM^i = rho * x^i * alpha * sqrt(detgd)
+    ! Division by integral of density in IntegrateVol
+    ! We don't use x1 here (and add x0 back in IntegrateVol), so that this GF can be used in other thorns directly
+    dCoM_Tmunu_gf_volume_x(i,j,k) = alph * rho * x(i,j,k) * sqrt(detgd) * dV
+    dCoM_Tmunu_gf_volume_y(i,j,k) = alph * rho * y(i,j,k) * sqrt(detgd) * dV
+    dCoM_Tmunu_gf_volume_z(i,j,k) = alph * rho * z(i,j,k) * sqrt(detgd) * dV
+
     ! dI_ij = rho * x^i x^j * alpha * sqrt(detgd)
     dIxx_gf_volume(i,j,k) = alph * rho * x1 * x1 * sqrt(detgd) * dV
     dIxy_gf_volume(i,j,k) = alph * rho * x1 * y1 * sqrt(detgd) * dV
@@ -254,7 +268,7 @@ subroutine UAv_Analysis_IntegrateVol( CCTK_ARGUMENTS )
   DECLARE_CCTK_PARAMETERS
 
   ! num_out_vals: number of output values for a given reduction
-  CCTK_INT, PARAMETER :: num_in_fields = 10, num_out_vals = 1  
+  CCTK_INT, PARAMETER :: num_in_fields = 14, num_out_vals = 1  
   CCTK_REAL out_vals(num_in_fields*num_out_vals)
   
   CCTK_INT ierr
@@ -263,21 +277,34 @@ subroutine UAv_Analysis_IntegrateVol( CCTK_ARGUMENTS )
   CCTK_INT i
 
   character(len=*), PARAMETER :: thorn_str = "UAv_Analysis::"
-  CCTK_INT, PARAMETER :: thorn_strlen = LEN(thorn_str), var_strlen = 14 ! 14 for dIxy_gf_volume (largest so far)
+  CCTK_INT, PARAMETER :: thorn_strlen = LEN(thorn_str)
+  CCTK_INT, PARAMETER :: var_strlen = max(LEN("dE_gf_volume"), &
+                                          LEN("dJx_gf_volume"), &
+                                          LEN("dIxx_gf_volume"), &
+                                          LEN("drho_gf_volume"), &
+                                          LEN("dCoM_Tmunu_gf_volume_x"))
+
   CCTK_INT, PARAMETER :: full_strlen = thorn_strlen + var_strlen 
   character(len=full_strlen), dimension(num_in_fields) :: varnames
 
   varnames = [character(len=full_strlen) :: &
-               thorn_str//"dE_gf_volume  ", &
-               thorn_str//"dJx_gf_volume ", &
-               thorn_str//"dJy_gf_volume ", &
-               thorn_str//"dJz_gf_volume ", &
+               thorn_str//"dE_gf_volume",   &
+               ! 1
+               thorn_str//"dJx_gf_volume",  &
+               thorn_str//"dJy_gf_volume",  &
+               thorn_str//"dJz_gf_volume",  &
+               ! 4
                thorn_str//"dIxx_gf_volume", &
                thorn_str//"dIxy_gf_volume", &
                thorn_str//"dIxz_gf_volume", &
                thorn_str//"dIyy_gf_volume", &
                thorn_str//"dIyz_gf_volume", &
-               thorn_str//"dIzz_gf_volume"]
+               thorn_str//"dIzz_gf_volume", &
+               ! 10
+               thorn_str//"drho_gf_volume", &
+               thorn_str//"dCoM_Tmunu_gf_volume_x", &
+               thorn_str//"dCoM_Tmunu_gf_volume_y", &
+               thorn_str//"dCoM_Tmunu_gf_volume_z"]
 
 
   if (do_analysis_every .le. 0) then
@@ -309,7 +336,9 @@ subroutine UAv_Analysis_IntegrateVol( CCTK_ARGUMENTS )
        out_vals, num_in_fields, &
        varid(1), & ! E
        varid(2), varid(3), varid(4), & ! J_i
-       varid(5), varid(6), varid(7), varid(8), varid(9), varid(10)) ! I_ij
+       varid(5), varid(6), varid(7), varid(8), varid(9), varid(10), & ! I_ij
+       varid(11), & ! rho
+       varid(12), varid(13), varid(14)) ! Center of mass
   if (ierr < 0) then
      call CCTK_WARN(0, 'Error while reducing the auxiliary XX_gf_volume grid functions.')
   end if
@@ -319,6 +348,10 @@ subroutine UAv_Analysis_IntegrateVol( CCTK_ARGUMENTS )
   total_angular_momentum_x = out_vals(2)
   total_angular_momentum_y = out_vals(3)
   total_angular_momentum_z = out_vals(4)
+
+  center_of_mass_Tmunu_x = out_vals(12) / out_vals(11)
+  center_of_mass_Tmunu_y = out_vals(13) / out_vals(11)
+  center_of_mass_Tmunu_z = out_vals(14) / out_vals(11)
 
   Ixx = out_vals(5)
   Ixy = out_vals(6)
