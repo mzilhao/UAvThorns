@@ -58,6 +58,20 @@ CCTK_REAL dCoM_Tmunu_gf_volume type=gf timelevels=3 tags='Prolongation="none" te
   dCoM_Tmunu_gf_volume_z
 } "density rho*x^i gridfunctions for volume integration. Note that we use x, and not x-x0, so that the density GF can be safely used in other thorns."
 
+CCTK_REAL linear_momentum type=scalar timelevels=1 tags='checkpoint="no"'
+{
+  linear_momentum_x
+  linear_momentum_y
+  linear_momentum_z
+} "Linear momentum (volume integral)."
+
+CCTK_REAL dp_gf_volume type=gf timelevels=3 tags='Prolongation="none" tensortypealias="D" checkpoint="no"'
+{
+  dpx_gf_volume
+  dpy_gf_volume
+  dpz_gf_volume
+} "momentum density gridfunctions for volume integration"
+
 CCTK_REAL quadrupole type=scalar timelevels=1 tags='checkpoint="no"'
 {
   Ixx, Ixy, Ixz
