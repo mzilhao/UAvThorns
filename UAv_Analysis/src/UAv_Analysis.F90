@@ -15,7 +15,9 @@ subroutine UAv_Analysis_gfs( CCTK_ARGUMENTS )
   DECLARE_CCTK_PARAMETERS
 
   CCTK_REAL alph, beta(3), Tab(4,4)
-  CCTK_REAL gd(3,3), gu(3,3), detgd, sqrt_detgd
+  CCTK_REAL gd(3,3), gu(3,3), detgd
+  ! Auxiliaries to avoid repeating computations
+  CCTK_REAL sqrt_detgd, vol3, vol4, rho_vol4
 
   CCTK_REAL S, rho
   CCTK_REAL mom(3)
@@ -186,6 +188,17 @@ subroutine UAv_Analysis_gfs( CCTK_ARGUMENTS )
     sqrt_detgd = sqrt(detgd)
     !--------------------------------------------
 
+    ! With multipatch we need to multiply by the volume element stored in the corresponding variable
+    ! Else, just use the standard Cartesian one
+    if (use_volume_form > 0) then
+       dV = volume_form(i,j,k)
+    else
+       dV = dV_cart
+    end if
+
+    vol3 = sqrt_detgd * dV
+    vol4 = alph * vol3
+
     ! Eulerian energy density
     rho = Tab(4,4)
     do m = 1, 3
@@ -195,6 +208,7 @@ subroutine UAv_Analysis_gfs( CCTK_ARGUMENTS )
        end do
     end do
     rho = rho / ( alph * alph )
+    rho_vol4 = rho * vol4
 
     if (compute_density_rho == 1) then
       density_rho(i,j,k) = rho
@@ -224,48 +238,40 @@ subroutine UAv_Analysis_gfs( CCTK_ARGUMENTS )
     end do
 
 
-    ! With multipatch we need to multiply by the volume element stored in the corresponding variable
-    ! Else, just use the standard Cartesian one
-    if (use_volume_form > 0) then
-       dV = volume_form(i,j,k)
-    else
-       dV = dV_cart
-    end if
-
     ! Symmetry: we multiply by the factors here, so that other thorns can use these GFs safely
 
     ! dE = (alpha h^ij T_ij + T_tt / alpha - beta^i beta^j T_ij / alpha) sqrt(detgd)
     !              = (alpha * (rho + S) - 2 p_i beta^i) sqrt(detgd)
 
-    dE_gf_volume(i,j,k)   = (alph * (rho + S) - 2 * sum(beta * mom)) * sqrt_detgd * dV * sym_factor_dE
+    dE_gf_volume(i,j,k)   = (alph * (rho + S) - 2 * sum(beta * mom)) * vol3 * sym_factor_dE
 
     ! dJz = (-y p_x + x p_y) sqrt(detgd)        + permutations
-    dJz_gf_volume(i,j,k)  = (-y1 * mom(1) + x1 * mom(2)) * sqrt_detgd * dV * sym_factor_dJz
-    dJx_gf_volume(i,j,k)  = (-z1 * mom(2) + y1 * mom(3)) * sqrt_detgd * dV * sym_factor_dJx
-    dJy_gf_volume(i,j,k)  = (-x1 * mom(3) + z1 * mom(1)) * sqrt_detgd * dV * sym_factor_dJy
+    dJz_gf_volume(i,j,k)  = (-y1 * mom(1) + x1 * mom(2)) * vol3 * sym_factor_dJz
+    dJx_gf_volume(i,j,k)  = (-z1 * mom(2) + y1 * mom(3)) * vol3 * sym_factor_dJx
+    dJy_gf_volume(i,j,k)  = (-x1 * mom(3) + z1 * mom(1)) * vol3 * sym_factor_dJy
     
     ! drho = rho * alpha * sqrt(detgd)
-    drho_gf_volume(i,j,k) = alph * rho * sqrt_detgd * dV * sym_factor_drho
+    drho_gf_volume(i,j,k) = rho_vol4 * sym_factor_drho
 
     ! dCoM^i = rho * x^i * alpha * sqrt(detgd)
     ! Division by integral of density in IntegrateVol
     ! We don't use x1 here (and add x0 back in IntegrateVol), so that this GF can be used in other thorns directly
-    dCoMx_gf_volume(i,j,k) = alph * rho * x(i,j,k) * sqrt_detgd * dV * sym_factor_dCoMx
-    dCoMy_gf_volume(i,j,k) = alph * rho * y(i,j,k) * sqrt_detgd * dV * sym_factor_dCoMy
-    dCoMz_gf_volume(i,j,k) = alph * rho * z(i,j,k) * sqrt_detgd * dV * sym_factor_dCoMz
+    dCoMx_gf_volume(i,j,k) = x(i,j,k) * rho_vol4 * sym_factor_dCoMx
+    dCoMy_gf_volume(i,j,k) = y(i,j,k) * rho_vol4 * sym_factor_dCoMy
+    dCoMz_gf_volume(i,j,k) = z(i,j,k) * rho_vol4 * sym_factor_dCoMz
 
     ! dp^i = p^i * alpha * sqrt(detgd)
-    dpx_gf_volume(i,j,k) = alph * mom(1) * sqrt_detgd * dV * sym_factor_dpx
-    dpy_gf_volume(i,j,k) = alph * mom(2) * sqrt_detgd * dV * sym_factor_dpy
-    dpz_gf_volume(i,j,k) = alph * mom(3) * sqrt_detgd * dV * sym_factor_dpz
+    dpx_gf_volume(i,j,k) = mom(1) * vol4 * sym_factor_dpx
+    dpy_gf_volume(i,j,k) = mom(2) * vol4 * sym_factor_dpy
+    dpz_gf_volume(i,j,k) = mom(3) * vol4 * sym_factor_dpz
 
     ! dI_ij = rho * x^i x^j * alpha * sqrt(detgd)
-    dIxx_gf_volume(i,j,k) = alph * rho * x1 * x1 * sqrt_detgd * dV * sym_factor_dIxx
-    dIxy_gf_volume(i,j,k) = alph * rho * x1 * y1 * sqrt_detgd * dV * sym_factor_dIxy
-    dIxz_gf_volume(i,j,k) = alph * rho * x1 * z1 * sqrt_detgd * dV * sym_factor_dIxz
-    dIyy_gf_volume(i,j,k) = alph * rho * y1 * y1 * sqrt_detgd * dV * sym_factor_dIyy
-    dIyz_gf_volume(i,j,k) = alph * rho * y1 * z1 * sqrt_detgd * dV * sym_factor_dIyz
-    dIzz_gf_volume(i,j,k) = alph * rho * z1 * z1 * sqrt_detgd * dV * sym_factor_dIzz
+    dIxx_gf_volume(i,j,k) = x1 * x1 * rho_vol4 * sym_factor_dIxx
+    dIxy_gf_volume(i,j,k) = x1 * y1 * rho_vol4 * sym_factor_dIxy
+    dIxz_gf_volume(i,j,k) = x1 * z1 * rho_vol4 * sym_factor_dIxz
+    dIyy_gf_volume(i,j,k) = y1 * y1 * rho_vol4 * sym_factor_dIyy
+    dIyz_gf_volume(i,j,k) = y1 * z1 * rho_vol4 * sym_factor_dIyz
+    dIzz_gf_volume(i,j,k) = z1 * z1 * rho_vol4 * sym_factor_dIzz
 
   end do
   end do
