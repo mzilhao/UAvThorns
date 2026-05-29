@@ -14,8 +14,6 @@ void UAv_Analysis_ParamCheck(CCTK_ARGUMENTS){
   // MULTIPATCH
   // -------------------------------
   
-  // For information, see WARNING in param.ccl
-
   // For multipatch / Llama grids, we need the volume form computed in Coordinates
   // This is activated by the parameter Coordinates::store_volume_form = yes
 

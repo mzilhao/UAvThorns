@@ -12,8 +12,6 @@ void UAv_Initialization (CCTK_ARGUMENTS) {
   // MULTIPATCH
   // -------------------------------
 
-  // For information, see WARNING in param.ccl
-
   // Setting the flags has to be done here, cannot be done in PARAMCHECK
 
   // Trick to check multipatch usage without having to inherit the thorn

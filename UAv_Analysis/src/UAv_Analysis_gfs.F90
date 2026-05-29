@@ -6,8 +6,6 @@
 
 #include "SpaceMask.h"
 
-! For information, see WARNING in param.ccl
-
 subroutine UAv_Analysis_gfs( CCTK_ARGUMENTS )
   implicit none
   DECLARE_CCTK_ARGUMENTS
