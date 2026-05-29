@@ -110,6 +110,8 @@ CCTK_INT origin_from_grid_scalar_index type=scalar tags='checkpoint="no"'
   origin_from_grid_scalar_index_z
 } "Auxiliary to store the Cactus indices of the grid scalars tracking the origin"
 
+CCTK_INT early_CoM type=scalar timelevels=1 tags='checkpoint="no"' "Flag to know if we need to compute the center of mass earlier than normally, in case it is used for origin tracking by this thorn."
+
 # TODO: See if there is a clever way to deal with quantities that should be 0 by symmetry.
 #       One issue is that storage is assigned for a whole group.
 #       Another is to figure out, if possible, how to reduce in one go only specific variables.

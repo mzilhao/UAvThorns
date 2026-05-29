@@ -6,6 +6,7 @@
 storage: is_multipatch[1]
 storage: use_volume_form[1]
 storage: symmetry_factors[1]
+storage: early_CoM[1]
 # Grid Function integrands
 storage: dE_gf_volume[3]
 storage: dJ_gf_volume[3]
@@ -82,6 +83,43 @@ schedule GROUP UAv_Analysis_Group at ANALYSIS after AHFinderDirect_maybe_do_mask
 {
 } "Compute several diagnostic quantities"
 
+##### EARLY COM GROUP #####
+# We may need to compute the center of mass earlier than the other grid functions.
+# This can happen if the origin used in the analysis is tracking the center of mass,
+# or if the user explicitly forces it with the parameter `force_early_CoM` (possibly
+# to use it in other thorns).
+# The functions will return if they are not needed (dictated by variable `early_CoM`).
+
+schedule GROUP UAv_Analysis_early_CoM_Group in UAv_Analysis_Group before UAv_Track_origin
+{
+} "Compute the center of mass and density earlier than normally, in case it is used for origin tracking by this thorn."
+
+schedule UAv_Analysis_early_CoM_gfs in UAv_Analysis_early_CoM_Group
+{
+  LANG: Fortran
+  OPTIONS: global-early loop-local
+  SYNC: density_rho
+} "Compute the center of mass grid functions earlier than normally."
+
+schedule UAv_Analysis_Boundaries_early_CoM after UAv_Analysis_early_CoM_gfs in UAv_Analysis_early_CoM_Group
+{
+  LANG: Fortran
+  OPTIONS: LEVEL
+  SYNC: density_rho
+} "Enforce symmetry BCs in Analysis"
+
+schedule GROUP ApplyBCs as UAv_Analysis_ApplyBCs after UAv_Analysis_Boundaries_early_CoM in UAv_Analysis_early_CoM_Group
+{
+} "Apply boundary conditions"
+
+schedule UAv_Analysis_early_CoM_reduce in UAv_Analysis_early_CoM_Group after UAv_Analysis_ApplyBCs
+{
+  LANG: C
+  OPTIONS: global-early
+} "Compute the center of mass reduction earlier than normally."
+
+##### END EARLY COM GROUP #####
+
 # Track origin at global-early time (i.e. like coarsest level),
 # to be done before UAv_Analysis_gfs (which is local)
 
@@ -123,6 +161,6 @@ schedule GROUP ApplyBCs as UAv_Analysis_ApplyBCs after UAv_Analysis_Boundaries i
 
 schedule UAv_Analysis_IntegrateVol after UAv_Analysis_ApplyBCs in UAv_Analysis_Group
 {
-  LANG: Fortran
+  LANG: C
   OPTIONS: global
 } "Compute volume integrals"
