@@ -65,7 +65,7 @@ void UAv_Initialization (CCTK_ARGUMENTS) {
   if (track_origin_from_grid_scalar) {
     // Get the index of variables. It's not supposed to change during the simulation (I think).
     // Validity of parameters should have been checked in ParamCheck.
-    // Since validity has been checked, a negative value here should mean "fixed".
+    // Since validity has been checked, a negative value here should mean fixed origin (empty string "^$").
 
     // x source
     *origin_from_grid_scalar_index_x = CCTK_VarIndex (track_origin_source_x);

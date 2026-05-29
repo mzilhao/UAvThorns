@@ -48,7 +48,7 @@ void UAv_Analysis_ParamCheck(CCTK_ARGUMENTS){
 
     // x
     index = CCTK_VarIndex (track_origin_source_x);
-    if (!CCTK_Equals(track_origin_source_x, "fixed")) {
+    if (!CCTK_Equals(track_origin_source_x, "")) {
       if (index < 0) {
         CCTK_VPARAMWARN("Could not get index of chosen track_origin_source_x: %s.", track_origin_source_x);
       }
@@ -59,7 +59,7 @@ void UAv_Analysis_ParamCheck(CCTK_ARGUMENTS){
     
     // y
     index = CCTK_VarIndex (track_origin_source_y);
-    if (!CCTK_Equals(track_origin_source_y, "fixed")) {
+    if (!CCTK_Equals(track_origin_source_y, "")) {
       if (index < 0) {
         CCTK_VPARAMWARN("Could not get index of chosen track_origin_source_y: %s.", track_origin_source_y);
       }
@@ -70,7 +70,7 @@ void UAv_Analysis_ParamCheck(CCTK_ARGUMENTS){
     
     // z
     index = CCTK_VarIndex (track_origin_source_z);
-    if (!CCTK_Equals(track_origin_source_z, "fixed")) {
+    if (!CCTK_Equals(track_origin_source_z, "")) {
       if (index < 0) {
         CCTK_VPARAMWARN("Could not get index of chosen track_origin_source_z: %s.", track_origin_source_z);
       }
