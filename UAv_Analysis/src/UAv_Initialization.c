@@ -55,6 +55,8 @@ void UAv_Initialization (CCTK_ARGUMENTS) {
   // ORIGIN TRACKING
   // -------------------------------
 
+  *early_CoM = force_early_CoM; // default value, can be overridden to true if the origin tracks the CoM
+  
   // We can already initialize the coordinates
   *x0 = origin_x;
   *y0 = origin_y;
@@ -73,6 +75,15 @@ void UAv_Initialization (CCTK_ARGUMENTS) {
     *origin_from_grid_scalar_index_y = CCTK_VarIndex (track_origin_source_y);
     // z source
     *origin_from_grid_scalar_index_z = CCTK_VarIndex (track_origin_source_z);
+
+    // If we want to track the center of mass calculated by this thorn, we need to compute it earlier than the tracking
+    // We'll use the group ID in case coordinates are switched for some reason (should be more robust).
+    const CCTK_INT CoM_index = CCTK_GroupIndex("UAv_Analysis::center_of_mass");
+    if (CCTK_GroupIndexFromVar(track_origin_source_x) == CoM_index ||
+        CCTK_GroupIndexFromVar(track_origin_source_y) == CoM_index ||
+        CCTK_GroupIndexFromVar(track_origin_source_z) == CoM_index) {
+      *early_CoM = 1;
+    }
   }
   
   // Info
@@ -97,5 +108,9 @@ void UAv_Initialization (CCTK_ARGUMENTS) {
   }
   else {
     CCTK_VINFO("z0 = %g (fixed)", *z0);
+  }
+
+  if (*early_CoM) {
+    CCTK_VINFO("Activating early computation of the center of mass.");
   }
 }
