@@ -64,22 +64,25 @@ BOOLEAN track_origin_from_grid_scalar "Track analysis origin from given grid sca
 {
 } "no"
 
+# Splitting the grid scalar names in two cases for legibility and portability
 STRING track_origin_source_x "grid scalar containing the x component of the origin estimate" STEERABLE=RECOVER
 {
-  "" :: "don't use this feature"
-  "[a-zA-Z_][a-zA-Z0-9_]*[:][:][a-zA-Z_][a-zA-Z0-9_]*(\[0-9+\])" :: "name of a grid scalar"
+  "^$" :: "No tracking, or fixed value."
+  "[a-zA-Z_][a-zA-Z0-9_]*[:][:][a-zA-Z_][a-zA-Z0-9_]*(\[[0-9]+\])?" :: "name of a grid scalar"
 } ""
 
+# Splitting the grid scalar names in two cases for legibility and portability
 STRING track_origin_source_y "grid scalar containing the y component of the origin estimate" STEERABLE=RECOVER
 {
-  "" :: "don't use this feature"
-  "[a-zA-Z_][a-zA-Z0-9_]*[:][:][a-zA-Z_][a-zA-Z0-9_]*(\[0-9+\])" :: "name of a grid scalar"
+  "^$" :: "No tracking, or fixed value."
+  "[a-zA-Z_][a-zA-Z0-9_]*[:][:][a-zA-Z_][a-zA-Z0-9_]*(\[[0-9]+\])?" :: "name of a grid scalar"
 } ""
 
+# Splitting the grid scalar names in two cases for legibility and portability
 STRING track_origin_source_z "grid scalar containing the z component of the origin estimate" STEERABLE=RECOVER
 {
-  "" :: "don't use this feature"
-  "[a-zA-Z_][a-zA-Z0-9_]*[:][:][a-zA-Z_][a-zA-Z0-9_]*(\[0-9+\])" :: "name of a grid scalar"
+  "^$" :: "No tracking, or fixed value."
+  "[a-zA-Z_][a-zA-Z0-9_]*[:][:][a-zA-Z_][a-zA-Z0-9_]*(\[[0-9]+\])?" :: "name of a grid scalar"
 } ""
 
 REAL origin_x "x coordinate for the fixed origin used in the analysis" STEERABLE=RECOVER
