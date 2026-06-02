@@ -12,7 +12,7 @@ void InitializeOneTarget (CCTK_ARGUMENTS, CCTK_INT itarget) {
 
     // Get the index of variables. It's not supposed to change during the simulation (I think).
     // Validity of parameters should have been checked in ParamCheck.
-    // Since validity has been checked, we can use the negative return value for "fixed" targets.
+    // Since validity has been checked, a negative value here should mean fixed tracker (empty string "^$").
     // WARNING: Since the parameters are steerable, make sure the rest is robust
     
     
@@ -77,14 +77,14 @@ void RecoverOneTargetNameOneDim (CCTK_ARGUMENTS, const struct TargetInfoBundleOn
         sprintf(checkpointed_Name, "%s::%s", CCTK_ImpFromVarI(*ptr_current_id), CCTK_VarName(*ptr_current_id));
     }
     else {
-        sprintf(checkpointed_Name, "fixed");
+        sprintf(checkpointed_Name, "%s", "");
     }
 
     // Output info
     if (recovery_ID != *ptr_current_id || !CCTK_Equals(tgt_name, checkpointed_Name)) {
         char message[1000];
         sprintf(message, "At recovery of target %d, parameter 'target_%s' is '%s' (ID: %d),\n"
-                         "    but the variable with chekcpointed index 'target_id_%s[%d]' = %d is '%s'.\n"
+                         "    but the variable with checkpointed index 'target_id_%s[%d]' = %d is '%s'.\n"
                          "    Setting target_%s[%d] = %s.",
                          itarget, dim_name, tgt_name, recovery_ID,
                          dim_name, itarget, *ptr_current_id, checkpointed_Name,
@@ -95,14 +95,14 @@ void RecoverOneTargetNameOneDim (CCTK_ARGUMENTS, const struct TargetInfoBundleOn
         else {
             CCTK_VWARN(CCTK_WARN_COMPLAIN, "%s", message);
         }
-    } //enf if mismatch
+    } //end if mismatch
 
     // Set parameter to checkpointed value
     // A recovered negative index should mean a fixed target
     // The ParameterSet will take effect at the next DECLARE_CCTK_PARAMETERS
     char param_name[100];
     sprintf(param_name, "target_%s[%d]", dim_name, itarget);
-    CCTK_ParameterSet(param_name, "TargetTracker", (*ptr_current_id >= 0) ? checkpointed_Name : "fixed");
+    CCTK_ParameterSet(param_name, "TargetTracker", (*ptr_current_id >= 0) ? checkpointed_Name : "");
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -141,7 +141,7 @@ void RecoverOneTarget (CCTK_ARGUMENTS, CCTK_INT itarget) {
 
     /* Parameters: target variables
      * We recover the names from their checkpointed IDs.
-     * NOTE: If these parameters become not always steerable, this step is probably unncessary.
+     * NOTE: If these parameters become not always steerable, this step is probably unnecessary.
      */
     const struct TargetInfoBundleOneDim bundle_x = {itarget, &target_id_x[itarget], target_x[itarget], "x"};
     RecoverOneTargetNameOneDim(CCTK_PASS_CTOC, bundle_x);

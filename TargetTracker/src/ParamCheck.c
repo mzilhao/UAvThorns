@@ -19,7 +19,7 @@ void TargetTracker_ParamCheck(CCTK_ARGUMENTS) {
         CCTK_INT index;
         // x
         index = CCTK_VarIndex (target_x[itarget]);
-        if (!CCTK_Equals(target_x[itarget], "fixed")) {
+        if (!CCTK_Equals(target_x[itarget], "")) {
             if (index < 0) {
                 CCTK_VPARAMWARN("Could not get index of target %d x variable: %s.", itarget, target_x[itarget]);
             }
@@ -29,7 +29,7 @@ void TargetTracker_ParamCheck(CCTK_ARGUMENTS) {
         }
         // y
         index = CCTK_VarIndex (target_y[itarget]);
-        if (!CCTK_Equals(target_y[itarget], "fixed")) {
+        if (!CCTK_Equals(target_y[itarget], "")) {
             if (index < 0) {
                 CCTK_VPARAMWARN("Could not get index of target %d y variable: %s.", itarget, target_y[itarget]);
             }
@@ -39,7 +39,7 @@ void TargetTracker_ParamCheck(CCTK_ARGUMENTS) {
         }
         // z
         index = CCTK_VarIndex (target_z[itarget]);
-        if (!CCTK_Equals(target_z[itarget], "fixed")) {
+        if (!CCTK_Equals(target_z[itarget], "")) {
             if (index < 0) {
                 CCTK_VPARAMWARN("Could not get index of target %d z variable: %s.", itarget, target_z[itarget]);
             }

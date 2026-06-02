@@ -73,7 +73,7 @@ void TargetChangeOneDim (CCTK_ARGUMENTS, struct TargetInfoBundleOneDim bundle) {
     if (tgt_id != *ptr_current_id) { // Target has changed
     
         // Check if target is fixed
-        if (!CCTK_Equals(tgt_name, "fixed")) {
+        if (!CCTK_Equals(tgt_name, "")) {
             
             // Check if new target exists
             if (tgt_id < 0) { // No such variable
