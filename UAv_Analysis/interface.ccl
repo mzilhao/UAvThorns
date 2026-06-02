@@ -18,7 +18,6 @@ USES FUNCTION Boundary_SelectGroupForBC
 
 private:
 
-# For information about multipatch/Llama behavior, see WARNING in param.ccl
 # Two separate flags, in case later we implement something with derivatives that use the jacobian, for example
 CCTK_INT is_multipatch type=scalar timelevels=1 tags='checkpoint="no"' "Flag to know if the simulation uses a multipatch grid."
 
