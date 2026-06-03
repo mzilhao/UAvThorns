@@ -48,6 +48,7 @@ static inline void UpdateIsLocFromSurface(CCTK_ARGUMENTS, CCTK_INT itarget) {
         // Not sure the second can happen in here because the relevant parameters
         // are not always steerable, so they pass through ParamCheck.
         // The first one can happen when steering loc_to_surface_mode from no to yes.
+        // NOTE: This will be issued and terminate even if the target is not tracked nor active
         if (which_surface_to_store_info[itarget] == -1 || which_surface_to_store_info[itarget] >= nsurfaces) {
             char error_message [1000];
             sprintf(error_message,  "For target %d, 'loc_from_surface_mode' is yes "
