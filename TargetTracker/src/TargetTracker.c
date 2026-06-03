@@ -214,7 +214,7 @@ void TargetTracker_SetSurfaces(CCTK_ARGUMENTS)
                 target_loc_z[itarget] = sf_centroid_z[which_surface_to_store_info[itarget]];
 
                 if (verbose) {
-                    CCTK_VINFO("Setting target %d location from surface %d to (%g,%g,%g)",
+                    CCTK_VINFO("Setting tracker %d location from surface %d to (%g,%g,%g)",
                                 itarget, which_surface_to_store_info[itarget], 
                                 target_loc_x[itarget], target_loc_y[itarget], target_loc_z[itarget]);
                 }

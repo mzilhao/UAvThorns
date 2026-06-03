@@ -31,7 +31,7 @@ void InitializeOneTarget (CCTK_ARGUMENTS, CCTK_INT itarget) {
     
     // Set initial value of is_loc_from_surface flag.
     // ParamCheck prevents a wrong surface index here.
-    // TargetActivationCondtion will repeat it, 
+    // TargetActivationCondition will repeat it, 
     // but doing it once here allows to avoid triggering the change message.
     is_loc_from_surface[itarget] = loc_from_surface_mode[itarget];
     
@@ -195,7 +195,7 @@ void RecoverOneTarget (CCTK_ARGUMENTS, CCTK_INT itarget) {
      * - force_params_at_recovery: STEERABLE=RECOVER
      * - track_every: STEERABLE=RECOVER
      * - start/stop_tracking_after_time: STEERABLE=RECOVER
-     * - which_surface_to_store_info: STEERABLE=NEVER
+     * - which_surface_to_store_info: STEERABLE=RECOVER
      * - initial_x/y/z: STEERABLE=RECOVER, and they are ignored anyway if force_params_at_recovery = no
      * - verbose: STEERABLE=ALWAYS, but it's not critical (and the user should know if they try to steer it mid-run)
      */

@@ -55,7 +55,7 @@ REAL stop_tracking_after_time[10] "Stop tracking after the given time" STEERABLE
   *:* :: "after this time (exclusively)"
 } 1e+99
 
-INT which_surface_to_store_info[10] "A spherical surface index where we can store the target location. Make sure you have created the surface!"
+INT which_surface_to_store_info[10] "A spherical surface index where we can store the target location. Make sure you have created the surface!" STEERABLE=RECOVER
 {
   -1  :: "don't store target location"
   0:* :: "any spherical surface index"
