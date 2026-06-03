@@ -6,7 +6,7 @@
 
 ///////////////////////////////////////////////////////////////////////////////
 // Declare functions to avoid warnings
-////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
 
 // Main function of the TargetTracker thorn
 void TargetTracker_SetSurfaces(CCTK_ARGUMENTS);
@@ -23,6 +23,7 @@ CCTK_INT TargetGetDataOneDim (CCTK_ARGUMENTS, const struct TargetInfoBundleOneDi
 
 ///////////////////////////////////////////////////////////////////////////////
 // This function updates the is_active status of the target based on the current parameters.
+// It calls the function that checks parameters and updates the various internal flags.
 // It performs checks to see if the target has changed, and if the new one is valid (since it's always steerable).
 ///////////////////////////////////////////////////////////////////////////////
 CCTK_INT UpdateTargetStatus(CCTK_ARGUMENTS, CCTK_INT itarget) {
@@ -32,10 +33,19 @@ CCTK_INT UpdateTargetStatus(CCTK_ARGUMENTS, CCTK_INT itarget) {
     // Check if the target was tracked previously
     CCTK_INT was_active = is_active[itarget];
 
+    // Check if the tracker was passively following a surface
+    CCTK_INT was_loc_from_surface = is_loc_from_surface[itarget];
+
     // Check if the target is tracked now
     TargetActivationCondition(CCTK_PASS_CTOC, itarget);
 
     // Info
+    if (verbose && is_loc_from_surface[itarget] != was_loc_from_surface) {
+        CCTK_VINFO("At iteration %d (simulation time %g), tracker %d changed to %s mode.", 
+            cctk_iteration, cctk_time, itarget,
+            is_loc_from_surface[itarget] ? "'surface to tracker'" : "'tracker to surface'");
+    }
+
     if (verbose && is_active[itarget] != was_active) {
         CCTK_VINFO("At iteration %d (simulation time %g), target %d was %sactivated.", 
             cctk_iteration, cctk_time, itarget, is_active[itarget] ? "" : "de");
@@ -154,39 +164,61 @@ void TargetTracker_SetSurfaces(CCTK_ARGUMENTS)
         // Perform tracking for this target
         // WARNING: Bypass update if we're not on a tracking iteration
         // track_every should be > 0 by construction
-        if (cctk_iteration % track_every[itarget] == 0 && UpdateTargetStatus(CCTK_PASS_CTOC, itarget)) { // process iteration
+        if (cctk_iteration % track_every[itarget] == 0) { // process iteration
+            // WARNING: UpdateTargetStatus needs to be called first to update the flags!
+            if (UpdateTargetStatus(CCTK_PASS_CTOC, itarget)) { // active target in tracker to surface mode
             
-            CCTK_INT target_err = 0;
-            // Get target position for each dimension and check for errors
-            struct TargetInfoBundleOneDim bundle_x = {itarget, &target_id_x[itarget], target_x[itarget], "x"};
-            target_err += TargetGetDataOneDim(CCTK_PASS_CTOC, bundle_x, &target_loc_x[itarget]);
-            struct TargetInfoBundleOneDim bundle_y = {itarget, &target_id_y[itarget], target_y[itarget], "y"};
-            target_err += TargetGetDataOneDim(CCTK_PASS_CTOC, bundle_y, &target_loc_y[itarget]);
-            struct TargetInfoBundleOneDim bundle_z = {itarget, &target_id_z[itarget], target_z[itarget], "z"};
-            target_err += TargetGetDataOneDim(CCTK_PASS_CTOC, bundle_z, &target_loc_z[itarget]);
+                // Normal case: get target location from variables
+                // In surface to tracker mode, the target is considered inactive
 
-            // An error will trigger termination at the end of the time step.
-            if (target_err > 0) {
-                continue;
-            }
+                CCTK_INT target_err = 0;
+                // Get target position for each dimension and check for errors
+                struct TargetInfoBundleOneDim bundle_x = {itarget, &target_id_x[itarget], target_x[itarget], "x"};
+                target_err += TargetGetDataOneDim(CCTK_PASS_CTOC, bundle_x, &target_loc_x[itarget]);
+                struct TargetInfoBundleOneDim bundle_y = {itarget, &target_id_y[itarget], target_y[itarget], "y"};
+                target_err += TargetGetDataOneDim(CCTK_PASS_CTOC, bundle_y, &target_loc_y[itarget]);
+                struct TargetInfoBundleOneDim bundle_z = {itarget, &target_id_z[itarget], target_z[itarget], "z"};
+                target_err += TargetGetDataOneDim(CCTK_PASS_CTOC, bundle_z, &target_loc_z[itarget]);
 
-            // Update spherical surface with target position
-            if (which_surface_to_store_info[itarget] != -1) {
-                int sn = which_surface_to_store_info[itarget];
+                // An error will trigger termination at the end of the time step.
+                if (target_err > 0) {
+                    continue;
+                }
 
-                sf_centroid_x[sn] = target_loc_x[itarget];
-                sf_centroid_y[sn] = target_loc_y[itarget];
-                sf_centroid_z[sn] = target_loc_z[itarget];
+                // Update spherical surface with target position
+                if (which_surface_to_store_info[itarget] != -1) {
+                    int sn = which_surface_to_store_info[itarget];
 
-                sf_active[sn] = 1;
-                sf_valid[sn]  = 1;
+                    sf_centroid_x[sn] = target_loc_x[itarget];
+                    sf_centroid_y[sn] = target_loc_y[itarget];
+                    sf_centroid_z[sn] = target_loc_z[itarget];
+
+                    sf_active[sn] = 1;
+                    sf_valid[sn]  = 1;
+
+                    if (verbose) {
+                        CCTK_VINFO("Setting spherical surface %d centroid from target #%d to (%g,%g,%g)",
+                                    sn, itarget, 
+                                    target_loc_x[itarget], target_loc_y[itarget], target_loc_z[itarget]);
+                    }
+                }
+            
+            } else if (is_tracked[itarget] && is_loc_from_surface[itarget]) { // tracked target in surface to tracker mode
+                // If loc_from_surface_mode is on, we don't try to get the target location from the variables,
+                // but directly from the surface. This can be useful for continuity when a horizon is formed for instance.
+                // The case where which_surface_to_store_info is invalid should be caught before
+                
+                // TODO: Check if surface is active / is valid ?
+                target_loc_x[itarget] = sf_centroid_x[which_surface_to_store_info[itarget]];
+                target_loc_y[itarget] = sf_centroid_y[which_surface_to_store_info[itarget]];
+                target_loc_z[itarget] = sf_centroid_z[which_surface_to_store_info[itarget]];
 
                 if (verbose) {
-                    CCTK_VINFO("Setting spherical surface %d centroid from target #%d to (%g,%g,%g)",
-                                sn, itarget, 
+                    CCTK_VINFO("Setting target %d location from surface %d to (%g,%g,%g)",
+                                itarget, which_surface_to_store_info[itarget], 
                                 target_loc_x[itarget], target_loc_y[itarget], target_loc_z[itarget]);
                 }
-            }
+            } // else we don't do anything
         } //end if process iteration
     } // end for loop over targets
 }

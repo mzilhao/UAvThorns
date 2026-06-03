@@ -2,6 +2,7 @@
 
 storage: is_tracked[1]
 storage: is_active[1]
+storage: is_loc_from_surface[1]
 storage: target_loc[1]
 storage: target_ids[1]
 

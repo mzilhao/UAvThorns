@@ -8,6 +8,10 @@ void TargetTracker_ParamCheck(CCTK_ARGUMENTS) {
 
     for (CCTK_INT itarget = 0; itarget < nmax_targets; itarget++) {
         
+        if (loc_from_surface_mode[itarget] && which_surface_to_store_info[itarget] == -1) {
+            CCTK_VPARAMWARN("For target %d, 'loc_from_surface_mode' is yes but no surface is specified in 'which_surface_to_store_info'.", itarget);
+        }
+
         if (which_surface_to_store_info[itarget] != -1 && which_surface_to_store_info[itarget] >= nsurfaces) {
             CCTK_VPARAMWARN("For target %d, surface index is greater than the number of spherical surfaces.", itarget);
         }

@@ -15,6 +15,10 @@ BOOLEAN track[10] "Track this target" STEERABLE=ALWAYS
 {
 } "no"
 
+BOOLEAN loc_from_surface_mode[10] "Instead of tracking a scalar and set the surface accordingly, feed the surface coordinates into target_loc. Can be useful for continuity when a horizon is formed for instance." STEERABLE=ALWAYS
+{
+} "no"
+
 # Splitting the grid scalar names in two cases for legibility and portability
 STRING target_x[10] "Grid scalar that is tracked: x component" STEERABLE=ALWAYS
 {

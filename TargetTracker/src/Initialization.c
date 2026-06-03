@@ -23,16 +23,31 @@ void InitializeOneTarget (CCTK_ARGUMENTS, CCTK_INT itarget) {
     // z source
     target_id_z[itarget] = CCTK_VarIndex (target_z[itarget]);
 
-    // initial position
+    // Initial position
+    // Will be overriden with the correct values at ANALYSIS if needed 
     target_loc_x[itarget] = initial_x[itarget];
     target_loc_y[itarget] = initial_y[itarget];
     target_loc_z[itarget] = initial_z[itarget];
-
+    
+    // Set initial value of is_loc_from_surface flag.
+    // ParamCheck prevents a wrong surface index here.
+    // TargetActivationCondtion will repeat it, 
+    // but doing it once here allows to avoid triggering the change message.
+    is_loc_from_surface[itarget] = loc_from_surface_mode[itarget];
+    
     // Set initial active status of the target based on the current parameters.
     TargetActivationCondition(CCTK_PASS_CTOC, itarget);
     
     if (is_tracked[itarget]) {
         
+        if (which_surface_to_store_info[itarget] != -1) {
+            char* from_surf_str = loc_from_surface_mode[itarget] ? 
+                                "'surface to tracker'" : 
+                                "'tracker to surface'" ;
+            CCTK_VINFO("Tracker %d associated with surface %d is in %s mode.", 
+                        itarget, which_surface_to_store_info[itarget], from_surf_str);
+        }
+
         CCTK_VINFO("Initialized %s target %d with sources:", is_active[itarget] ? "active" : "inactive", itarget);
         
         // Check if fixed target in each dimension
@@ -115,6 +130,8 @@ void RecoverOneTarget (CCTK_ARGUMENTS, CCTK_INT itarget) {
     
     // The ParameterSet will take effect at the next DECLARE_CCTK_PARAMETERS
 
+    char param_name[100];
+
     /* Parameter: track 
      * Most important to recover since it controls the tracking and is always steerable.
      */
@@ -133,9 +150,31 @@ void RecoverOneTarget (CCTK_ARGUMENTS, CCTK_INT itarget) {
         }
     }
     // Set
-    char param_name[100];
     sprintf(param_name, "track[%d]", itarget);
     CCTK_ParameterSet(param_name, "TargetTracker", is_tracked[itarget] ? "yes" : "no");
+
+    //////////////////////////////////////////////
+    
+    /* Parameter: loc_from_surface_mode
+     * Controls the tracking mode and is always steerable.
+     */
+    // Info
+    if (loc_from_surface_mode[itarget] != is_loc_from_surface[itarget]) {
+        char message[1000];
+        sprintf(message, "At recovery of target %d, parameter 'loc_from_surface_mode' is '%s', but the internal flag 'is_loc_from_surface' is '%s'.\n"
+                         "    Setting loc_from_surface_mode[%d] = %s.",
+                         itarget, loc_from_surface_mode[itarget] ? "yes" : "no", is_loc_from_surface[itarget] ? "yes" : "no",
+                         itarget, is_loc_from_surface[itarget] ? "yes" : "no");
+        if (verbose) {
+            CCTK_VINFO("%s", message);
+        }
+        else {
+            CCTK_VWARN(CCTK_WARN_COMPLAIN, "%s", message);
+        }
+    }
+    // Set
+    sprintf(param_name, "loc_from_surface_mode[%d]", itarget);
+    CCTK_ParameterSet(param_name, "TargetTracker", is_loc_from_surface[itarget] ? "yes" : "no");
 
     //////////////////////////////////////////////
 
