@@ -1,0 +1,83 @@
+# Parameter definitions for thorn TargetTracker
+
+# This could be turned into a public parameter with range, setting the number of targets
+# (like nsurfaces for SphericalSurface)
+INT nmax_targets "crutch parameter for the maximum number of targets"
+{
+  10
+} 10
+
+BOOLEAN force_params_at_recovery[10] "When recovering from a checkpoint, set the surfaces with values from the parameter file, instead of the checkpoint. See documentation for caveats." STEERABLE=RECOVER
+{
+} "no"
+
+BOOLEAN track[10] "Track this target" STEERABLE=ALWAYS
+{
+} "no"
+
+BOOLEAN loc_from_surface_mode[10] "Instead of tracking a scalar and set the surface accordingly, feed the surface coordinates into target_loc. Can be useful for continuity when a horizon is formed for instance." STEERABLE=ALWAYS
+{
+} "no"
+
+STRING target_x[10] "Grid scalar that is tracked: x component" STEERABLE=ALWAYS
+{
+  "^$" :: "No tracking, or fixed value."
+  "[a-zA-Z_][a-zA-Z0-9_]*[:][:][a-zA-Z_][a-zA-Z0-9_]*(\[[0-9]+\])?" :: "name of a grid scalar"
+} ""
+
+STRING target_y[10] "Grid scalar that is tracked: y component" STEERABLE=ALWAYS
+{
+  "^$" :: "No tracking, or fixed value."
+  "[a-zA-Z_][a-zA-Z0-9_]*[:][:][a-zA-Z_][a-zA-Z0-9_]*(\[[0-9]+\])?" :: "name of a grid scalar"
+} ""
+
+STRING target_z[10] "Grid scalar that is tracked: z component" STEERABLE=ALWAYS
+{
+  "^$" :: "No tracking, or fixed value."
+  "[a-zA-Z_][a-zA-Z0-9_]*[:][:][a-zA-Z_][a-zA-Z0-9_]*(\[[0-9]+\])?" :: "name of a grid scalar"
+} ""
+
+INT track_every[10] "Track target every N iterations. Use parameter `track` to (de)activate tracking. In-run updates of other steerable parameters will occur after the iteration number is checked." STEERABLE=RECOVER
+{
+  1:* :: "Any positive integer"
+} 1
+
+REAL start_tracking_after_time[10] "Start tracking at the given time" STEERABLE=RECOVER
+{
+  *:* :: "after this time (inclusively)"
+} 0.0
+
+REAL stop_tracking_after_time[10] "Stop tracking after the given time" STEERABLE=RECOVER
+{
+  *:* :: "after this time (exclusively)"
+} 1e+99
+
+INT which_surface_to_store_info[10] "A spherical surface index where we can store the target location. Make sure you have created the surface!" STEERABLE=RECOVER
+{
+  -1  :: "don't store target location"
+  0:* :: "any spherical surface index"
+} -1
+
+REAL initial_x[10] "Initial x coordinate positions of targets" STEERABLE=RECOVER
+{
+  *:* :: ""
+} 0.0
+
+REAL initial_y[10] "Initial y coordinate positions of targets" STEERABLE=RECOVER
+{
+  *:* :: ""
+} 0.0
+
+REAL initial_z[10] "Initial z coordinate positions of targets" STEERABLE=RECOVER
+{
+  *:* :: ""
+} 0.0
+
+BOOLEAN verbose "Print tracking status messages" STEERABLE=ALWAYS
+{
+} "no"
+
+
+SHARES: SphericalSurface
+
+USES CCTK_INT nsurfaces
