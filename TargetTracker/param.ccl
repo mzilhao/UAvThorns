@@ -19,21 +19,18 @@ BOOLEAN loc_from_surface_mode[10] "Instead of tracking a scalar and set the surf
 {
 } "no"
 
-# Splitting the grid scalar names in two cases for legibility and portability
 STRING target_x[10] "Grid scalar that is tracked: x component" STEERABLE=ALWAYS
 {
   "^$" :: "No tracking, or fixed value."
   "[a-zA-Z_][a-zA-Z0-9_]*[:][:][a-zA-Z_][a-zA-Z0-9_]*(\[[0-9]+\])?" :: "name of a grid scalar"
 } ""
 
-# Splitting the grid scalar names in two cases for legibility and portability
 STRING target_y[10] "Grid scalar that is tracked: y component" STEERABLE=ALWAYS
 {
   "^$" :: "No tracking, or fixed value."
   "[a-zA-Z_][a-zA-Z0-9_]*[:][:][a-zA-Z_][a-zA-Z0-9_]*(\[[0-9]+\])?" :: "name of a grid scalar"
 } ""
 
-# Splitting the grid scalar names in two cases for legibility and portability
 STRING target_z[10] "Grid scalar that is tracked: z component" STEERABLE=ALWAYS
 {
   "^$" :: "No tracking, or fixed value."
