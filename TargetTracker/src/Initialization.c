@@ -23,11 +23,21 @@ void InitializeOneTarget (CCTK_ARGUMENTS, CCTK_INT itarget) {
     // z source
     target_id_z[itarget] = CCTK_VarIndex (target_z[itarget]);
 
+    // Initialize all adjustment parameters
+    is_adjusted[itarget] = tracker_adjust[itarget];
+    adj_fac_x[itarget]   = tracker_x_adjust_factor[itarget];
+    adj_fac_y[itarget]   = tracker_y_adjust_factor[itarget];
+    adj_fac_z[itarget]   = tracker_z_adjust_factor[itarget];
+    adj_ori_x[itarget]   = tracker_x_adjust_origin[itarget];
+    adj_ori_y[itarget]   = tracker_y_adjust_origin[itarget];
+    adj_ori_z[itarget]   = tracker_z_adjust_origin[itarget];
+
     // Initial position
     // Will be overriden with the correct values at ANALYSIS if needed 
-    target_loc_x[itarget] = initial_x[itarget];
-    target_loc_y[itarget] = initial_y[itarget];
-    target_loc_z[itarget] = initial_z[itarget];
+    // WARNING: if fixed target and adjusted target (not so sensible), this will be reapeated at t=0
+    target_loc_x[itarget] = adj_fac_x[itarget] * initial_x[itarget] + adj_ori_x[itarget];
+    target_loc_y[itarget] = adj_fac_y[itarget] * initial_y[itarget] + adj_ori_y[itarget];
+    target_loc_z[itarget] = adj_fac_z[itarget] * initial_z[itarget] + adj_ori_z[itarget];
     
     // Set initial value of is_loc_from_surface flag.
     // ParamCheck prevents a wrong surface index here.
@@ -47,27 +57,32 @@ void InitializeOneTarget (CCTK_ARGUMENTS, CCTK_INT itarget) {
             CCTK_VINFO("Tracker %d associated with surface %d is in %s mode.", 
                         itarget, which_surface_to_store_info[itarget], from_surf_str);
         }
-
-        CCTK_VINFO("Initialized %s target %d with sources:", is_active[itarget] ? "active" : "inactive", itarget);
         
+        if (is_adjusted[itarget]) {
+            CCTK_VINFO("Adjustment is activated for tracker %d with parameters: fac_x = %g, ori_x = %g; fac_y = %g, ori_y = %g; fac_z = %g, ori_z = %g.", 
+                itarget, adj_fac_x[itarget], adj_ori_x[itarget], adj_fac_y[itarget], adj_ori_y[itarget], adj_fac_z[itarget], adj_ori_z[itarget]);
+        }
+        
+        CCTK_VINFO("Initialized %s tracker %d with sources:", is_active[itarget] ? "active" : "inactive", itarget);
+
         // Check if fixed target in each dimension
 
         if (target_id_x[itarget] >= 0) {
             CCTK_VINFO("x: %s", target_x[itarget]);
         } else {
-            CCTK_VINFO("x = %g (fixed)", initial_x[itarget]);
+            CCTK_VINFO("x = %g (fixed)", target_loc_x[itarget]);
         }
 
         if (target_id_y[itarget] >= 0) {
             CCTK_VINFO("y: %s", target_y[itarget]);
         } else {
-            CCTK_VINFO("y = %g (fixed)", initial_y[itarget]);
+            CCTK_VINFO("y = %g (fixed)", target_loc_y[itarget]);
         }
 
         if (target_id_z[itarget] >= 0) {
             CCTK_VINFO("z: %s", target_z[itarget]);
         } else {
-            CCTK_VINFO("z = %g (fixed)", initial_z[itarget]);
+            CCTK_VINFO("z = %g (fixed)", target_loc_z[itarget]);
         }
 
     } // end if track
@@ -175,6 +190,29 @@ void RecoverOneTarget (CCTK_ARGUMENTS, CCTK_INT itarget) {
     // Set
     sprintf(param_name, "loc_from_surface_mode[%d]", itarget);
     CCTK_ParameterSet(param_name, "TargetTracker", is_loc_from_surface[itarget] ? "yes" : "no");
+    
+    //////////////////////////////////////////////
+    
+    /* Parameter: tracker_adjust
+     * Controls the adjustment mode and is always steerable.
+     */
+    // Info
+    if (tracker_adjust[itarget] != is_adjusted[itarget]) {
+        char message[1000];
+        sprintf(message, "At recovery of tracker %d, parameter 'tracker_adjust' is '%s', but the internal flag 'is_adjusted' is '%s'.\n"
+                         "    Setting tracker_adjust[%d] = %s.",
+                         itarget, tracker_adjust[itarget] ? "yes" : "no", is_adjusted[itarget] ? "yes" : "no",
+                         itarget, is_adjusted[itarget] ? "yes" : "no");
+        if (verbose) {
+            CCTK_VINFO("%s", message);
+        }
+        else {
+            CCTK_VWARN(CCTK_WARN_COMPLAIN, "%s", message);
+        }
+    }
+    // Set
+    sprintf(param_name, "tracker_adjust[%d]", itarget);
+    CCTK_ParameterSet(param_name, "TargetTracker", is_adjusted[itarget] ? "yes" : "no");
 
     //////////////////////////////////////////////
 
@@ -193,6 +231,7 @@ void RecoverOneTarget (CCTK_ARGUMENTS, CCTK_INT itarget) {
 
     /* Parameters that we don't try to recover:
      * - force_params_at_recovery: STEERABLE=RECOVER
+     * - adjustments parameters (fac and ori): STEERABLE=RECOVER for simplicity for now, taken from the param file as such
      * - track_every: STEERABLE=RECOVER
      * - start/stop_tracking_after_time: STEERABLE=RECOVER
      * - which_surface_to_store_info: STEERABLE=RECOVER

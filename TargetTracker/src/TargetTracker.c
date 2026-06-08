@@ -36,6 +36,9 @@ CCTK_INT UpdateTargetStatus(CCTK_ARGUMENTS, CCTK_INT itarget) {
     // Check if the tracker was passively following a surface
     CCTK_INT was_loc_from_surface = is_loc_from_surface[itarget];
 
+    // Check if the tracker position was adjusted previously
+    CCTK_INT was_adjusted = is_adjusted[itarget];
+
     // Check if the target is tracked now
     TargetActivationCondition(CCTK_PASS_CTOC, itarget);
 
@@ -47,8 +50,18 @@ CCTK_INT UpdateTargetStatus(CCTK_ARGUMENTS, CCTK_INT itarget) {
     }
 
     if (verbose && is_active[itarget] != was_active) {
-        CCTK_VINFO("At iteration %d (simulation time %g), target %d was %sactivated.", 
+        CCTK_VINFO("At iteration %d (simulation time %g), tracker %d was %sactivated.", 
             cctk_iteration, cctk_time, itarget, is_active[itarget] ? "" : "de");
+    }
+
+    if (verbose && is_adjusted[itarget] != was_adjusted) {
+        CCTK_VINFO("At iteration %d (simulation time %g), tracker %d adjustment was %sactivated.", 
+            cctk_iteration, cctk_time, itarget, is_adjusted[itarget] ? "" : "de");
+
+        if (is_adjusted[itarget]) {
+            CCTK_VINFO("Adjustment parameters for tracker %d: fac_x = %g, ori_x = %g; fac_y = %g, ori_y = %g; fac_z = %g, ori_z = %g.", 
+                itarget, adj_fac_x[itarget], adj_ori_x[itarget], adj_fac_y[itarget], adj_ori_y[itarget], adj_fac_z[itarget], adj_ori_z[itarget]);
+        }
     }
     
     // Check if target has changed and is valid
@@ -130,7 +143,7 @@ CCTK_INT TargetGetDataOneDim (CCTK_ARGUMENTS, const struct TargetInfoBundleOneDi
     const char* tgt_name      = bundle.tgt_name;
     const char* dim_name      = bundle.dim_name;
 
-    // A negative index here should mean fixed target (and not an error):
+    // A negative index here should mean fixed tracker (and not an error):
     // keep current position in that case
     if (tgt_id >= 0) {
         // Acquire pointer to target variable
@@ -152,7 +165,7 @@ CCTK_INT TargetGetDataOneDim (CCTK_ARGUMENTS, const struct TargetInfoBundleOneDi
 
 ///////////////////////////////////////////////////////////////////////////////
 // This is the main function of the TargetTracker thorn. 
-// It loops over all targets and performs tracking for those that are active during the current iteration.
+// It loops over all trackers and performs tracking for those that are active during the current iteration.
 ///////////////////////////////////////////////////////////////////////////////
 void TargetTracker_SetSurfaces(CCTK_ARGUMENTS)
 {
@@ -166,10 +179,10 @@ void TargetTracker_SetSurfaces(CCTK_ARGUMENTS)
         // track_every should be > 0 by construction
         if (cctk_iteration % track_every[itarget] == 0) { // process iteration
             // WARNING: UpdateTargetStatus needs to be called first to update the flags!
-            if (UpdateTargetStatus(CCTK_PASS_CTOC, itarget)) { // active target in tracker to surface mode
+            if (UpdateTargetStatus(CCTK_PASS_CTOC, itarget)) { // active tracker in tracker to surface mode
             
                 // Normal case: get target location from variables
-                // In surface to tracker mode, the target is considered inactive
+                // In surface to tracker mode, the tracker is considered inactive
 
                 CCTK_INT target_err = 0;
                 // Get target position for each dimension and check for errors
@@ -185,7 +198,14 @@ void TargetTracker_SetSurfaces(CCTK_ARGUMENTS)
                     continue;
                 }
 
-                // Update spherical surface with target position
+                // Adjust location if needed
+                if (is_adjusted[itarget]) {
+                    target_loc_x[itarget] = adj_fac_x[itarget] * target_loc_x[itarget] + adj_ori_x[itarget];
+                    target_loc_y[itarget] = adj_fac_y[itarget] * target_loc_y[itarget] + adj_ori_y[itarget];
+                    target_loc_z[itarget] = adj_fac_z[itarget] * target_loc_z[itarget] + adj_ori_z[itarget];
+                }
+                
+                // Update spherical surface with tracker position
                 if (which_surface_to_store_info[itarget] != -1) {
                     int sn = which_surface_to_store_info[itarget];
 
@@ -197,7 +217,7 @@ void TargetTracker_SetSurfaces(CCTK_ARGUMENTS)
                     sf_valid[sn]  = 1;
 
                     if (verbose) {
-                        CCTK_VINFO("Setting spherical surface %d centroid from target #%d to (%g,%g,%g)",
+                        CCTK_VINFO("Setting spherical surface %d centroid from tracker #%d to (%g,%g,%g)",
                                     sn, itarget, 
                                     target_loc_x[itarget], target_loc_y[itarget], target_loc_z[itarget]);
                     }

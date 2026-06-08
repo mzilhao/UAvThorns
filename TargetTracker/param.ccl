@@ -37,6 +37,42 @@ STRING target_z[10] "Grid scalar that is tracked: z component" STEERABLE=ALWAYS
   "[a-zA-Z_][a-zA-Z0-9_]*[:][:][a-zA-Z_][a-zA-Z0-9_]*(\[[0-9]+\])?" :: "name of a grid scalar"
 } ""
 
+# Some ad hoc parameters to adjust the tracked location
+# loc = adj_fac * target + adj_ori
+BOOLEAN tracker_adjust[10] "Whether to apply the adjustment to the tracked location. Not applied in 'surface to tracker' mode." STEERABLE=ALWAYS
+{
+} "no"
+
+# These parameters are STEERABLE=RECOVER for implementation simplicity for now
+REAL tracker_x_adjust_factor[10] "Adjustment factor for the tracked x location, applied as: loc = adj_fac * target + adj_ori" STEERABLE=RECOVER
+{
+  *:* :: ""
+} 1.0
+
+REAL tracker_y_adjust_factor[10] "Adjustment factor for the tracked y location, applied as: loc = adj_fac * target + adj_ori" STEERABLE=RECOVER
+{
+  *:* :: ""
+} 1.0
+
+REAL tracker_z_adjust_factor[10] "Adjustment factor for the tracked z location, applied as: loc = adj_fac * target + adj_ori" STEERABLE=RECOVER
+{
+  *:* :: ""
+} 1.0
+REAL tracker_x_adjust_origin[10] "Adjustment origin for the tracked x location, applied as: loc = adj_fac * target + adj_ori" STEERABLE=RECOVER
+{
+  *:* :: ""
+} 0.0
+
+REAL tracker_y_adjust_origin[10] "Adjustment origin for the tracked y location, applied as: loc = adj_fac * target + adj_ori" STEERABLE=RECOVER
+{
+  *:* :: ""
+} 0.0
+
+REAL tracker_z_adjust_origin[10] "Adjustment origin for the tracked z location, applied as: loc = adj_fac * target + adj_ori" STEERABLE=RECOVER
+{
+  *:* :: ""
+} 0.0
+
 INT track_every[10] "Track target every N iterations. Use parameter `track` to (de)activate tracking. In-run updates of other steerable parameters will occur after the iteration number is checked." STEERABLE=RECOVER
 {
   1:* :: "Any positive integer"
