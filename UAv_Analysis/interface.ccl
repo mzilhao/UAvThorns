@@ -23,11 +23,11 @@ CCTK_INT is_multipatch type=scalar timelevels=1 tags='checkpoint="no"' "Flag to 
 
 CCTK_INT use_volume_form type=scalar timelevels=1 tags='checkpoint="no"' "Flag to know if we can use the volume form from the multipatch grid."
 
-CCTK_REAL total_energy type=scalar timelevels=1 tags='checkpoint="no"' "Komar mass (volume integral). See Gourgoulhon's 3+1 Formalism, sections 8.6.1 and 8.6.2 (Eq. 8.63 and 8.70)."
+CCTK_REAL total_energy type=scalar timelevels=1 tags='checkpoint="yes"' "Komar mass (volume integral). See Gourgoulhon's 3+1 Formalism, sections 8.6.1 and 8.6.2 (Eq. 8.63 and 8.70)."
 
 CCTK_REAL dE_gf_volume type=gf timelevels=3 tags='Prolongation="none" tensortypealias="Scalar" checkpoint="no"' "energy density gridfunction for volume integration"
 
-CCTK_REAL total_angular_momentum type=scalar timelevels=1 tags='checkpoint="no"'
+CCTK_REAL total_angular_momentum type=scalar timelevels=1 tags='checkpoint="yes"'
 {
   total_angular_momentum_x
   total_angular_momentum_y
@@ -41,7 +41,7 @@ CCTK_REAL dJ_gf_volume type=gf timelevels=3 tags='Prolongation="none" tensortype
   dJz_gf_volume
 } "angular momentum density J_i gridfunctions for volume integration"
 
-CCTK_REAL center_of_mass type=scalar timelevels=1 tags='checkpoint="no"'
+CCTK_REAL center_of_mass type=scalar timelevels=1 tags='checkpoint="yes"'
 {
   center_of_mass_x
   center_of_mass_y
@@ -57,7 +57,7 @@ CCTK_REAL dCoM_gf_volume type=gf timelevels=3 tags='Prolongation="none" tensorty
   dCoMz_gf_volume
 } "density_rho*x^i gridfunctions for volume integration. Note that we use x, and not x-x0, so that the density GF can be safely used in other thorns."
 
-CCTK_REAL linear_momentum type=scalar timelevels=1 tags='checkpoint="no"'
+CCTK_REAL linear_momentum type=scalar timelevels=1 tags='checkpoint="yes"'
 {
   linear_momentum_x
   linear_momentum_y
@@ -71,7 +71,7 @@ CCTK_REAL dp_gf_volume type=gf timelevels=3 tags='Prolongation="none" tensortype
   dpz_gf_volume
 } "momentum density gridfunctions for volume integration"
 
-CCTK_REAL quadrupole type=scalar timelevels=1 tags='checkpoint="no"'
+CCTK_REAL quadrupole type=scalar timelevels=1 tags='checkpoint="yes"'
 {
   Ixx, Ixy, Ixz
   Iyy, Iyz
@@ -97,7 +97,7 @@ CCTK_REAL density_p type=gf timelevels=3 tags='tensortypealias="D" tensorweight=
   density_pz
 } "Eulerian momentum density"
 
-CCTK_REAL origin_coordinates type=scalar tags='checkpoint="no"'
+CCTK_REAL origin_coordinates type=scalar tags='checkpoint="yes"'
 {
   x0, y0, z0
 } "Coordinates of the origin used in the analysis"
