@@ -56,7 +56,7 @@ void UAv_Kerr_test(CCTK_ARGUMENTS)
         // const CCTK_REAL rho  = sqrt(rho2);
 
         /* To avoid divisions by RR=0, we use a small value instead.
-           Alternatvely, use a non-zero z0 (for instance) */
+           Alternatively, use a non-zero z0 (for instance) */
         CCTK_REAL RR2 = x1*x1 + y1*y1 + z1*z1;
         if(RR2 < pow(eps_R, 2)) 
           RR2 = pow(eps_R, 2);

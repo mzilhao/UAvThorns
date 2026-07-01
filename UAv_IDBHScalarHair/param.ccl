@@ -96,7 +96,7 @@ REAL z0 "z coordinate of central point"
   *:* :: "any real number"
 } 0.0
 
-CCTK_REAL eps_R "floor value for RR"
+CCTK_REAL eps_R "floor value for RR (not used for ScalarBS)."
 {
   0:*  :: "any small positive value"
 } 1.0d-12

@@ -31,6 +31,9 @@ void UAv_IDBHScalarHair_ParamCheck(CCTK_ARGUMENTS){
       CCTK_PARAMWARN("Using 'initial_data = HairyBH' with a non-zero 'omega_BS' is not allowed. "
                    "Unset 'omega_BS' and check that you set 'OmegaH' and 'rH' properly.");
     }
+
+    // TODO?: Treatment of RR==0
+    // Idea would be to have `if (eps_R==0 && x0==0 && y0==0 && z0==0)`, but double comparison is always tricky.
   }
 
   // Scalar BS simulation: use omega_BS, not OmegaH nor rH.
