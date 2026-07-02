@@ -340,8 +340,10 @@ void UAv_IDBHScalarHair(CCTK_ARGUMENTS)
 
   // Second loop on z<0 half-space (completion by symmetry)
 
-  // Even parity: F1, F2, F0, phi0, Wbar and their r derivatives
+  // Even parity: F1, F2, F0, Wbar and their r derivatives
   // Odd parity:  theta derivatives of even functions
+  // phi: depends on parameter phi_z_sym_is_odd (= no by default)
+  const CCTK_INT phi0_z_sign = phi_z_sym_is_odd ? -1 : +1;
 
   for (int jj = 1; jj < Ntheta; jj++) { // don't repeat theta == pi/2
     for (int i = 0; i < NX; i++) {
@@ -357,14 +359,16 @@ void UAv_IDBHScalarHair(CCTK_ARGUMENTS)
       F1_extd[ind]       = F1_extd[indsym];
       F2_extd[ind]       = F2_extd[indsym];
       F0_extd[ind]       = F0_extd[indsym];
-      phi0_extd[ind]     = phi0_extd[indsym];
-
+      
       Wbar_extd[ind]     = Wbar_extd[indsym];
       dWbar_dr_extd[ind] = dWbar_dr_extd[indsym];
-
+      
       // Odd
       dWbar_dth_extd[ind]   = - dWbar_dth_extd[indsym];
       d2Wbar_drth_extd[ind] = - d2Wbar_drth_extd[indsym];
+      
+      // Scalar field
+      phi0_extd[ind] = phi0_z_sign * phi0_extd[indsym];
 
       } // for i
   } // for jj
