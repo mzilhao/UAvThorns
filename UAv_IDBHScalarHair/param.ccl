@@ -55,10 +55,8 @@ INT mm "azimuthal number of the solution. mm=0 for solutions with spherical symm
 } 0
 
 # Symmetry of the scalar field, with respect to the equatorial plane (initial data is provided for 0 <= theta <= pi/2).
-# We write A = phi exp{i(m varphi - w t)}.
-# phi even (default)
-# phi odd
-BOOLEAN phi_z_sym_is_odd "Parity of scalar field with respect to equatorial plane symmetry. So far, used only in HairyBH."
+# With Phi = phi exp{i(m varphi - w t)}, phi z-even is the default.
+BOOLEAN phi_z_sym_is_odd "Parity of the scalar field with respect to equatorial (z-)plane symmetry."
 {
 } "no"
 
