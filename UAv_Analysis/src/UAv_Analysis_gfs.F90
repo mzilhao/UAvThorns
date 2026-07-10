@@ -322,9 +322,7 @@ subroutine UAv_Analysis_early_CoM_gfs( CCTK_ARGUMENTS )
   ! Cartesian volume element used without multipatch
   CCTK_REAL dV_cart
 
-  if (early_CoM == 0) then
-    return
-  end if
+  ! The `if (early_CoM == 0)` statement is moved to the schedule directly.
   
   if (do_analysis_every .le. 0) then
     return

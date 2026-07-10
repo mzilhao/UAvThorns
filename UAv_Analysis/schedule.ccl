@@ -88,9 +88,9 @@ schedule GROUP UAv_Analysis_Group at ANALYSIS after AHFinderDirect_maybe_do_mask
 # This can happen if the origin used in the analysis is tracking the center of mass,
 # or if the user explicitly forces it with the parameter `force_early_CoM` (possibly
 # to use it in other thorns).
-# The functions will return if they are not needed (dictated by variable `early_CoM`).
+# The group is scheduled depending on the value of `UAv_Analysis::early_CoM`.
 
-schedule GROUP UAv_Analysis_early_CoM_Group in UAv_Analysis_Group before UAv_Track_origin
+schedule GROUP UAv_Analysis_early_CoM_Group in UAv_Analysis_Group before UAv_Track_origin if UAv_Analysis::early_CoM
 {
 } "Compute the center of mass and density earlier than normally, in case it is used for origin tracking by this thorn."
 
