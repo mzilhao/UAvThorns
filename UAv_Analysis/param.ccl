@@ -11,6 +11,14 @@ INT do_analysis_every "Perform the analysis (compute the energy, densities...) e
     *:*  :: "0 or a negative value means never compute them"
 } 1
 
+BOOLEAN run_at_CCTK_ANALYSIS "run at CCTK_ANALYSIS (default). You may want to set it to 'no' if you already run at another schedule bin." STEERABLE=RECOVER
+{
+} "yes"
+
+BOOLEAN run_at_CCTK_POSTSTEP "run at CCTK_POSTSTEP (not by default)." STEERABLE=RECOVER
+{
+} "no"
+
 BOOLEAN compute_density_rho "Compute the grid function density_rho" STEERABLE=ALWAYS
 {
 } "no"

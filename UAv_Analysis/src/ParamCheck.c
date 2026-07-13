@@ -11,6 +11,23 @@ void UAv_Analysis_ParamCheck(CCTK_ARGUMENTS){
   DECLARE_CCTK_PARAMETERS;
 
   // -------------------------------
+  // SCHEDULE
+  // -------------------------------
+
+  // Make sure it is run at least once
+  if (!run_at_CCTK_ANALYSIS && !run_at_CCTK_POSTSTEP) {
+    CCTK_VPARAMWARN("UAv_Analysis thorn is not scheduled to run at CCTK_ANALYSIS or CCTK_POSTSTEP. " 
+                    "Please set at least one of the parameters run_at_CCTK_ANALYSIS or run_at_CCTK_POSTSTEP to yes.");
+  }
+
+  // Simple warning if both are set to yes, but we don't forbid it
+  if (run_at_CCTK_ANALYSIS && run_at_CCTK_POSTSTEP) {
+    CCTK_WARN(CCTK_WARN_COMPLAIN, "UAv_Analysis thorn is scheduled to run at both CCTK_ANALYSIS and CCTK_POSTSTEP. " 
+                    "This is not forbidden, but it may be redundant, wasteful or lead to unexpected behavior. "
+                    "Please check your parameters.");
+  }
+
+  // -------------------------------
   // MULTIPATCH
   // -------------------------------
   

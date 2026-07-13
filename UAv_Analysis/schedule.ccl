@@ -66,22 +66,42 @@ schedule UAv_Initialization at BASEGRID after MultiPatch_SpatialCoordinates
 
 ###############################################################################
 # WARNING/NOTE:
-# It seems to be working fine with AHFinderDirect, even when the latter runs
-# at ANALYSIS, but if in doubt, maybe run AHFinderDirect at POSTSTEP (which
+#
+# SPECIAL CARE AND REVISION should be taken about schedule bins, timelevels, 
+# and the code itself, if derivatives/stencils are computed in the analysis.
+# As operations are currently pointwise, it should be OK to compute every so
+# often (in ANALYSIS or POSTSTEP), but iterations in between coarse grid time 
+# steps will be ill-defined and can contain erroneous values or nans.
+#  
+#
+# The thorn seems to be working fine with AHFinderDirect, even when the latter
+# runs at ANALYSIS, but if in doubt, maybe run AHFinderDirect at POSTSTEP (this
 # is the current default), this should make sure the excision mask is there.
 #
 # For a discussion about the schedule options, such as "local" versus "global
 # loop-local", as well as the schedule bins, see the users list archives
 # https://lists.einsteintoolkit.org/pipermail/users/2024-September/009456.html
 # and corresponding thread (several back and forth replies).
+# See also
+# https://lists.einsteintoolkit.org/pipermail/users/2026-June/009955.html
 # 
 # A possible schedule in EVOL would be
 # schedule GROUP UAv_Analysis_Group in MoL_PseudoEvolution after MoL_PostStep
 ###############################################################################
 
-schedule GROUP UAv_Analysis_Group at ANALYSIS after AHFinderDirect_maybe_do_masks before TargetTracker_SetSurfaces
+if (run_at_CCTK_POSTSTEP)
 {
-} "Compute several diagnostic quantities"
+  schedule GROUP UAv_Analysis_Group at CCTK_POSTSTEP after AHFinderDirect_maybe_do_masks before TargetTracker_SetSurfaces
+  {
+  } "Compute several diagnostic quantities"
+}
+
+if (run_at_CCTK_ANALYSIS)
+{
+  schedule GROUP UAv_Analysis_Group at ANALYSIS after AHFinderDirect_maybe_do_masks before TargetTracker_SetSurfaces
+  {
+  } "Compute several diagnostic quantities"
+}
 
 ##### EARLY COM GROUP #####
 # We may need to compute the center of mass earlier than the other grid functions.
@@ -104,7 +124,7 @@ schedule UAv_Analysis_early_CoM_gfs in UAv_Analysis_early_CoM_Group
 schedule UAv_Analysis_Boundaries_early_CoM after UAv_Analysis_early_CoM_gfs in UAv_Analysis_early_CoM_Group
 {
   LANG: Fortran
-  OPTIONS: LEVEL
+  OPTIONS: global-early loop-level
   SYNC: density_rho
 } "Enforce symmetry BCs in Analysis"
 
@@ -162,5 +182,5 @@ schedule GROUP ApplyBCs as UAv_Analysis_ApplyBCs after UAv_Analysis_Boundaries i
 schedule UAv_Analysis_IntegrateVol after UAv_Analysis_ApplyBCs in UAv_Analysis_Group
 {
   LANG: C
-  OPTIONS: global
+  OPTIONS: global-late
 } "Compute volume integrals"
