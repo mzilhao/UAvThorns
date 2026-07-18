@@ -57,9 +57,7 @@ subroutine UAv_Analysis_Boundaries_early_CoM( CCTK_ARGUMENTS )
   CCTK_INT, parameter :: one = 1
   CCTK_INT, parameter :: bndsize = 3
 
-  if (early_CoM == 0) then
-     return
-  end if
+  ! The `if (early_CoM == 0)` statement is moved to the schedule directly.
 
   if (do_analysis_every .le. 0) then
      return

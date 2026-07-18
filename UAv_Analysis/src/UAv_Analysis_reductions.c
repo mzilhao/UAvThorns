@@ -160,9 +160,7 @@ void UAv_Analysis_early_CoM_reduce(CCTK_ARGUMENTS)
   DECLARE_CCTK_ARGUMENTS;
   DECLARE_CCTK_PARAMETERS;
 
-  if (*early_CoM == 0) {
-    return;
-  }
+  // The `if(*early_CoM)` statement is moved to the schedule directly.
 
   if (do_analysis_every <= 0) {
     return;
