@@ -54,6 +54,12 @@ INT mm "azimuthal number of the solution. mm=0 for solutions with spherical symm
   0:3 :: "0, 1, 2 or 3"
 } 0
 
+# Symmetry of the scalar field, with respect to the equatorial plane (initial data is provided for 0 <= theta <= pi/2).
+# With Phi = phi exp{i(m varphi - w t)}, phi z-even is the default.
+BOOLEAN phi_z_sym_is_odd "Parity of the scalar field with respect to equatorial (z-)plane symmetry."
+{
+} "no"
+
 INT maxNF "maximum number of lines allowed in the input file"
 {
  100:* :: "any large enough integer"
@@ -95,6 +101,11 @@ REAL z0 "z coordinate of central point"
 {
   *:* :: "any real number"
 } 0.0
+
+CCTK_REAL eps_R "floor value for RR (not used for ScalarBS)."
+{
+  0:*  :: "any small positive value"
+} 1.0d-12
 
 
 REAL Apert_conf_fac "amplitude for conformal factor perturbation"
