@@ -3,6 +3,9 @@
 #include <cctk_Parameters.h>
 #include "TargetTracker.h"
 
+// Forward declaration of helper function to output initialization information for one target
+void OutputInfoInitOneTarget (CCTK_ARGUMENTS, CCTK_INT itarget);
+
 ///////////////////////////////////////////////////////////////////////////////
 // First initialization of one target
 ///////////////////////////////////////////////////////////////////////////////
@@ -50,49 +53,66 @@ void InitializeOneTarget (CCTK_ARGUMENTS, CCTK_INT itarget) {
     // Set initial active status of the target based on the current parameters.
     TargetActivationCondition(CCTK_PASS_CTOC, itarget);
     
-    if (is_tracked[itarget]) {
-        
-        if (which_surface_to_store_info[itarget] != -1) {
-            char* from_surf_str = loc_from_surface_mode[itarget] ? 
-                                "'surface to tracker'" : 
-                                "'tracker to surface'" ;
-            CCTK_VINFO("Tracker %d associated with surface %d is in %s mode.", 
-                        itarget, which_surface_to_store_info[itarget], from_surf_str);
-        }
-        
-        if (is_opposite[itarget]) {
-            CCTK_VINFO("Tracker %d is tracking the opposite of the target. "
-                "This takes precedence over any other adjustment parameters.", itarget);
-        }
-        
-        if (is_adjusted[itarget]) {
-            CCTK_VINFO("Adjustment is activated for tracker %d with parameters: fac_x = %g, ori_x = %g; fac_y = %g, ori_y = %g; fac_z = %g, ori_z = %g.", 
-                itarget, adj_fac_x[itarget], adj_ori_x[itarget], adj_fac_y[itarget], adj_ori_y[itarget], adj_fac_z[itarget], adj_ori_z[itarget]);
-        }
-        
-        CCTK_VINFO("Initialized %s tracker %d with sources:", is_active[itarget] ? "active" : "inactive", itarget);
+    // Output initialization information
+    OutputInfoInitOneTarget(CCTK_PASS_CTOC, itarget);
+}
 
-        // Check if fixed target in each dimension
+///////////////////////////////////////////////////////////////////////////////
+// Helper function to output initialization information for one target.
+// Also reused at checkpoint recovery if verbose.
+///////////////////////////////////////////////////////////////////////////////
+void OutputInfoInitOneTarget (CCTK_ARGUMENTS, CCTK_INT itarget) {
+    DECLARE_CCTK_ARGUMENTS;
+    DECLARE_CCTK_PARAMETERS;
 
-        if (target_id_x[itarget] >= 0) {
-            CCTK_VINFO("x: %s", target_x[itarget]);
-        } else {
-            CCTK_VINFO("x = %g (fixed)", target_loc_x[itarget]);
-        }
+    // Only for tracked targets
+    if (!is_tracked[itarget]) {
+        return;
+    }
 
-        if (target_id_y[itarget] >= 0) {
-            CCTK_VINFO("y: %s", target_y[itarget]);
-        } else {
-            CCTK_VINFO("y = %g (fixed)", target_loc_y[itarget]);
-        }
+    CCTK_VINFO("----- Initialized %s tracker %d -----", is_active[itarget] ? "active" : "inactive", itarget);
 
-        if (target_id_z[itarget] >= 0) {
-            CCTK_VINFO("z: %s", target_z[itarget]);
-        } else {
-            CCTK_VINFO("z = %g (fixed)", target_loc_z[itarget]);
-        }
+    // Surface association info
+    if (which_surface_to_store_info[itarget] != -1) {
+        char* from_surf_str = loc_from_surface_mode[itarget] ? 
+                            "'surface to tracker'" : 
+                            "'tracker to surface'" ;
+        CCTK_VINFO("Tracker %d associated with surface %d is in %s mode.", 
+                    itarget, which_surface_to_store_info[itarget], from_surf_str);
+    }
+    
+    // Adjustment info
+    if (is_opposite[itarget]) {
+        CCTK_VINFO("Tracker %d is tracking the opposite of the target. "
+            "This takes precedence over any other adjustment parameters.", itarget);
+    }
+    
+    if (is_adjusted[itarget]) {
+        CCTK_VINFO("Adjustment is activated for tracker %d with parameters: fac_x = %g, ori_x = %g; fac_y = %g, ori_y = %g; fac_z = %g, ori_z = %g.", 
+            itarget, adj_fac_x[itarget], adj_ori_x[itarget], adj_fac_y[itarget], adj_ori_y[itarget], adj_fac_z[itarget], adj_ori_z[itarget]);
+    }
+    
+    // Source info
+    // Check if fixed target in each dimension
+    CCTK_VINFO("Sources for tracker %d:", itarget);
 
-    } // end if track
+    if (target_id_x[itarget] >= 0) {
+        CCTK_VINFO("    x: %s", target_x[itarget]);
+    } else {
+        CCTK_VINFO("    x = %g (fixed)", target_loc_x[itarget]);
+    }
+
+    if (target_id_y[itarget] >= 0) {
+        CCTK_VINFO("    y: %s", target_y[itarget]);
+    } else {
+        CCTK_VINFO("    y = %g (fixed)", target_loc_y[itarget]);
+    }
+
+    if (target_id_z[itarget] >= 0) {
+        CCTK_VINFO("    z: %s", target_z[itarget]);
+    } else {
+        CCTK_VINFO("    z = %g (fixed)", target_loc_z[itarget]);
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -282,7 +302,12 @@ void RecoverOneTarget (CCTK_ARGUMENTS, CCTK_INT itarget) {
     adj_ori_y[itarget] = is_opposite[itarget] ?  0 : tracker_y_adjust_origin[itarget];
     adj_ori_z[itarget] = is_opposite[itarget] ?  0 : tracker_z_adjust_origin[itarget];
 
+    ///////////////////////////////////////////////
 
+    // Output other initialization information if verbose
+    if (verbose) {
+        OutputInfoInitOneTarget(CCTK_PASS_CTOC, itarget);
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
