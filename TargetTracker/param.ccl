@@ -39,13 +39,13 @@ STRING target_z[10] "Grid scalar that is tracked: z component" STEERABLE=ALWAYS
 
 # Track the opposite of a target
 # Overrides ad hoc adjustment parameters
-BOOLEAN track_opposite[10] "Track the opposite of a target. Supersedes ad hoc adjustment parameters. Will be switched off if tracker_adjust is dynamically switched on." STEERABLE=ALWAYS
+BOOLEAN track_opposite[10] "Track the opposite of a (non-fixed) target. Supersedes ad hoc adjustment parameters. Will be switched off if tracker_adjust is dynamically switched on. Not applied in 'surface to tracker' mode." STEERABLE=ALWAYS
 {
 } "no"
 
 # Some ad hoc parameters to adjust the tracked location
 # loc = adj_fac * target + adj_ori
-BOOLEAN tracker_adjust[10] "Whether to apply the adjustment to the tracked location. Not applied in 'surface to tracker' mode." STEERABLE=ALWAYS
+BOOLEAN tracker_adjust[10] "Adjust the tracked location with respect to a (non-fixed) target, in an affine manner. Not applied in 'surface to tracker' mode." STEERABLE=ALWAYS
 {
 } "no"
 

@@ -13,7 +13,7 @@ void InitializeOneTarget (CCTK_ARGUMENTS, CCTK_INT itarget) {
     // Get the index of variables. It's not supposed to change during the simulation (I think).
     // Validity of parameters should have been checked in ParamCheck.
     // Since validity has been checked, a negative value here should mean fixed tracker (empty string "^$").
-    // WARNING: Since the parameters are steerable, make sure the rest is robust
+    // WARNING: Since the parameters are steerable, make sure the rest is robust.
     
     
     // x source
@@ -34,11 +34,12 @@ void InitializeOneTarget (CCTK_ARGUMENTS, CCTK_INT itarget) {
     adj_ori_z[itarget]   = is_opposite[itarget] ?  0 : tracker_z_adjust_origin[itarget];
 
     // Initial position
-    // Will be overriden with the correct values at ANALYSIS if needed 
-    // WARNING: if fixed target and adjusted target (not so sensible), this will be reapeated at t=0
-    target_loc_x[itarget] = adj_fac_x[itarget] * initial_x[itarget] + adj_ori_x[itarget];
-    target_loc_y[itarget] = adj_fac_y[itarget] * initial_y[itarget] + adj_ori_y[itarget];
-    target_loc_z[itarget] = adj_fac_z[itarget] * initial_z[itarget] + adj_ori_z[itarget];
+    // This will be overriden with the correct values in the main function if needed,
+    // but initially fixed trackers get their initial values here.
+    // No adjustment on fixed trackers.
+    target_loc_x[itarget] = initial_x[itarget];
+    target_loc_y[itarget] = initial_y[itarget];
+    target_loc_z[itarget] = initial_z[itarget];
     
     // Set initial value of is_loc_from_surface flag.
     // ParamCheck prevents a wrong surface index here.
@@ -268,6 +269,18 @@ void RecoverOneTarget (CCTK_ARGUMENTS, CCTK_INT itarget) {
      * - verbose: STEERABLE=ALWAYS, but it's not critical (and the user should know if they try to steer it mid-run)
      */
 
+    ///////////////////////////////////////////////
+    
+    /* Interface: adj_fac and adj_ori
+     * They are not checkpointed, so set them.
+     * (Just to avoid random values when there's no adjustment.)
+     */
+    adj_fac_x[itarget] = is_opposite[itarget] ? -1 : tracker_x_adjust_factor[itarget];
+    adj_fac_y[itarget] = is_opposite[itarget] ? -1 : tracker_y_adjust_factor[itarget];
+    adj_fac_z[itarget] = is_opposite[itarget] ? -1 : tracker_z_adjust_factor[itarget];
+    adj_ori_x[itarget] = is_opposite[itarget] ?  0 : tracker_x_adjust_origin[itarget];
+    adj_ori_y[itarget] = is_opposite[itarget] ?  0 : tracker_y_adjust_origin[itarget];
+    adj_ori_z[itarget] = is_opposite[itarget] ?  0 : tracker_z_adjust_origin[itarget];
 
 
 }

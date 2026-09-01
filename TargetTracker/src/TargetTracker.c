@@ -170,7 +170,7 @@ CCTK_INT TargetGetDataOneDim (CCTK_ARGUMENTS, const struct TargetInfoBundleOneDi
 
     // Unpack bundle
     const CCTK_INT itarget    = bundle.itarget;
-    const CCTK_INT tgt_id     = *bundle.ptr_current_id;
+    const CCTK_INT tgt_id     =*bundle.ptr_current_id;
     const char* tgt_name      = bundle.tgt_name;
     const char* dim_name      = bundle.dim_name;
 
@@ -229,13 +229,19 @@ void TargetTracker_SetSurfaces(CCTK_ARGUMENTS)
                     continue;
                 }
 
-                // Adjust location if needed
+                // Adjust location if needed (not applied to fixed tracker)
                 // (We need the if statement because of dynamic steerability of the flags)
                 if (is_opposite[itarget] || is_adjusted[itarget]) {
-                    target_loc_x[itarget] = adj_fac_x[itarget] * target_loc_x[itarget] + adj_ori_x[itarget];
-                    target_loc_y[itarget] = adj_fac_y[itarget] * target_loc_y[itarget] + adj_ori_y[itarget];
-                    target_loc_z[itarget] = adj_fac_z[itarget] * target_loc_z[itarget] + adj_ori_z[itarget];
-                }
+                    if (*bundle_x.ptr_current_id >= 0) {
+                        target_loc_x[itarget] = adj_fac_x[itarget] * target_loc_x[itarget] + adj_ori_x[itarget];
+                    }
+                    if (*bundle_y.ptr_current_id >= 0) {
+                        target_loc_y[itarget] = adj_fac_y[itarget] * target_loc_y[itarget] + adj_ori_y[itarget];
+                    }
+                    if (*bundle_z.ptr_current_id >= 0) {
+                        target_loc_z[itarget] = adj_fac_z[itarget] * target_loc_z[itarget] + adj_ori_z[itarget];
+                    }
+                } // end if adjustment
                 
                 // Update spherical surface with tracker position
                 if (which_surface_to_store_info[itarget] != -1) {
@@ -258,7 +264,7 @@ void TargetTracker_SetSurfaces(CCTK_ARGUMENTS)
             } else if (is_tracked[itarget] && is_loc_from_surface[itarget]) { // tracked target in surface to tracker mode
                 // If loc_from_surface_mode is on, we don't try to get the target location from the variables,
                 // but directly from the surface. This can be useful for continuity when a horizon is formed for instance.
-                // The case where which_surface_to_store_info is invalid should be caught before
+                // The case where which_surface_to_store_info is invalid should be caught before.
                 
                 // TODO: Check if surface is active / is valid ?
                 target_loc_x[itarget] = sf_centroid_x[which_surface_to_store_info[itarget]];
