@@ -16,6 +16,11 @@ void TargetTracker_ParamCheck(CCTK_ARGUMENTS) {
             CCTK_VPARAMWARN("For target %d, surface index is greater than the number of spherical surfaces.", itarget);
         }
         
+        // Soft warning for the user if they set both tracker_adjust and track_opposite to yes.
+        if (tracker_adjust[itarget] && track_opposite[itarget]) {
+            CCTK_VWARN(CCTK_WARN_COMPLAIN, "For target %d, both 'tracker_adjust' and 'track_opposite' are set to yes."
+                            "'track_opposite' takes precedence and 'tracker_adjust' will be ignored.", itarget);
+        }
         
         // --------------------------------
         // CHECK TARGET VARIABLES

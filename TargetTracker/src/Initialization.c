@@ -24,13 +24,14 @@ void InitializeOneTarget (CCTK_ARGUMENTS, CCTK_INT itarget) {
     target_id_z[itarget] = CCTK_VarIndex (target_z[itarget]);
 
     // Initialize all adjustment parameters
+    is_opposite[itarget] = track_opposite[itarget];
     is_adjusted[itarget] = tracker_adjust[itarget];
-    adj_fac_x[itarget]   = tracker_x_adjust_factor[itarget];
-    adj_fac_y[itarget]   = tracker_y_adjust_factor[itarget];
-    adj_fac_z[itarget]   = tracker_z_adjust_factor[itarget];
-    adj_ori_x[itarget]   = tracker_x_adjust_origin[itarget];
-    adj_ori_y[itarget]   = tracker_y_adjust_origin[itarget];
-    adj_ori_z[itarget]   = tracker_z_adjust_origin[itarget];
+    adj_fac_x[itarget]   = is_opposite[itarget] ? -1 : tracker_x_adjust_factor[itarget];
+    adj_fac_y[itarget]   = is_opposite[itarget] ? -1 : tracker_y_adjust_factor[itarget];
+    adj_fac_z[itarget]   = is_opposite[itarget] ? -1 : tracker_z_adjust_factor[itarget];
+    adj_ori_x[itarget]   = is_opposite[itarget] ?  0 : tracker_x_adjust_origin[itarget];
+    adj_ori_y[itarget]   = is_opposite[itarget] ?  0 : tracker_y_adjust_origin[itarget];
+    adj_ori_z[itarget]   = is_opposite[itarget] ?  0 : tracker_z_adjust_origin[itarget];
 
     // Initial position
     // Will be overriden with the correct values at ANALYSIS if needed 
@@ -56,6 +57,11 @@ void InitializeOneTarget (CCTK_ARGUMENTS, CCTK_INT itarget) {
                                 "'tracker to surface'" ;
             CCTK_VINFO("Tracker %d associated with surface %d is in %s mode.", 
                         itarget, which_surface_to_store_info[itarget], from_surf_str);
+        }
+        
+        if (is_opposite[itarget]) {
+            CCTK_VINFO("Tracker %d is tracking the opposite of the target. "
+                "This takes precedence over any other adjustment parameters.", itarget);
         }
         
         if (is_adjusted[itarget]) {
@@ -191,6 +197,29 @@ void RecoverOneTarget (CCTK_ARGUMENTS, CCTK_INT itarget) {
     sprintf(param_name, "loc_from_surface_mode[%d]", itarget);
     CCTK_ParameterSet(param_name, "TargetTracker", is_loc_from_surface[itarget] ? "yes" : "no");
     
+    //////////////////////////////////////////////
+    
+    /* Parameter: is_opposite
+     * Tells whether to track the opposite of a target and is always steerable.
+     */
+    // Info
+    if (track_opposite[itarget] != is_opposite[itarget]) {
+        char message[1000];
+        sprintf(message, "At recovery of tracker %d, parameter 'track_opposite' is '%s', but the internal flag 'is_opposite' is '%s'.\n"
+                         "    Setting track_opposite[%d] = %s.",
+                         itarget, track_opposite[itarget] ? "yes" : "no", is_opposite[itarget] ? "yes" : "no",
+                         itarget, is_opposite[itarget] ? "yes" : "no");
+        if (verbose) {
+            CCTK_VINFO("%s", message);
+        }
+        else {
+            CCTK_VWARN(CCTK_WARN_COMPLAIN, "%s", message);
+        }
+    }
+    // Set
+    sprintf(param_name, "track_opposite[%d]", itarget);
+    CCTK_ParameterSet(param_name, "TargetTracker", is_opposite[itarget] ? "yes" : "no");
+
     //////////////////////////////////////////////
     
     /* Parameter: tracker_adjust

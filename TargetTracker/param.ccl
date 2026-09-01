@@ -37,6 +37,12 @@ STRING target_z[10] "Grid scalar that is tracked: z component" STEERABLE=ALWAYS
   "[a-zA-Z_][a-zA-Z0-9_]*[:][:][a-zA-Z_][a-zA-Z0-9_]*(\[[0-9]+\])?" :: "name of a grid scalar"
 } ""
 
+# Track the opposite of a target
+# Overrides ad hoc adjustment parameters
+BOOLEAN track_opposite[10] "Track the opposite of a target. Supersedes ad hoc adjustment parameters. Will be switched off if tracker_adjust is dynamically switched on." STEERABLE=ALWAYS
+{
+} "no"
+
 # Some ad hoc parameters to adjust the tracked location
 # loc = adj_fac * target + adj_ori
 BOOLEAN tracker_adjust[10] "Whether to apply the adjustment to the tracked location. Not applied in 'surface to tracker' mode." STEERABLE=ALWAYS

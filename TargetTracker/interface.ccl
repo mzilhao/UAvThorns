@@ -11,6 +11,8 @@ CCTK_INT is_active[nmax_targets] type=scalar timelevels=1 tags='checkpoint="yes"
 
 CCTK_INT is_loc_from_surface[nmax_targets] type=scalar timelevels=1 tags='checkpoint="yes"' "Flag to know which tracker gets its location from a surface"
 
+CCTK_INT is_opposite[nmax_targets] type=scalar timelevels=1 tags='checkpoint="yes"' "Flag to know which tracker tracks the opposite of a target"
+
 CCTK_INT is_adjusted[nmax_targets] type=scalar timelevels=1 tags='checkpoint="yes"' "Flag to know which tracker applies the adjustment to the tracked location"
 
 CCTK_REAL target_loc[nmax_targets] type=scalar timelevels=1 tags='checkpoint="yes"'

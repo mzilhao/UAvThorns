@@ -30,41 +30,72 @@ CCTK_INT UpdateTargetStatus(CCTK_ARGUMENTS, CCTK_INT itarget) {
     DECLARE_CCTK_ARGUMENTS;
     DECLARE_CCTK_PARAMETERS;
     
+    // ----- Register old flag values to check for changes -----
+
     // Check if the target was tracked previously
     CCTK_INT was_active = is_active[itarget];
 
     // Check if the tracker was passively following a surface
     CCTK_INT was_loc_from_surface = is_loc_from_surface[itarget];
 
+    // Check if the tracker was tracking the opposite of the target previously
+    CCTK_INT was_opposite = is_opposite[itarget];
+
     // Check if the tracker position was adjusted previously
     CCTK_INT was_adjusted = is_adjusted[itarget];
 
-    // Check if the target is tracked now
+    // Dynamic activation of adjustment will deactivate tracking the opposite of a target.
+    // The interface quantities (including flags) will be updated below in TargetActivationCondition.
+    if (was_opposite && !was_adjusted && tracker_adjust[itarget]) {
+        // Info
+        if (verbose) {
+            CCTK_VINFO("At iteration %d (simulation time %g), tracker %d adjustment was dynamically activated, "
+                "which deactivates tracking the opposite of the target.", 
+                cctk_iteration, cctk_time, itarget);
+        }
+        // Set track_opposite parameter, will be effective at the next DECLARE_CCTK_PARAMETERS (in TargetActivationCondition)
+        char param_name[100];
+        sprintf(param_name, "track_opposite[%d]", itarget);
+        CCTK_ParameterSet(param_name, "TargetTracker", "no");
+    }
+
+
+    // ----- Check if the target is tracked now -----
     TargetActivationCondition(CCTK_PASS_CTOC, itarget);
 
     // Info
-    if (verbose && is_loc_from_surface[itarget] != was_loc_from_surface) {
-        CCTK_VINFO("At iteration %d (simulation time %g), tracker %d changed to %s mode.", 
-            cctk_iteration, cctk_time, itarget,
-            is_loc_from_surface[itarget] ? "'surface to tracker'" : "'tracker to surface'");
-    }
-
-    if (verbose && is_active[itarget] != was_active) {
-        CCTK_VINFO("At iteration %d (simulation time %g), tracker %d was %sactivated.", 
-            cctk_iteration, cctk_time, itarget, is_active[itarget] ? "" : "de");
-    }
-
-    if (verbose && is_adjusted[itarget] != was_adjusted) {
-        CCTK_VINFO("At iteration %d (simulation time %g), tracker %d adjustment was %sactivated.", 
-            cctk_iteration, cctk_time, itarget, is_adjusted[itarget] ? "" : "de");
-
-        if (is_adjusted[itarget]) {
-            CCTK_VINFO("Adjustment parameters for tracker %d: fac_x = %g, ori_x = %g; fac_y = %g, ori_y = %g; fac_z = %g, ori_z = %g.", 
-                itarget, adj_fac_x[itarget], adj_ori_x[itarget], adj_fac_y[itarget], adj_ori_y[itarget], adj_fac_z[itarget], adj_ori_z[itarget]);
+    if (verbose) {
+        if (is_loc_from_surface[itarget] != was_loc_from_surface) {
+            CCTK_VINFO("At iteration %d (simulation time %g), tracker %d changed to %s mode.", 
+                cctk_iteration, cctk_time, itarget,
+                is_loc_from_surface[itarget] ? "'surface to tracker'" : "'tracker to surface'");
         }
-    }
+
+        if (is_active[itarget] != was_active) {
+            CCTK_VINFO("At iteration %d (simulation time %g), tracker %d was %sactivated.", 
+                cctk_iteration, cctk_time, itarget, is_active[itarget] ? "" : "de");
+        }
+
+        if (is_adjusted[itarget] != was_adjusted) {
+            CCTK_VINFO("At iteration %d (simulation time %g), tracker %d adjustment was %sactivated.", 
+                cctk_iteration, cctk_time, itarget, is_adjusted[itarget] ? "" : "de");
+
+            if (is_adjusted[itarget]) {
+                CCTK_VINFO("Adjustment parameters for tracker %d: fac_x = %g, ori_x = %g; fac_y = %g, ori_y = %g; fac_z = %g, ori_z = %g.", 
+                    itarget, adj_fac_x[itarget], adj_ori_x[itarget], adj_fac_y[itarget], adj_ori_y[itarget], adj_fac_z[itarget], adj_ori_z[itarget]);
+            }
+        }
+
+        // Put this message after the adjustment message, since dynamically turning on adjustment
+        // shuts down tracking the opposite.
+        if (is_opposite[itarget] != was_opposite) {
+            CCTK_VINFO("At iteration %d (simulation time %g), tracker %d is %s tracking the opposite of the target.", 
+                cctk_iteration, cctk_time, itarget, is_opposite[itarget] ? "now" : "no longer");
+        }
+    } // end if verbose
     
-    // Check if target has changed and is valid
+
+    // ----- Check if target has changed and is valid -----
     if (is_active[itarget]) {
         struct TargetInfoBundleOneDim bundle_x = {itarget, &target_id_x[itarget], target_x[itarget], "x"};
         TargetChangeOneDim(CCTK_PASS_CTOC, bundle_x);
@@ -199,7 +230,8 @@ void TargetTracker_SetSurfaces(CCTK_ARGUMENTS)
                 }
 
                 // Adjust location if needed
-                if (is_adjusted[itarget]) {
+                // (We need the if statement because of dynamic steerability of the flags)
+                if (is_opposite[itarget] || is_adjusted[itarget]) {
                     target_loc_x[itarget] = adj_fac_x[itarget] * target_loc_x[itarget] + adj_ori_x[itarget];
                     target_loc_y[itarget] = adj_fac_y[itarget] * target_loc_y[itarget] + adj_ori_y[itarget];
                     target_loc_z[itarget] = adj_fac_z[itarget] * target_loc_z[itarget] + adj_ori_z[itarget];
