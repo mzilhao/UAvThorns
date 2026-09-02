@@ -271,6 +271,10 @@ void TargetTracker_SetSurfaces(CCTK_ARGUMENTS)
                 target_loc_y[itarget] = sf_centroid_y[which_surface_to_store_info[itarget]];
                 target_loc_z[itarget] = sf_centroid_z[which_surface_to_store_info[itarget]];
 
+                // TODO: Set surface is_active and is_valid flags to 1 ?
+                //       It seems I had an issue with CarpetTracker because of this once,
+                //       but I don't remember how to reproduce it.
+
                 if (verbose) {
                     CCTK_VINFO("Setting tracker %d location from surface %d to (%g,%g,%g)",
                                 itarget, which_surface_to_store_info[itarget], 

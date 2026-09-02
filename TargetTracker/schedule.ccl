@@ -30,6 +30,12 @@ schedule TargetTracker_Recovery at CCTK_POST_RECOVER_VARIABLES
   OPTIONS: global
 } "(Partial) recovery of parameters from checkpointed internal variables"
 
+# WARNING: schedule bin
+# We schedule at ANALYSIS because Trigger_Check is scheduled at ANALYSIS.
+# This is relevant when Triggers are used to steer trackers, for instance
+# when a horizon is found, etc. (TargetTracker doesn't have native triggers).
+# TODO: If adding schedule bin parameters to run at POSTSTEP, some thoughts
+# and checks need to go to the before/after conditions.
 schedule TargetTracker_SetSurfaces at ANALYSIS after Trigger_Check
 {
   LANG: C
