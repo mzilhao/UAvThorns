@@ -62,6 +62,27 @@ static inline void UpdateIsLocFromSurface(CCTK_ARGUMENTS, CCTK_INT itarget) {
     return;
 }
 
+////////////////////////////////////////////////////////////////////////////////
+// Helper function to update adjustment flags and interface.
+////////////////////////////////////////////////////////////////////////////////
+
+static inline void UpdateAdjustment(CCTK_ARGUMENTS, CCTK_INT itarget) {
+    DECLARE_CCTK_ARGUMENTS;
+    DECLARE_CCTK_PARAMETERS;
+
+    is_opposite[itarget] = track_opposite[itarget];
+    is_adjusted[itarget] = tracker_adjust[itarget];
+    if (is_opposite[itarget] || is_adjusted[itarget]) {
+        adj_fac_x[itarget] = is_opposite[itarget] ? -1 : tracker_x_adjust_factor[itarget];
+        adj_fac_y[itarget] = is_opposite[itarget] ? -1 : tracker_y_adjust_factor[itarget];
+        adj_fac_z[itarget] = is_opposite[itarget] ? -1 : tracker_z_adjust_factor[itarget];
+        adj_ori_x[itarget] = is_opposite[itarget] ?  0 : tracker_x_adjust_origin[itarget];
+        adj_ori_y[itarget] = is_opposite[itarget] ?  0 : tracker_y_adjust_origin[itarget];
+        adj_ori_z[itarget] = is_opposite[itarget] ?  0 : tracker_z_adjust_origin[itarget];
+    }
+    return;
+}
+
 
 ////////////////////////////////////////////////////////////////////////////////
 // Helper function for factorization and consistency.
@@ -79,6 +100,10 @@ static inline void TargetActivationCondition(CCTK_ARGUMENTS, CCTK_INT itarget) {
     // Update value of is_loc_from_surface flag based on loc_from_surface_mode parameter (which is STEERABLE=ALWAYS)
     // WARNING: We consider that the target is inactive in that mode, but the tracker still has to follow the surface!
     UpdateIsLocFromSurface(CCTK_PASS_CTOC, itarget);
+
+    // Update value of is_opposite and is_adjusted flags 
+    // based on track_opposite and tracker_adjust parameters (which are STEERABLE=ALWAYS)
+    UpdateAdjustment(CCTK_PASS_CTOC, itarget);
 
     is_active[itarget] = ( 
         is_tracked[itarget]

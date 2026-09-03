@@ -11,6 +11,10 @@ CCTK_INT is_active[nmax_targets] type=scalar timelevels=1 tags='checkpoint="yes"
 
 CCTK_INT is_loc_from_surface[nmax_targets] type=scalar timelevels=1 tags='checkpoint="yes"' "Flag to know which tracker gets its location from a surface"
 
+CCTK_INT is_opposite[nmax_targets] type=scalar timelevels=1 tags='checkpoint="yes"' "Flag to know which tracker tracks the opposite of a target"
+
+CCTK_INT is_adjusted[nmax_targets] type=scalar timelevels=1 tags='checkpoint="yes"' "Flag to know which tracker applies the adjustment to the tracked location"
+
 CCTK_REAL target_loc[nmax_targets] type=scalar timelevels=1 tags='checkpoint="yes"'
 {
   target_loc_x
@@ -24,3 +28,17 @@ CCTK_INT target_ids[nmax_targets] type=scalar timelevels=1 tags='checkpoint="yes
   target_id_y
   target_id_z
 } "ID of the targets"
+
+CCTK_REAL adj_fac[nmax_targets] type=scalar timelevels=1 tags='checkpoint="no"' 
+{
+  adj_fac_x
+  adj_fac_y
+  adj_fac_z
+} "Adjustment factor for the tracked location, applied as: loc = adj_fac * target + adj_ori"
+
+CCTK_REAL adj_ori[nmax_targets] type=scalar timelevels=1 tags='checkpoint="no"' 
+{
+  adj_ori_x
+  adj_ori_y
+  adj_ori_z
+} "Adjustment origin for the tracked location, applied as: loc = adj_fac * target + adj_ori"
