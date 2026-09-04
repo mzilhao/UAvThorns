@@ -8,6 +8,7 @@
 #include "cctk_Parameters.h"
 #include "cctk_Functions.h"
 #include "util_Table.h"
+#include "perturbation_IDScalar.h"
 
 #define SMALL (1.e-9)
 
@@ -547,18 +548,26 @@ void UAv_IDScalarBS(CCTK_ARGUMENTS)
         const CCTK_REAL cosmph = cos(mm*ph);
         const CCTK_REAL sinmph = sin(mm*ph);
 
+        // struct used for perturbations
+        const struct PertCoords pertCoords = {
+            // .x = x1, .y = y1, .z = z1,
+            .rho = rho, .R = rr,
+            /*.th = th,*/ .ph = ph,
+        };
+
         const CCTK_REAL psi4 = exp(2. * F1[ind]);
         const CCTK_REAL psi2 = sqrt(psi4);
         const CCTK_REAL psi1 = sqrt(psi2);
 
         const CCTK_REAL h_rho2 = exp(2. * (F2[ind] - F1[ind])) - 1.;
 
-        // add non-axisymmetric perturbation on conformal factor
-        // NOTE: the perturbation is only taken into account for the 3-metric grid functions (not extrinsic curvature, lapse, ...)
-        const CCTK_REAL argpert_cf = (rr - R0pert_conf_fac)/Sigmapert_conf_fac;
-        const CCTK_REAL pert_cf = 1. + Apert_conf_fac * (x1*x1 - y1*y1)*mu*mu * exp( -0.5*argpert_cf*argpert_cf );
 
-        const CCTK_REAL conf_fac = psi4 * pert_cf;
+        // (Optional) Perturbation to the conformal factor psi^4
+        // NOTE: the perturbation is only taken into account for the 3-metric grid functions (not extrinsic curvature, lapse, ...)
+        CCTK_REAL conf_fac = psi4;
+        if (CCTK_EQUALS(perturbation_field, "conformal_factor")) {
+            conf_fac = UAv_IDScalar_Perturb(CCTK_PASS_CTOC, conf_fac, pertCoords);
+        }
 
         // 3-metric
         gxx[ind] = conf_fac * (1. + h_rho2 * sinph * sinph);
@@ -609,17 +618,20 @@ void UAv_IDScalarBS(CCTK_ARGUMENTS)
 
           
 
-        // let's add a perturbation to the scalar field as well
-        // NOTE: the derivative of the perturbation is not taken into account for the scalar field momentum
-        // TODO (?): Design perturbation more generically as ~ cos((m+1)\varphi)
-        const CCTK_REAL argpert_phi = (rr - R0pert_phi)/Sigmapert_phi;
-        const CCTK_REAL pert_phi = 1. + Apert_phi * (x1*x1 - y1*y1)*mu*mu * exp( -0.5*argpert_phi*argpert_phi );
-
-        const CCTK_REAL phi0_l = phi0[ind] * pert_phi;
-
         // scalar fields
-        phi1[ind]  = phi0_l * (coswt * cosmph + sinwt * sinmph);
-        phi2[ind]  = phi0_l * (coswt * sinmph - sinwt * cosmph);
+        CCTK_REAL phi0_re = phi0[ind] * (coswt * cosmph + sinwt * sinmph);
+        CCTK_REAL phi0_im = phi0[ind] * (coswt * sinmph - sinwt * cosmph);
+        
+        // (Optional) Perturbation to the scalar field
+        // NOTE: the derivative of the perturbation is not taken into account for the scalar field momentum
+        if (CCTK_EQUALS(perturbation_field, "scalar_field")) {
+          phi0_re = UAv_IDScalar_Perturb(CCTK_PASS_CTOC, phi0_re, pertCoords);
+          phi0_im = UAv_IDScalar_Perturb(CCTK_PASS_CTOC, phi0_im, pertCoords);
+        }
+        
+        phi1[ind] = phi0_re;
+        phi2[ind] = phi0_im;
+
 
         const CCTK_REAL alph = exp(F0[ind]);
 

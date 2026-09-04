@@ -108,37 +108,6 @@ CCTK_REAL eps_R "floor value for RR (not used for ScalarBS)."
 } 1.0d-12
 
 
-REAL Apert_conf_fac "amplitude for conformal factor perturbation"
-{
-  0:* :: "non-negative"
-} 0.0
-
-REAL R0pert_conf_fac "center radius for conformal factor perturbation. To be conceived in quasi-isotropic coordinate R"
-{
-  0:* :: "non-negative"
-} 0.0
-
-REAL Sigmapert_conf_fac "spread for conformal factor perturbation. To be conceived in quasi-isotropic coordinate R"
-{
-  (0:* :: "positive"
-} 1.0
-
-REAL Apert_phi "amplitude for scalar perturbation"
-{
-  0:* :: "non-negative"
-} 0.0
-
-REAL R0pert_phi "center radius for scalar perturbation. To be conceived in quasi-isotropic coordinate R"
-{
-  0:* :: "non-negative"
-} 0.0
-
-REAL Sigmapert_phi "spread for scalar perturbation. To be conceived in quasi-isotropic coordinate R"
-{
-  (0:* :: "positive"
-} 1.0
-
-
 REAL initial_lapse_psi_exponent "Exponent n for psi^n initial lapse profile"
 {
   (*:*) :: "Should be negative"
@@ -150,3 +119,68 @@ INT normalization_Tmunu "Normalization used for the stress-energy tensor in the 
   1   :: "G = 1"
   2   :: "G = 1 and Tmunu has factor of 0.5"
 } 0
+
+################################################################################
+############### Parameters for perturbations of the initial data ###############
+################################################################################
+# These parameters allow to add a perturbation to a quantity in the initial data,
+# such as the scalar field profile Phi or the conformal factor psi^4 used in the
+# 3-metric.
+# Note that the derivatives of the perturbation are not taken into account for
+# the scalar field momentum K_Phi and the extrinsic curvature K_ij.
+# 
+# There are currently three types of perturbations delta available:
+# relative (1+delta)*Phi, multiplicative delta*Phi, and additive Phi+delta.
+#
+# The perturbation delta is the product of a radial seed and an angular part.
+# Currently, the angular part is simply of the form:
+# (rho*mu)^m * cos(m*phi),        with rho^2 = x^2 + y^2,
+# where m is a perturbation parameter (need not be the same as the solution's mm).
+# CAUTION: This has a dependence on the CYLINDRICAL radius (except for m=0)!
+#
+# The perturbation is otherwise conceived in terms of the grid coordinates and
+# functions, so you may need to add factors of mu, depending on your needs. 
+################################################################################
+
+KEYWORD perturbation_field "Field on which to apply the perturbation."
+{
+  "none" :: "No perturbation"
+  "scalar_field" :: "Perturbation to the complex scalar field Phi"
+  "conformal_factor" :: "Perturbation to the conformal factor psi^4"
+} "none"
+
+# The none-none combination is redundant, but it forces the user to be explicit.
+KEYWORD perturbation_type "Type of perturbation to be applied."
+{
+  "none" :: "No perturbation"
+  "relative" :: "Relative perturbation: f * (1 + delta)"
+  "multiplicative" :: "Multiplicative perturbation: f * delta"
+  "additive" :: "Additive perturbation: f + delta"
+} "none"
+
+KEYWORD perturbation_radial_seed "Radial seed for the perturbation to be applied."
+{
+  "constant" :: "Constant perturbation: delta = A"
+  "gaussian" :: "Gaussian perturbation: delta = A * exp[-(R-R0)^2 / (2*width^2)]"
+} "constant"
+
+INT perturbation_azimuthal_number "Azimuthal number m for the perturbation to be applied (need not coincide with the solution's mm)."
+{
+  0   :: "Spherically symmetric perturbation"
+  1:* :: "Azimuthal perturbation delta = rho^m * cos(m*phi), with rho^2 = x^2 + y^2"
+} 0
+
+REAL perturbation_amplitude "Amplitude for the perturbation to be applied."
+{
+  *:* :: "any real number"
+} 0.0
+
+REAL perturbation_R0 "Center radius for the perturbation to be applied. To be conceived in quasi-isotropic coordinate R."
+{
+  0:* :: "non-negative"
+} 0.0
+
+REAL perturbation_width "Spread for the perturbation to be applied. To be conceived in quasi-isotropic coordinate R."
+{
+  (0:* :: "positive"
+} 1.0
