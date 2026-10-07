@@ -1,7 +1,9 @@
 # Interface definition for thorn TargetTracker
 
 implements: TargetTracker
-inherits: SphericalSurface
+inherits: SphericalSurface ADMBase TmunuBase SpaceMask
+
+USES INCLUDE: SpaceMask.h
 
 private:
 
@@ -14,6 +16,8 @@ CCTK_INT is_loc_from_surface[nmax_targets] type=scalar timelevels=1 tags='checkp
 CCTK_INT is_opposite[nmax_targets] type=scalar timelevels=1 tags='checkpoint="yes"' "Flag to know which tracker tracks the opposite of a target"
 
 CCTK_INT is_adjusted[nmax_targets] type=scalar timelevels=1 tags='checkpoint="yes"' "Flag to know which tracker applies the adjustment to the tracked location"
+
+CCTK_INT is_computed[nmax_targets] type=scalar timelevels=1 tags='checkpoint="yes"' "Flag to know for which target the center of mass is computed (reflects parameter compute_com, for recovery)"
 
 CCTK_REAL target_loc[nmax_targets] type=scalar timelevels=1 tags='checkpoint="yes"'
 {
@@ -42,3 +46,31 @@ CCTK_REAL adj_ori[nmax_targets] type=scalar timelevels=1 tags='checkpoint="no"'
   adj_ori_y
   adj_ori_z
 } "Adjustment origin for the tracked location, applied as: loc = adj_fac * target + adj_ori"
+
+CCTK_INT is_multipatch type=scalar timelevels=1 tags='checkpoint="no"' "Flag to know if the simulation uses a multipatch grid."
+
+CCTK_INT use_volume_form type=scalar timelevels=1 tags='checkpoint="no"' "Flag to know if we can use the volume form from the multipatch grid."
+
+CCTK_REAL com_sym_factors type=scalar timelevels=1 tags='checkpoint="no"'
+{
+  sym_factor_drho
+  sym_factor_dpx_coM, sym_factor_dpy_coM, sym_factor_dpz_coM
+} "Symmetry factors to apply to the center of mass integrands, depending on the symmetry of the problem (given by parameter 'com_symmetry'). The factor for dCoM^i is called sym_factor_dpX_coM to avoid confusion with the symmetry parameter (parities) of the CoM grid scalar itself."
+
+CCTK_REAL target_com[nmax_targets] type=scalar timelevels=1 tags='checkpoint="yes"'
+{
+  target_com_x
+  target_com_y
+  target_com_z
+  target_com_mass
+} "Center of mass of the matter distribution computed by this thorn, from rho = - n^mu n^nu T_mu_nu, and the corresponding mass integral. Can be tracked itself by other targets (it is computed before the tracking in the schedule)."
+
+CCTK_INT com_counter type=scalar timelevels=1 tags='checkpoint="no"' "Counter for the WHILE schedule group of the center of mass calculation"
+
+CCTK_REAL com_integrand type=gf timelevels=1 tags='Prolongation="none" InterpNumTimelevels=1 checkpoint="no"'
+{
+  com_integrand_rho
+  com_integrand_x
+  com_integrand_y
+  com_integrand_z
+} "Center of mass integrand grid functions, reused for all targets (recomputed for each target). The division by the mass integral is done after the reduction."

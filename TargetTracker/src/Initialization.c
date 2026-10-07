@@ -20,11 +20,13 @@ void InitializeOneTarget (CCTK_ARGUMENTS, CCTK_INT itarget) {
     
     
     // x source
-    target_id_x[itarget] = CCTK_VarIndex (target_x[itarget]);
+    // WARNING: CCTK_VarIndex makes the flesh warn for invalid names (e.g. the empty string of a fixed target),
+    //          so we only call it for non-empty names (validity of non-empty names has been checked in ParamCheck)
+    target_id_x[itarget] = CCTK_Equals(target_x[itarget], "") ? -1 : CCTK_VarIndex (target_x[itarget]);
     // y source
-    target_id_y[itarget] = CCTK_VarIndex (target_y[itarget]);
+    target_id_y[itarget] = CCTK_Equals(target_y[itarget], "") ? -1 : CCTK_VarIndex (target_y[itarget]);
     // z source
-    target_id_z[itarget] = CCTK_VarIndex (target_z[itarget]);
+    target_id_z[itarget] = CCTK_Equals(target_z[itarget], "") ? -1 : CCTK_VarIndex (target_z[itarget]);
 
     // Initialize all adjustment parameters
     is_opposite[itarget] = track_opposite[itarget];
@@ -49,6 +51,27 @@ void InitializeOneTarget (CCTK_ARGUMENTS, CCTK_INT itarget) {
     // TargetActivationCondition will repeat it, 
     // but doing it once here allows to avoid triggering the change message.
     is_loc_from_surface[itarget] = loc_from_surface_mode[itarget];
+    
+    // Set initial value of is_computed flag for the center of mass calculation.
+    // TargetActivationCondition will repeat it (this avoids a spurious recovery message).
+    is_computed[itarget] = compute_com[itarget];
+
+    // Initial position
+    // This will be overriden with the correct values in the main function if needed,
+    // but initially fixed trackers get their initial values here.
+    // No adjustment on fixed trackers.
+    target_loc_x[itarget] = initial_x[itarget];
+    target_loc_y[itarget] = initial_y[itarget];
+    target_loc_z[itarget] = initial_z[itarget];
+
+    // Initial center of mass values
+    // They will be computed in the first center of mass integration (if any),
+    // but this gives sensible values in the meantime
+    // (in particular the position of the sphere used for the integration)
+    target_com_x[itarget]    = initial_x[itarget];
+    target_com_y[itarget]    = initial_y[itarget];
+    target_com_z[itarget]    = initial_z[itarget];
+    target_com_mass[itarget] = 0.0;
     
     // Set initial active status of the target based on the current parameters.
     TargetActivationCondition(CCTK_PASS_CTOC, itarget);
@@ -113,6 +136,11 @@ void OutputInfoInitOneTarget (CCTK_ARGUMENTS, CCTK_INT itarget) {
     } else {
         CCTK_VINFO("    z = %g (fixed)", target_loc_z[itarget]);
     }
+    
+    // Center of mass calculation info
+    if (is_computed[itarget]) {
+        CCTK_VINFO("The center of mass of the matter distribution is computed for tracker %d.", itarget);
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -128,7 +156,9 @@ void RecoverOneTargetNameOneDim (CCTK_ARGUMENTS, const struct TargetInfoBundleOn
     const char* tgt_name            = bundle.tgt_name;
     const char* dim_name            = bundle.dim_name;
 
-    const CCTK_INT recovery_ID      = CCTK_VarIndex (tgt_name);
+    // See InitializeOneTarget about avoiding calling CCTK_VarIndex for fixed (empty-name) targets;
+    // here we also skip the comparison and warning below in that case
+    const CCTK_INT recovery_ID      = CCTK_Equals(tgt_name, "") ? -1 : CCTK_VarIndex (tgt_name);
     char checkpointed_Name[150];
     if (*ptr_current_id >= 0) {
         sprintf(checkpointed_Name, "%s::%s", CCTK_ImpFromVarI(*ptr_current_id), CCTK_VarName(*ptr_current_id));
@@ -265,6 +295,29 @@ void RecoverOneTarget (CCTK_ARGUMENTS, CCTK_INT itarget) {
     CCTK_ParameterSet(param_name, "TargetTracker", is_adjusted[itarget] ? "yes" : "no");
 
     //////////////////////////////////////////////
+    
+    /* Parameter: compute_com
+     * Controls the center of mass calculation and is always steerable.
+     */
+    // Info
+    if (compute_com[itarget] != is_computed[itarget]) {
+        char message[1000];
+        sprintf(message, "At recovery of target %d, parameter 'compute_com' is '%s', but the internal flag 'is_computed' is '%s'.\n"
+                         "    Setting compute_com[%d] = %s.",
+                         itarget, compute_com[itarget] ? "yes" : "no", is_computed[itarget] ? "yes" : "no",
+                         itarget, is_computed[itarget] ? "yes" : "no");
+        if (verbose) {
+            CCTK_VINFO("%s", message);
+        }
+        else {
+            CCTK_VWARN(CCTK_WARN_COMPLAIN, "%s", message);
+        }
+    }
+    // Set
+    sprintf(param_name, "compute_com[%d]", itarget);
+    CCTK_ParameterSet(param_name, "TargetTracker", is_computed[itarget] ? "yes" : "no");
+
+    //////////////////////////////////////////////
 
     /* Parameters: target variables
      * We recover the names from their checkpointed IDs.
@@ -286,6 +339,8 @@ void RecoverOneTarget (CCTK_ARGUMENTS, CCTK_INT itarget) {
      * - start/stop_tracking_after_time: STEERABLE=RECOVER
      * - which_surface_to_store_info: STEERABLE=RECOVER
      * - initial_x/y/z: STEERABLE=RECOVER, and they are ignored anyway if force_params_at_recovery = no
+     * - center of mass related parameters (com_every, com_symmetry, excise_horizon):
+     *   STEERABLE=RECOVER, taken from the param file as such
      * - verbose: STEERABLE=ALWAYS, but it's not critical (and the user should know if they try to steer it mid-run)
      */
 

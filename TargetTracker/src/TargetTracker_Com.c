@@ -1,0 +1,421 @@
+#include <cctk.h>
+#include <cctk_Arguments.h>
+#include <cctk_Parameters.h>
+#include <cctk_Functions.h>
+
+#include <math.h>
+
+#include "SpaceMask.h"
+
+/*
+ * Self-contained calculation of the center of mass of the matter distribution,
+ * mostly replicating the implementation of UAv_Analysis, as an independent thorn
+ * (see the documentation).
+ *
+ * The calculation is done for one target at a time, with a single set of
+ * integrand grid functions which are recomputed for each target (a scheme
+ * similar to the one of VolumeIntegrals_GRMHD).
+ * The integrands are reduced with a sum reduction, and the center of mass is
+ * obtained by dividing the reduced x^i-weighted integrands by the reduced
+ * density integrand.
+ */
+
+
+///////////////////////////////////////////////////////////////////////////////
+// Initialization of flags and quantities for the center of mass calculation
+///////////////////////////////////////////////////////////////////////////////
+
+void TargetTracker_ComFlags(CCTK_ARGUMENTS) {
+    DECLARE_CCTK_ARGUMENTS;
+    DECLARE_CCTK_PARAMETERS;
+
+    // -------------------------------
+    // MULTIPATCH
+    // -------------------------------
+
+    // Setting the flags has to be done here, cannot be done in PARAMCHECK
+
+    // Trick to check multipatch usage without having to inherit the thorn (similarly to UAv_Analysis)
+    *is_multipatch = CCTK_IsFunctionAliased("MultiPatch_GetDomainSpecification");
+
+    // default (non Llama grid): don't use volume form
+    *use_volume_form = 0;
+
+    // TODO: If there's ever a flag in Coordinates that indicates that the volume form is trivial
+    //       (e.g. is_cartesian), we could check it and set *use_volume_form = 0 in that case.
+
+    if (*is_multipatch > 0) {
+        // If the simulation uses multipatch, make sure that the volume form variable is stored.
+        // Supposedly, this should be handled correctly in Coordinates,
+        // so this should be redundant with the ParamCheck on store_volume_form.
+        CCTK_INT* volume_form_state_ptr = CCTK_VarDataPtr(cctkGH, 0, "Coordinates::volume_form_state");
+
+        if (volume_form_state_ptr != NULL) {
+            // No volume form actually stored (should not happen if ParamCheck passed)
+            if (*volume_form_state_ptr != 1) {
+                CCTK_ERROR("The patch system that you are using does not store the volume form, although you set Coordinates::store_volume_form = yes. "
+                           "TargetTracker thorn will not be able to use the volume form for the center of mass integration. "
+                           "There is likely a problem in thorn Coordinates.");
+            }
+            // else, we're good to go
+            else {
+                CCTK_INFO("Using volume form from multipatch system for the center of mass integration in TargetTracker.");
+                *use_volume_form = 1;
+            }
+        }
+        else {
+            CCTK_ERROR("Problem acquiring pointer to Coordinates::volume_form_state variable.");
+        }
+    }
+
+
+    // -------------------------------
+    // SYMMETRY FACTORS
+    // -------------------------------
+
+    // Factors to apply to the integrands, depending on the symmetry of the problem.
+    // Since the integrand grid functions are private to this thorn, there is no
+    // need to set parities on them (unlike in UAv_Analysis): the factors are
+    // internal to this thorn.
+
+    if (CCTK_Equals(com_symmetry, "none")) {
+        *sym_factor_drho      = 1;
+        *sym_factor_dpx_coM   = 1;
+        *sym_factor_dpy_coM   = 1;
+        *sym_factor_dpz_coM   = 1;
+    }
+    else if (CCTK_Equals(com_symmetry, "bitant_x")) {
+        *sym_factor_drho      = 2;
+        *sym_factor_dpx_coM   = 0;
+        *sym_factor_dpy_coM   = 2;
+        *sym_factor_dpz_coM   = 2;
+    }
+    else if (CCTK_Equals(com_symmetry, "bitant_y")) {
+        *sym_factor_drho      = 2;
+        *sym_factor_dpx_coM   = 2;
+        *sym_factor_dpy_coM   = 0;
+        *sym_factor_dpz_coM   = 2;
+    }
+    else if (CCTK_Equals(com_symmetry, "bitant_z")) {
+        *sym_factor_drho      = 2;
+        *sym_factor_dpx_coM   = 2;
+        *sym_factor_dpy_coM   = 2;
+        *sym_factor_dpz_coM   = 0;
+    }
+    else {
+        // Should not happen thanks to the parameter checks
+        CCTK_VWARN(CCTK_WARN_ALERT, "Unknown symmetry for the center of mass integrands: '%s'. Defaulting to 'com_symmetry=none'.", com_symmetry);
+        *sym_factor_drho      = 1;
+        *sym_factor_dpx_coM   = 1;
+        *sym_factor_dpy_coM   = 1;
+        *sym_factor_dpz_coM   = 1;
+    }
+}
+
+
+///////////////////////////////////////////////////////////////////////////////
+// Counter management
+///////////////////////////////////////////////////////////////////////////////
+
+void TargetTracker_ComCounterZero(CCTK_ARGUMENTS) {
+    DECLARE_CCTK_ARGUMENTS;
+    DECLARE_CCTK_PARAMETERS;
+
+    *com_counter = 0;
+}
+
+void TargetTracker_ComCounterZeroRec(CCTK_ARGUMENTS) {
+    DECLARE_CCTK_ARGUMENTS;
+    DECLARE_CCTK_PARAMETERS;
+
+    *com_counter = 0;
+}
+
+void TargetTracker_ComCounter(CCTK_ARGUMENTS) {
+    DECLARE_CCTK_ARGUMENTS;
+    DECLARE_CCTK_PARAMETERS;
+
+    // Do the calculation only if asked for and on the right iteration
+    if (com_every <= 0 || cctk_iteration % com_every != 0) {
+        // Make sure the counter is zero: it gates the WHILE loop of the group
+        *com_counter = 0;
+        return;
+    }
+
+    // One iteration of the WHILE group per target with the calculation activated.
+    // The targets are processed in the decreasing order of the counter
+    // (from the last to the first).
+    *com_counter = 0;
+    for (CCTK_INT itarget = 0 ; itarget < nmax_targets ; itarget++) {
+        if (is_computed[itarget]) {
+            (*com_counter)++;
+        }
+    }
+}
+
+void TargetTracker_ComDecrementCounter(CCTK_ARGUMENTS) {
+    DECLARE_CCTK_ARGUMENTS;
+    DECLARE_CCTK_PARAMETERS;
+
+    (*com_counter)--;
+}
+
+
+///////////////////////////////////////////////////////////////////////////////
+// Computation of the integrands for one target
+///////////////////////////////////////////////////////////////////////////////
+
+void TargetTracker_ComIntegrand(CCTK_ARGUMENTS) {
+    DECLARE_CCTK_ARGUMENTS;
+    DECLARE_CCTK_PARAMETERS;
+
+    // The targets are processed in the decreasing order of the counter (from the last to the first)
+    const CCTK_INT itarget = nmax_targets - *com_counter;
+
+    // Inactive target: nothing to do (should not happen in normal circumstances)
+    if (!is_computed[itarget]) {
+        CCTK_VWARN(CCTK_WARN_COMPLAIN, "In the center of mass calculation, target %d is marked as computed but is inactive. Skipping it.", itarget);
+        return;
+    }
+
+
+    // Get the mask type and state bits if we need to excise the horizon
+    // (adapted from UAv_Analysis_gfs)
+
+    CCTK_INT type_bits     = -1;
+    CCTK_INT state_outside = -1;
+
+    if (excise_horizon) {
+        type_bits     = SpaceMask_GetTypeBits("mask");
+        state_outside = SpaceMask_GetStateBits("mask", "outside");
+
+        if (type_bits < 0) {
+            CCTK_ERROR("Thorn AHFinderDirect (or a similar thorn setting the mask) not activated, but excise_horizon requires it.");
+        }
+
+        if (state_outside < 0) {
+            CCTK_ERROR("Error in obtaining the 'outside' state bits of the mask from SpaceMask.");
+        }
+    }
+
+
+    // Volume element: with multipatch we need to multiply by the volume form,
+    // else just use the standard Cartesian one
+    // (adapted from UAv_Analysis_gfs)
+
+    CCTK_REAL dV_cart = cctk_delta_space[0] * cctk_delta_space[1] * cctk_delta_space[2];
+
+    CCTK_REAL* volume_form = NULL;
+    if (*use_volume_form > 0) {
+        volume_form = (CCTK_REAL *) CCTK_VarDataPtr(cctkGH, 0, "Coordinates::volume_form");
+        if (volume_form == NULL) {
+            CCTK_ERROR("Problem acquiring pointer to Coordinates::volume_form variable.");
+        }
+    }
+
+
+    // Zero out the integrands before filling them
+    // WARNING: This zeroes out everything, including the ghost zones,
+    //          which are not included in the reductions anyway
+
+    for (int k = 0 ; k < cctk_lsh[2] ; k++) {
+    for (int j = 0 ; j < cctk_lsh[1] ; j++) {
+    for (int i = 0 ; i < cctk_lsh[0] ; i++) {
+        const CCTK_INT ind = CCTK_GFINDEX3D(cctkGH, i, j, k);
+        com_integrand_rho[ind] = 0;
+        com_integrand_x[ind]   = 0;
+        com_integrand_y[ind]   = 0;
+        com_integrand_z[ind]   = 0;
+    }
+    }
+    }
+
+
+    // Compute the integrands
+    //
+    // Note that these loops will also exclude at least one layer of points on the physical boundary
+    // (see https://lists.einsteintoolkit.org/pipermail/users/2024-September/009465.html),
+    // but as of now we choose to live with that (as in UAv_Analysis)
+    //
+    // WARNING: This is a loop-local (local) routine: we only have access to the
+    //          data of the current refinement level, which is what we want.
+
+    for (int k = 1 + cctk_nghostzones[2] ; k < cctk_lsh[2] - cctk_nghostzones[2] ; k++) {
+    for (int j = 1 + cctk_nghostzones[1] ; j < cctk_lsh[1] - cctk_nghostzones[1] ; j++) {
+    for (int i = 1 + cctk_nghostzones[0] ; i < cctk_lsh[0] - cctk_nghostzones[0] ; i++) {
+
+        const CCTK_INT ind = CCTK_GFINDEX3D(cctkGH, i, j, k);
+
+
+        // ----- Excision -----
+        // Checking if inside the horizon, if asking for it to be excised
+        // No need to compute the rest if inside the horizon
+
+        int docalc = 1;
+        if (excise_horizon) {
+            docalc = SpaceMask_CheckState(space_mask, ind, "mask", "outside");
+        }
+
+
+        // ----- Metric determinant -----
+
+        const CCTK_REAL gxx_l = gxx[ind];
+        const CCTK_REAL gxy_l = gxy[ind];
+        const CCTK_REAL gxz_l = gxz[ind];
+        const CCTK_REAL gyy_l = gyy[ind];
+        const CCTK_REAL gyz_l = gyz[ind];
+        const CCTK_REAL gzz_l = gzz[ind];
+
+        const CCTK_REAL detgd =       gxx_l * gyy_l * gzz_l
+                                + 2 * gxy_l * gxz_l * gyz_l
+                                -     gxx_l * gyz_l * gyz_l
+                                -     gyy_l * gxz_l * gxz_l
+                                -     gzz_l * gxy_l * gxy_l;
+
+
+        // ----- Volume element -----
+
+        const CCTK_REAL dV = (volume_form != NULL) ? volume_form[ind] : dV_cart;
+
+        const CCTK_REAL vol3 = sqrt(detgd) * dV;
+
+
+        // ----- Density -----
+        // Eulerian energy density rho = - n^mu n^nu T_mu_nu
+        // (from TmunuBase, replicated from UAv_Analysis)
+
+        const CCTK_REAL alph    = alp[ind];
+        const CCTK_REAL betax_l = betax[ind];
+        const CCTK_REAL betay_l = betay[ind];
+        const CCTK_REAL betaz_l = betaz[ind];
+
+        CCTK_REAL rho = eTtt[ind];
+        rho = rho - 2 * betax_l * eTtx[ind];
+        rho = rho - 2 * betay_l * eTty[ind];
+        rho = rho - 2 * betaz_l * eTtz[ind];
+        rho = rho + betax_l * betax_l * eTxx[ind];
+        rho = rho + betay_l * betay_l * eTyy[ind];
+        rho = rho + betaz_l * betaz_l * eTzz[ind];
+        rho = rho + 2 * betax_l * betay_l * eTxy[ind];
+        rho = rho + 2 * betax_l * betaz_l * eTxz[ind];
+        rho = rho + 2 * betay_l * betaz_l * eTyz[ind];
+        rho = rho / (alph * alph);
+
+        const CCTK_REAL rho_vol4 = rho * alph * vol3;
+
+
+        // ----- Integrands -----
+        // dCoM^i = rho * x^i * alpha * sqrt(detgd) dV
+        // The division by the integral of the density is done after the reduction.
+        // We don't use x1 = x - x_track (and add the tracking location back after
+        // the reduction), so that the integrand grid functions can be compared
+        // with the ones of UAv_Analysis directly.
+
+        if (docalc) {
+            com_integrand_rho[ind] = rho_vol4 * (*sym_factor_drho);
+            com_integrand_x[ind]   = x[ind] * rho_vol4 * (*sym_factor_dpx_coM);
+            com_integrand_y[ind]   = y[ind] * rho_vol4 * (*sym_factor_dpy_coM);
+            com_integrand_z[ind]   = z[ind] * rho_vol4 * (*sym_factor_dpz_coM);
+        }
+
+    }
+    }
+    }
+}
+
+
+///////////////////////////////////////////////////////////////////////////////
+// Reduction of the integrands, and setting of the center of mass scalars
+///////////////////////////////////////////////////////////////////////////////
+
+void TargetTracker_ComDoSum(CCTK_ARGUMENTS) {
+    DECLARE_CCTK_ARGUMENTS;
+    DECLARE_CCTK_PARAMETERS;
+
+    // The targets are processed in the decreasing order of the counter (from the last to the first)
+    const CCTK_INT itarget = nmax_targets - *com_counter;
+
+    // Inactive target: nothing to do (should not happen in normal circumstances)
+    if (!is_computed[itarget]) {
+        return;
+    }
+
+
+    // ----- Reduction -----
+
+    enum { num_fields = 4, num_out_vals = 1 };
+
+    // Helper to have a homogeneous interface for reduction output to cactus variables
+    CCTK_REAL out_vals[num_fields * num_out_vals];
+
+    CCTK_INT reduction_handle = CCTK_ReductionHandle("sum");
+    if (reduction_handle < 0) {
+        CCTK_WARN(0, "Could not obtain a handle for sum reduction");
+        return;
+    }
+
+    const char *const varnames[num_fields] = {
+        "TargetTracker::com_integrand_rho",
+        "TargetTracker::com_integrand_x",
+        "TargetTracker::com_integrand_y",
+        "TargetTracker::com_integrand_z"};
+
+    // Get IDs of all variables
+    CCTK_INT varid[num_fields];
+    for (int i = 0 ; i < num_fields ; i++) {
+        varid[i] = CCTK_VarIndex(varnames[i]);
+        if (varid[i] < 0) {
+            CCTK_VWARN(CCTK_WARN_ABORT, "Could not get index to grid function %s", varnames[i]);
+        }
+    }
+
+    CCTK_INT ierr = CCTK_Reduce(cctkGH, -1, reduction_handle, num_out_vals,
+        CCTK_VARIABLE_REAL, out_vals, num_fields,
+        varid[0], varid[1], varid[2], varid[3]);
+
+    if (ierr < 0) {
+        CCTK_WARN(0, "Error while reducing the com_integrand grid functions.");
+        return;
+    }
+
+
+    // ----- Output -----
+    // Center of mass: division by the mass integral (with sanity checks)
+    // Note that with symmetry factors, the numerator integrands for some components
+    // are deliberately zeroed out, so the division by the (nonzero) mass integral
+    // is still well-defined.
+
+    const CCTK_REAL mass = out_vals[0];
+
+    // Sanity checks: the mass integral should be positive (and finite) to make sense
+    // (typical failure case: no matter in the integration volume, e.g. a vacuum
+    // simulation or the matter having left the sphere)
+    const int mass_ok = (mass > 0) && isfinite(mass);
+
+    int com_ok = mass_ok;
+    for (int i = 0 ; i < 3 ; i++) {
+        com_ok = com_ok && isfinite(out_vals[1 + i]);
+    }
+
+    if (com_ok) {
+        target_com_x[itarget]    = out_vals[1] / mass;
+        target_com_y[itarget]    = out_vals[2] / mass;
+        target_com_z[itarget]    = out_vals[3] / mass;
+        target_com_mass[itarget] = mass;
+    }
+    // Failure: keep the previous values
+    else {
+        CCTK_VWARN(CCTK_WARN_COMPLAIN,
+                   "Invalid center of mass integral for target %d (mass = %g). Keeping the previous values (x,y,z) = (%g,%g,%g).",
+                   itarget, (double)mass,
+                   (double)target_com_x[itarget], (double)target_com_y[itarget], (double)target_com_z[itarget]);
+    }
+
+
+    if (verbose) {
+        CCTK_VINFO("Center of mass of target %d: (x,y,z) = (%g,%g,%g), mass = %g",
+                   itarget,
+                   (double)target_com_x[itarget], (double)target_com_y[itarget], (double)target_com_z[itarget],
+                   (double)target_com_mass[itarget]);
+    }
+}

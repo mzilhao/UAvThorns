@@ -1,10 +1,66 @@
 #include <cctk.h>
 #include <cctk_Arguments.h>
 #include <cctk_Parameters.h>
+#include <cctk_Functions.h>
 
 void TargetTracker_ParamCheck(CCTK_ARGUMENTS) {
     DECLARE_CCTK_ARGUMENTS;
     DECLARE_CCTK_PARAMETERS;
+
+    // -------------------------------
+    // CENTER OF MASS CALCULATION
+    // -------------------------------
+
+    // See if the calculation could be requested at all
+    CCTK_INT want_com = 0;
+    for (CCTK_INT itarget = 0; itarget < nmax_targets; itarget++) {
+        if (compute_com[itarget]) {
+            want_com = 1;
+        }
+    }
+
+    if (want_com && com_every <= 0) {
+        CCTK_VPARAMWARN("'com_every' is <= 0, but some 'compute_com' parameter is set to yes: the center of mass will not be computed.");
+    }
+
+    // For multipatch / Llama grids, we need the volume form computed in Coordinates.
+    // This is activated by the parameter Coordinates::store_volume_form = yes.
+    // (adapted from UAv_Analysis)
+    if (want_com && com_every > 0) {
+        // Trick to check multipatch usage without having to inherit the thorn
+        if( CCTK_IsFunctionAliased("MultiPatch_GetDomainSpecification") ) {
+
+            // -1 is the "error" return value of ParameterGetType() (see the flesh)
+            CCTK_INT type = -1;
+            const CCTK_INT* store_volume_form_ptr = CCTK_ParameterGet("store_volume_form", "Coordinates", &type);
+
+            if (store_volume_form_ptr == NULL || type != PARAMETER_BOOLEAN) {
+                CCTK_ERROR("Problem acquiring pointer to Coordinates::store_volume_form parameter.");
+            }
+            else if (!(*store_volume_form_ptr)) {
+                CCTK_VPARAMWARN("You are using a multipatch system, and the center of mass is computed, but you set Coordinates::store_volume_form = no. "
+                                "TargetTracker will not be able to use the volume form for the integration. "
+                                "Please set Coordinates::store_volume_form = yes.");
+            }
+            // else, we're good to go
+        }
+    }
+
+    // Check the excision parameter (soft warning: it depends on the user's schedule)
+    if (want_com && excise_horizon) {
+        // The mask type is registered by thorns like AHFinderDirect.
+        // At PARAMCHECK we cannot know for sure that such a thorn is active,
+        // so we only warn if the SpaceMask functions are not aliased at all.
+        // (The check is done again at runtime in the computation, where it is fatal.)
+        if (!CCTK_IsFunctionAliased("SpaceMask_GetTypeBits")) {
+            CCTK_VPARAMWARN("'excise_horizon' is yes, but the SpaceMask functions are not available: "
+                            "make sure SpaceMask and a thorn registering the 'mask' type (e.g. AHFinderDirect) are active.");
+        }
+    }
+
+    // -------------------------------
+    // TRACKING
+    // -------------------------------
 
     for (CCTK_INT itarget = 0; itarget < nmax_targets; itarget++) {
         

@@ -148,11 +148,13 @@ void TargetChangeOneDim (CCTK_ARGUMENTS, struct TargetInfoBundleOneDim bundle) {
         
         // Target is valid: update target_id
         if (verbose) {
+            // WARNING: CCTK_VarName returns NULL for invalid (e.g. negative) indices (see CCTK_VarName in the flesh)
+            const char* from_name = (*ptr_current_id >= 0) ? CCTK_VarName(*ptr_current_id) : "(fixed)";
             CCTK_VINFO("At iteration %d (simulation time %g), target %d %s component was successfully changed from '%s' to '%s'", 
                 cctk_iteration, cctk_time,
                 itarget, dim_name,
-                CCTK_VarName(*ptr_current_id),
-                tgt_name
+                from_name,
+                CCTK_Equals(tgt_name, "") ? "(fixed)" : tgt_name
             );
         }
         *ptr_current_id = tgt_id;

@@ -2,6 +2,7 @@
 
 # Source files in this directory
 SRCS =  TargetTracker.c  \
+        TargetTracker_Com.c \
         Initialization.c \
         ParamCheck.c
 

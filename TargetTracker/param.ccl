@@ -94,6 +94,30 @@ REAL stop_tracking_after_time[10] "Stop tracking after the given time" STEERABLE
   *:* :: "after this time (exclusively)"
 } 1e+99
 
+# Self-contained calculation of the center of mass of the matter distribution
+# (see the documentation)
+
+BOOLEAN compute_com[10] "Compute the center of mass of the matter distribution for this target (from the stress-energy tensor). The result is stored in the grid scalars 'target_com_x/y/z'. The calculation is restricted to a sphere around the tracked point if 'com_inside_radius' or 'com_outside_radius' are set." STEERABLE=ALWAYS
+{
+} "no"
+
+INT com_every "Do the center of mass calculation every N iterations (all targets together). Use parameter 'compute_com' to (de)activate targets. 0 or a negative value disables the calculation." STEERABLE=RECOVER
+{
+  *:* :: "0 or a negative value means never compute it"
+} 1
+
+BOOLEAN excise_horizon "excise the region inside the AH from the center of mass integration? Requires AHFinderDirect (or a similar thorn setting the mask with the 'outside' state of type 'mask')." STEERABLE=ALWAYS
+{
+} "no"
+
+KEYWORD com_symmetry "Symmetry type of the center of mass integrands, in order to multiply by the correct factor." STEERABLE=RECOVER
+{
+  "none"     :: "no symmetry"
+  "bitant_x" :: "bitant even symmetry across x=0 plane"
+  "bitant_y" :: "bitant even symmetry across y=0 plane"
+  "bitant_z" :: "bitant even symmetry across z=0 plane"
+} "none"
+
 INT which_surface_to_store_info[10] "A spherical surface index where we can store the target location. Make sure you have created the surface!" STEERABLE=RECOVER
 {
   -1  :: "don't store target location"
