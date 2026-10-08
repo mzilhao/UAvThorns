@@ -1,0 +1,15 @@
+# Test configuration for thorn TargetTracker
+#
+# The reference data files are CarpetIOASCII output (extension 'asc'); the
+# header comment lines (dates, build IDs, ...) are ignored by the test
+# comparison, only the data columns are compared.
+
+EXTENSIONS asc
+
+RELTOL 1e-10
+ABSTOL 1e-12
+
+# Self-validating checks for the volume-restriction identities, only for the
+# test that sets up the relevant targets (pattern is matched against the file
+# path, so it is scoped to that test's output directory).
+POSTPROC check_restriction com_restrict_identity.*target_com

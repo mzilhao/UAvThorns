@@ -1,0 +1,187 @@
+# TargetTracker test: volume-restriction identities
+#
+# A constant scalar field with a non-zero mass mu gives a spatially constant
+# Eulerian density rho = mu^2 |phi|^2, so the mass integral is proportional to
+# the number of grid points in the integration volume. This makes the
+# restriction scheme exactly checkable:
+#   inside(r) + outside(r) == global
+#   inside(1) + shell(1,2] == inside(2)
+#
+# Targets: 0 global, 1 inside r=2, 2 outside r=2, 3 inside r=1, 4 shell(1,2].
+
+ActiveThorns = "
+  ADMBase
+  ADMMacros
+  Boundary
+  Carpet
+  CarpetInterp
+  CarpetIOASCII
+  CarpetIOBasic
+  CarpetLib
+  CarpetReduce
+  CartGrid3D
+  CoordBase
+  CoordGauge
+  Dissipation
+  Exact
+  GenericFD
+  InitBase
+  IOUtil
+  LocalInterp
+  LoopControl
+  MoL
+  NewRad
+  ReflectionSymmetry
+  ScalarBase
+  ScalarEvolve
+  ScalarInit
+  Slab
+  SpaceMask
+  SphericalSurface
+  StaticConformal
+  SymBase
+  TargetTracker
+  Time
+  TmunuBase
+"
+
+# Grid setup
+#------------------------------------------------------------------------------
+
+CartGrid3D::type                     = "coordbase"
+Carpet::domain_from_coordbase        = yes
+CoordBase::domainsize                = "minmax"
+
+CoordBase::xmin                      = -4.0
+CoordBase::ymin                      = -4.0
+CoordBase::zmin                      = -4.0
+CoordBase::xmax                      = +4.0
+CoordBase::ymax                      = +4.0
+CoordBase::zmax                      = +4.0
+CoordBase::dx                        =  1.0
+CoordBase::dy                        =  1.0
+CoordBase::dz                        =  1.0
+
+driver::ghost_size                   = 3
+
+CoordBase::boundary_size_x_lower     = 3
+CoordBase::boundary_size_y_lower     = 3
+CoordBase::boundary_size_z_lower     = 3
+CoordBase::boundary_size_x_upper     = 3
+CoordBase::boundary_size_y_upper     = 3
+CoordBase::boundary_size_z_upper     = 3
+
+ReflectionSymmetry::reflection_x     = no
+ReflectionSymmetry::reflection_y     = no
+ReflectionSymmetry::reflection_z     = no
+
+# Initial data (flat space + constant scalar)
+#------------------------------------------------------------------------------
+
+ADMBase::initial_data                 = "exact"
+ADMBase::initial_lapse                = "exact"
+ADMBase::initial_shift                = "exact"
+ADMBase::initial_dtlapse              = "exact"
+ADMBase::initial_dtshift              = "exact"
+
+ADMBase::lapse_timelevels             = 3
+ADMBase::shift_timelevels             = 3
+ADMBase::metric_timelevels            = 3
+
+Exact::exact_model                    = "Minkowski"
+
+ScalarBase::initial_scalar            = "ID_SF_Const"
+ScalarBase::mu                        = 1.0
+ScalarInit::l0SF                      = 0
+ScalarInit::m0SF                      = 0
+ScalarInit::ampSF                     = 1.0
+
+InitBase::initial_data_setup_method   = "init_some_levels"
+Carpet::init_fill_timelevels          = yes
+Carpet::init_3_timelevels             = no
+
+# Evolution
+#------------------------------------------------------------------------------
+
+ADMBase::evolution_method             = "static"
+ADMBase::lapse_evolution_method       = "static"
+ADMBase::shift_evolution_method       = "static"
+ADMBase::dtlapse_evolution_method     = "static"
+ADMBase::dtshift_evolution_method     = "static"
+
+ScalarBase::evolution_method          = "ScalarEvolve"
+ScalarEvolve::chi_floor               = 1.0e-06
+
+TmunuBase::stress_energy_storage      = yes
+TmunuBase::stress_energy_at_RHS       = yes
+TmunuBase::timelevels                 = 1
+TmunuBase::prolongation_type          = "none"
+
+MoL::ODE_Method                       = "RK4"
+MoL::MoL_Intermediate_Steps           = 4
+MoL::MoL_Num_Scratch_Levels           = 1
+
+Carpet::num_integrator_substeps       = 4
+Time::dtfac                           = 0.25
+
+# Spherical surfaces (none needed, but TargetTracker inherits the implementation)
+#------------------------------------------------------------------------------
+
+SphericalSurface::nsurfaces           = 1
+SphericalSurface::maxntheta           = 10
+SphericalSurface::maxnphi             = 20
+SphericalSurface::verbose             = no
+
+SphericalSurface::ntheta              [0] = 10
+SphericalSurface::nphi                [0] = 20
+SphericalSurface::nghoststheta        [0] = 2
+SphericalSurface::nghostsphi          [0] = 2
+
+# Center of mass, restricted
+#------------------------------------------------------------------------------
+
+TargetTracker::compute_com                    [0] = yes
+TargetTracker::initial_x                      [0] = 0.0
+
+TargetTracker::compute_com                    [1] = yes
+TargetTracker::initial_x                      [1] = 0.0
+TargetTracker::com_inside_radius              [1] = 2.0
+
+TargetTracker::compute_com                    [2] = yes
+TargetTracker::initial_x                      [2] = 0.0
+TargetTracker::com_outside_radius             [2] = 2.0
+
+TargetTracker::compute_com                    [3] = yes
+TargetTracker::initial_x                      [3] = 0.0
+TargetTracker::com_inside_radius              [3] = 1.0
+
+TargetTracker::compute_com                    [4] = yes
+TargetTracker::initial_x                      [4] = 0.0
+TargetTracker::com_inside_radius              [4] = 2.0
+TargetTracker::com_outside_radius             [4] = 1.0
+
+TargetTracker::com_every                           = 1
+TargetTracker::com_symmetry                        = "none"
+TargetTracker::verbose                             = yes
+
+# Output
+#------------------------------------------------------------------------------
+
+Cactus::cctk_run_title       = $parfile
+IO::out_dir                  = $parfile
+IO::out_fileinfo             = "axis labels"
+
+IOASCII::one_file_per_group  = yes
+
+IOASCII::out0D_every         = 1
+IOASCII::out0D_point_x       = 4.0
+IOASCII::out0D_point_y       = 4.0
+IOASCII::out0D_vars          = "
+  TargetTracker::target_com
+"
+
+# Run termination
+#------------------------------------------------------------------------------
+
+Cactus::terminate            = "iteration"
+Cactus::cctk_itlast          = 2

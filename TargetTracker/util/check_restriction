@@ -1,0 +1,60 @@
+#!/usr/bin/perl
+#
+# Postprocessor for the TargetTracker test 'com_restrict_identity'.
+#
+# Reads a CarpetIOASCII target_com output file (path given as argument, as the
+# ET testsuite invokes postprocessors) and checks the volume-restriction
+# identities by emitting integer flags, so that the test fails if an identity
+# is violated in the new run:
+#
+#   A = mass[inside(r=2)] + mass[outside(r=2)] - mass[global]     (should be 0)
+#   B = mass[inside(r=1)] + mass[shell(1,2]] - mass[inside(r=2)]  (should be 0)
+#
+# The flags are compared exactly against the reference run, so a future change
+# that breaks either identity turns the test red.
+
+use strict;
+use warnings;
+
+my $file = shift or die "usage: $0 file\n";
+
+open(my $fh, '<', $file) or die "cannot open $file: $!";
+
+my %mass_col;
+my @last;
+while (my $line = <$fh>) {
+    if ($line =~ /^\s*#/) {
+        while ($line =~ /(\d+):target_com_mass\[(\d+)\]/g) {
+            $mass_col{$2} = $1;
+        }
+        next;
+    }
+    next if $line =~ /^\s*$/;
+    @last = split ' ', $line;
+}
+close $fh;
+
+die "no data lines in $file\n" unless @last;
+
+# 'mass_col' holds 1-based column numbers from the header; @last is 0-based
+sub mass {
+    my ($i) = @_;
+    return defined $mass_col{$i} && $mass_col{$i} <= @last
+        ? $last[ $mass_col{$i} - 1 ]
+        : 0;
+}
+
+my $global   = mass(0);
+my $inside2  = mass(1);
+my $outside2 = mass(2);
+my $inside1  = mass(3);
+my $shell12  = mass(4);
+
+my $A = $inside2 + $outside2 - $global;
+my $B = $inside1 + $shell12 - $inside2;
+
+my $tol = 1e-8;
+
+printf "mass_global_positive %d\n", ($global > 0 ? 1 : 0);
+printf "identity_inside_plus_outside %d\n", (abs($A) < $tol ? 1 : 0);
+printf "identity_shell_decomposition %d\n", (abs($B) < $tol ? 1 : 0);

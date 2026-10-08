@@ -175,9 +175,10 @@ void TargetTracker_ComIntegrand(CCTK_ARGUMENTS) {
     // calculation still to be done (see TargetTracker_ComCounter)
     const CCTK_INT itarget = *com_counter - 1;
 
-    // Inactive target: nothing to do (should not happen in normal circumstances)
+    // Inactive target: nothing to do.
+    // NOTE: The counter iterates over all target indices from the highest computed
+    //       one down to 0, so targets in the gaps (not computed) are expected here.
     if (itarget < 0 || !is_computed[itarget]) {
-        CCTK_VWARN(CCTK_WARN_COMPLAIN, "In the center of mass calculation, target %d is marked as computed but is inactive. Skipping it.", itarget);
         return;
     }
 

@@ -1,0 +1,197 @@
+Cactus Code Thorn TargetTracker
+Thorn Author(s)     : Jordan Nicoules
+                      Miguel Zilhão
+Thorn Maintainer(s) : Jordan Nicoules
+                      Miguel Zilhão
+--------------------------------------------------------------------------
+
+Purpose of the thorn:
+
+Track the locations of a number of targets during an evolution and update the
+locations of associated `SphericalSurface`s.
+
+It can be used together with any thorn computing suitable grid scalars, and the
+grid scalars computed by TargetTracker itself (`target_loc_*`, `target_com_*`)
+can be fed back into it or into other thorns.
+
+The targets are configured with per-target parameters (10 targets by
+default, see `nmax_targets`), in the style of `SphericalSurface`.
+
+
+Tracking targets
+----------------
+
+### Basic usage
+
+For each target i (0 <= i < nmax_targets), set `track[i] = yes` and
+provide the grid scalars to track with `target_x/y/z[i]`, e.g.
+
+    TargetTracker::track               [0] = yes
+    TargetTracker::target_x            [0] = "PunctureTracker::pt_loc_x[0]"
+    TargetTracker::target_y            [0] = "PunctureTracker::pt_loc_y[0]"
+    TargetTracker::target_z            [0] = "PunctureTracker::pt_loc_z[0]"
+    TargetTracker::which_surface_to_store_info[0] = 0
+
+The tracked coordinates are stored in the public grid scalars
+`TargetTracker::target_loc_x/y/z[i]` at every tracking iteration
+(see `track_every`, `start_tracking_after_time`, `stop_tracking_after_time`).
+If `which_surface_to_store_info[i]` is set, the centroid of the given
+spherical surface is set to the tracked location, and the surface is
+marked as active/valid. This, in particular, moves `SphericalSurface`s
+(and thus e.g. `AHFinderDirect`'s or `QuasiLocalMeasures`'s surfaces)
+during the evolution, as long as the corresponding grid scalars are
+updated. (The user must ensure the surface resolutions `ntheta`/`nphi`
+etc. are set.)
+
+A target with `target_*` set to "" is "fixed": it does not move
+(its location is set by `initial_x/y/z[i]`).
+
+### Surface-following mode ('surface to tracker')
+
+Setting `loc_from_surface_mode[i] = yes` inverts the data flow: the
+tracker does not read grid scalars but instead copies the centroid of
+its associated surface into `target_loc`. This is useful to carry a
+tracker across the formation of a new horizon: once `AHFinderDirect`
+finds the horizon and stores it into the surface, the tracker keeps
+the location, continuously, from the surface.
+
+### Tracking the opposite, and ad hoc adjustments
+
+Two methods allow to derive the tracked location from the tracked
+scalar(s), for cases not covered by a suitable grid scalar (e.g. when
+tracking the mirror of a puncture in a symmetry run):
+
+  - `track_opposite[i] = yes`: track the opposite of the target
+    (loc = -target). This takes precedence over the next method.
+
+  - `tracker_adjust[i] = yes` with `tracker_x/y/z_adjust_factor[i]`
+    and `tracker_x/y/z_adjust_origin[i]`: apply an affine adjustment
+    loc = factor * target + origin, for each direction independently.
+    A fixed dimension (empty target name) is not adjusted.
+
+All these parameters are STEERABLE=ALWAYS, and can be steered at
+runtime (e.g. with the `Trigger` thorn). The interface quantities
+(`target_loc`, `adj_fac`, `adj_ori`) and the relevant internal flags
+are recovered from checkpoints; most other parameters are STEERABLE=RECOVER
+and taken from the parameter file at recovery. In case of ambiguity at
+recovery (a parameter changed during the run and reused identically, or
+a user-modified parameter file), the internal values are recovered and
+the parameters reset to them, with warnings; `force_params_at_recovery[i] = yes`
+reverses this for target i (see the caveats in param.ccl).
+
+
+Self-contained center of mass
+-----------------------------
+
+For each target with `compute_com[i] = yes`, TargetTracker computes the
+center of mass of the matter distribution,
+
+    CoM^i = \int x^i rho alpha sqrt(gamma) dV / \int rho alpha sqrt(gamma) dV,
+
+with rho = - n^mu n^nu T_mu_nu built from the stress-energy tensor of
+`TmunuBase`. It is scheduled to run *before* the tracking itself, so that the
+results can be tracked in the same pass. The results are stored in the public,
+checkpointed grid scalars
+
+    TargetTracker::target_com_x/y/z[i]   (center of mass)
+    TargetTracker::target_com_mass[i]    (mass integral, i.e. the denominator)
+
+and can be output, tracked (with the parameters `target_*[i]`, by this
+thorn or any other), or used to move the corresponding puncture/surface.
+
+Restricting the integral to a spherical shell centered at the tracked
+point is done with `com_inside_radius[i]` and `com_outside_radius[i]`
+(negative = no restriction):
+
+    com_outside_radius[i] < r <= com_inside_radius[i]
+
+with r the coordinate distance to `target_loc_*[i]`. The (inclusive
+inside, exclusive outside) conventions are complementary, so that
+inside + outside integrals add up to the global one. This is useful
+in particular for tracking the matter around a given object (e.g.
+the collapsing scalar cluster of a hairy BH evolution), and the sphere
+moves with the tracker.
+
+The integrands are computed on all refinement levels at once (a single
+set of grid functions is recomputed and reduced sequentially for each
+target, in the spirit of `VolumeIntegrals_GRMHD`), and reduced with the
+driver's sum reduction, which handles mesh refinement. The following
+global parameters control the calculation:
+
+  - `com_every`: do the calculation every N iterations (for all
+    targets together; 0 disables). Note that the results are stored in
+    the grid scalars between calculations (checkpointed), and that the
+    calculation requires the stress-energy tensor of the current pass
+    (the user must make sure `TmunuBase` storage is on and the tensor
+    is up to date, e.g. with `TmunuBase::stress_energy_at_RHS = yes`).
+
+  - `excise_horizon`: exclude the region inside the (apparent) horizon
+    from the integration. This relies on the mask set by `AHFinderDirect`
+    (SpaceMask type "mask", state "outside"), similarly to `UAv_Analysis`.
+
+  - `com_symmetry`: multiply the integrands by the appropriate factors
+    for bitant runs ("none", "bitant_x/y/z"), as in `UAv_Analysis`.
+
+If the mass integral vanishes (e.g. an empty sphere), the previous
+values are kept and a warning printed (the calculation becomes trivially
+ill-defined).
+
+Since the integrands are private to the thorn, the grid functions do not
+need to be sync'ed between calculations for correctness of the reduction;
+they are nevertheless synced to make their (ghost) values meaningful for
+output. The reduction follows the driver's weights (in particular,
+half-weighting grid layers on symmetry planes, as required to normalize
+symmetric integrals).
+
+
+Schedule placement
+------------------
+
+The thorn runs at ANALYSIS (as does e.g. `Trigger_Check`, which runs before it).
+The CoM calculation thus runs before the tracking, so that the grid scalars it
+produces can be tracked in the same pass (by this thorn or others). Note the
+one-pass lag for a *self-tracking* restriction window (the sphere is centered on
+the previous pass's tracked point): same feedback design as
+`VolumeIntegrals_GRMHD`'s moving spheres. The `after
+AHFinderDirect_maybe_do_masks` (used by `UAv_Analysis`) is not part of this
+schedule: with `excise_horizon = yes`, the user must make sure the mask is up to
+date at ANALYSIS (e.g. run `AHFinderDirect` at CCTK_POSTSTEP, as in its default
+configuration, or at ANALYSIS before this thorn — see the discussion in the
+schedule.ccl of both thorns).
+
+Other schedule locations: `ParamCheck` (parameter checks), `INITIAL`
+and `CCTK_POST_RECOVER_VARIABLES` (initialization, recovery),
+`CCTK_INITIAL`/`CCTK_POST_RECOVER_VARIABLES` (counter safety),
+`BASEGRID` (flags for the CoM: multipatch detection, symmetry factors).
+
+
+Known limitations
+-----------------
+
+  - 10 targets maximum (crutch parameter `nmax_targets`).
+
+  - The thorn is scheduled at ANALYSIS only (no POSTSTEP option as of
+    yet; see the TODO in schedule.ccl). As with `UAv_Analysis`, care
+    must be taken with schedule bins and MoL substeps if derivatives
+    or reductions are involved.
+
+  - The CoM restriction is a sphere centered at the tracked point; the
+    radius is a fixed parameter (in particular it does not follow a
+    possibly non-spherical surface). Arbitrary integrands, and other
+    integral quantities (energy, angular momentum, quadrupole...) are
+    not provided: see `UAv_Analysis` and `VolumeIntegrals_GRMHD`.
+
+  - Only Carpet(-style) drivers are supported/relevant (in particular
+    for the reduction weights), and no accelerator offloading is done.
+
+  - Checkpoint recovery of parameters: STEERABLE=ALWAYS parameters are
+    recovered through checkpointed internal flags (see the recovery
+    section above and the caveats therein). STEERABLE=RECOVER parameters
+    are taken from the parameter file. The tracker grid scalars
+    (`target_loc`, `target_com`) are checkpointed as well.
+
+  - The testsuite deliberately does not cover checkpoint recovery: at the
+    time of writing, restarting any evolution run with this configuration
+    (even a plain `ScalarEvolve` run, with this thorn disabled) aborts in
+    `CarpetIOHDF5::Recover` (a `CarpetLib` timelevel assertion), i.e. a
+    pre-existing driver issue rather than a TargetTracker one.

@@ -1,0 +1,151 @@
+# TargetTracker test: timing controls (start_tracking_after_time, track_every)
+#
+# Target 0 is fixed at (1,0,0). Target 1 copies target 0's tracked location but
+# only starts tracking at t >= 0.5, so target_loc[1] must stay at its initial
+# value (-2) for t < 0.5 and become 1 afterwards. Target 2 copies target 0 only
+# every 2 iterations (track_every = 2).
+
+ActiveThorns = "
+  ADMBase
+  ADMMacros
+  Boundary
+  Carpet
+  CarpetInterp
+  CarpetIOASCII
+  CarpetIOBasic
+  CarpetLib
+  CarpetReduce
+  CartGrid3D
+  CoordBase
+  CoordGauge
+  Exact
+  InitBase
+  IOUtil
+  LocalInterp
+  LoopControl
+  MoL
+  NewRad
+  ReflectionSymmetry
+  SpaceMask
+  SphericalSurface
+  StaticConformal
+  SymBase
+  TargetTracker
+  Time
+  TmunuBase
+"
+
+# Grid setup
+#------------------------------------------------------------------------------
+
+CartGrid3D::type                     = "coordbase"
+Carpet::domain_from_coordbase        = yes
+CoordBase::domainsize                = "minmax"
+
+CoordBase::xmin                      = -8.0
+CoordBase::ymin                      = -8.0
+CoordBase::zmin                      = -8.0
+CoordBase::xmax                      = +8.0
+CoordBase::ymax                      = +8.0
+CoordBase::zmax                      = +8.0
+CoordBase::dx                        =  1.0
+CoordBase::dy                        =  1.0
+CoordBase::dz                        =  1.0
+
+driver::ghost_size                   = 3
+
+CoordBase::boundary_size_x_lower     = 3
+CoordBase::boundary_size_y_lower     = 3
+CoordBase::boundary_size_z_lower     = 3
+CoordBase::boundary_size_x_upper     = 3
+CoordBase::boundary_size_y_upper     = 3
+CoordBase::boundary_size_z_upper     = 3
+
+ReflectionSymmetry::reflection_x     = no
+ReflectionSymmetry::reflection_y     = no
+ReflectionSymmetry::reflection_z     = no
+
+# Initial data (flat space)
+#------------------------------------------------------------------------------
+
+ADMBase::initial_data                 = "exact"
+ADMBase::initial_lapse                = "exact"
+ADMBase::initial_shift                = "exact"
+ADMBase::initial_dtlapse              = "exact"
+ADMBase::initial_dtshift              = "exact"
+
+ADMBase::lapse_timelevels             = 3
+ADMBase::shift_timelevels             = 3
+ADMBase::metric_timelevels            = 3
+
+Exact::exact_model                    = "Minkowski"
+
+InitBase::initial_data_setup_method   = "init_some_levels"
+Carpet::init_fill_timelevels          = yes
+Carpet::init_3_timelevels             = no
+
+# Evolution (static)
+#------------------------------------------------------------------------------
+
+ADMBase::evolution_method             = "static"
+ADMBase::lapse_evolution_method       = "static"
+ADMBase::shift_evolution_method       = "static"
+ADMBase::dtlapse_evolution_method     = "static"
+ADMBase::dtshift_evolution_method     = "static"
+
+MoL::ODE_Method                       = "RK4"
+MoL::MoL_Intermediate_Steps           = 4
+MoL::MoL_Num_Scratch_Levels           = 1
+
+Carpet::num_integrator_substeps       = 4
+Time::dtfac                           = 0.25
+
+# Spherical surfaces
+#------------------------------------------------------------------------------
+
+SphericalSurface::nsurfaces           = 1
+SphericalSurface::maxntheta           = 10
+SphericalSurface::maxnphi             = 20
+SphericalSurface::verbose             = no
+
+SphericalSurface::ntheta              [0] = 10
+SphericalSurface::nphi                [0] = 20
+SphericalSurface::nghoststheta        [0] = 2
+SphericalSurface::nghostsphi          [0] = 2
+
+# Target tracking
+#------------------------------------------------------------------------------
+
+# Target 0: fixed at (1,0,0)
+TargetTracker::track                          [0] = yes
+TargetTracker::initial_x                      [0] = 1.0
+
+# Target 1: delayed start at t >= 0.5
+TargetTracker::track                          [1] = yes
+TargetTracker::initial_x                      [1] = -2.0
+TargetTracker::target_x                       [1] = "TargetTracker::target_loc_x[0]"
+TargetTracker::start_tracking_after_time      [1] = 0.5
+
+TargetTracker::verbose                             = yes
+
+# Output
+#------------------------------------------------------------------------------
+
+Cactus::cctk_run_title       = $parfile
+IO::out_dir                  = $parfile
+IO::out_fileinfo             = "none"
+
+IOASCII::one_file_per_group  = yes
+
+IOASCII::out0D_every         = 1
+IOASCII::out0D_point_x       = 4.0
+IOASCII::out0D_point_y       = 4.0
+IOASCII::out0D_vars          = "
+  TargetTracker::target_loc
+"
+
+# Run termination
+#------------------------------------------------------------------------------
+
+Cactus::terminate            = "iteration"
+Cactus::cctk_itlast          = 4
