@@ -250,6 +250,28 @@ void TargetTracker_ComIntegrand(CCTK_ARGUMENTS) {
     //
     // WARNING: This is a loop-local (local) routine: we only have access to the
     //          data of the current refinement level, which is what we want.
+    //
+    // The integrands are also zeroed outside/inside spheres centered at the tracking
+    // location of the target, following the scheme of VolumeIntegrals_GRMHD.
+    // The restriction radii are given by 'com_inside_radius' and 'com_outside_radius'
+    // (negative values = disabled); setting both integrates over a spherical shell.
+    // Note that the sphere is centered on the *tracked point* ('target_loc'), which moves
+    // with the tracker (in particular when it tracks the corresponding spherical surface),
+    // and that the current value is read in a global-early fashion (before the tracking
+    // updates it at this iteration). The integrand of each grid point is zeroed out unless
+    // com_outside_radius < r <= com_inside_radius, with the (<=, <) conventions of
+    // VolumeIntegrals_GRMHD.
+
+    const CCTK_REAL x_c   = target_loc_x[itarget];
+    const CCTK_REAL y_c   = target_loc_y[itarget];
+    const CCTK_REAL z_c   = target_loc_z[itarget];
+    const CCTK_REAL r_in  = com_inside_radius[itarget];
+    const CCTK_REAL r_out = com_outside_radius[itarget];
+
+    if (verbose) {
+        CCTK_VINFO("CoM pass for target %d: center = (%g,%g,%g), inside_radius = %g, outside_radius = %g",
+                   itarget, (double)x_c, (double)y_c, (double)z_c, (double)r_in, (double)r_out);
+    }
 
     for (int k = cctk_nghostzones[2] ; k < cctk_lsh[2] - cctk_nghostzones[2] ; k++) {
     for (int j = cctk_nghostzones[1] ; j < cctk_lsh[1] - cctk_nghostzones[1] ; j++) {
@@ -266,6 +288,14 @@ void TargetTracker_ComIntegrand(CCTK_ARGUMENTS) {
         if (excise_horizon) {
             docalc = SpaceMask_CheckState(space_mask, ind, "mask", "outside");
         }
+
+        // ----- Volume restriction -----
+        const CCTK_REAL dx_c = x[ind] - x_c;
+        const CCTK_REAL dy_c = y[ind] - y_c;
+        const CCTK_REAL dz_c = z[ind] - z_c;
+        const CCTK_REAL r2_c = dx_c*dx_c + dy_c*dy_c + dz_c*dz_c;
+        docalc = docalc && (r_in  <= 0 || r2_c <= r_in *r_in )
+                         && (r_out <= 0 || r2_c >  r_out*r_out);
 
 
         // ----- Metric determinant -----

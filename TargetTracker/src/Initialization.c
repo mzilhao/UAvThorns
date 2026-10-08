@@ -140,6 +140,21 @@ void OutputInfoInitOneTarget (CCTK_ARGUMENTS, CCTK_INT itarget) {
     // Center of mass calculation info
     if (is_computed[itarget]) {
         CCTK_VINFO("The center of mass of the matter distribution is computed for tracker %d.", itarget);
+        if (com_outside_radius[itarget] >= 0 && com_inside_radius[itarget] >= 0
+            && com_outside_radius[itarget] >= com_inside_radius[itarget]) {
+            CCTK_VINFO("WARNING: for tracker %d, 'com_outside_radius' >= 'com_inside_radius': the restricted integration region (a spherical shell) is empty.", itarget);
+        }
+        else {
+            if (com_inside_radius[itarget] >= 0) {
+                CCTK_VINFO("It is restricted to the inside of a sphere of radius %g centered at the tracked point.", com_inside_radius[itarget]);
+            }
+            if (com_outside_radius[itarget] >= 0) {
+                CCTK_VINFO("It is restricted to the outside of a sphere of radius %g centered at the tracked point.", com_outside_radius[itarget]);
+            }
+            if (com_inside_radius[itarget] < 0 && com_outside_radius[itarget] < 0) {
+                CCTK_VINFO("It runs over the whole grid (no restriction).");
+            }
+        }
     }
 }
 
