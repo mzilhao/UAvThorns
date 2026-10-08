@@ -46,17 +46,10 @@ void TargetTracker_ParamCheck(CCTK_ARGUMENTS) {
         }
     }
 
-    // Check the excision parameter (soft warning: it depends on the user's schedule)
-    if (want_com && excise_horizon) {
-        // The mask type is registered by thorns like AHFinderDirect.
-        // At PARAMCHECK we cannot know for sure that such a thorn is active,
-        // so we only warn if the SpaceMask functions are not aliased at all.
-        // (The check is done again at runtime in the computation, where it is fatal.)
-        if (!CCTK_IsFunctionAliased("SpaceMask_GetTypeBits")) {
-            CCTK_VPARAMWARN("'excise_horizon' is yes, but the SpaceMask functions are not available: "
-                            "make sure SpaceMask and a thorn registering the 'mask' type (e.g. AHFinderDirect) are active.");
-        }
-    }
+    // Check the excision parameter (runtime check in the computation:
+    // it is fatal there if the mask type is not registered by e.g. AHFinderDirect.)
+    // WARNING: CCTK_IsFunctionAliased is not usable here (SpaceMask functions are
+    //          plain C symbols, not schedule aliases)
 
     // -------------------------------
     // TRACKING

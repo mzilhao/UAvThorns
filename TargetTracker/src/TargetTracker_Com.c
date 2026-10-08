@@ -142,13 +142,14 @@ void TargetTracker_ComCounter(CCTK_ARGUMENTS) {
         return;
     }
 
-    // One iteration of the WHILE group per target with the calculation activated.
-    // The targets are processed in the decreasing order of the counter
-    // (from the last to the first).
+    // Register the index of the last (highest-index) target with the calculation
+    // activated, so that the WHILE group processes the computed targets from the
+    // last one to the first one (iterating on '*com_counter' as 1 + target index).
     *com_counter = 0;
-    for (CCTK_INT itarget = 0 ; itarget < nmax_targets ; itarget++) {
+    for (CCTK_INT itarget = nmax_targets - 1 ; itarget >= 0 ; itarget--) {
         if (is_computed[itarget]) {
-            (*com_counter)++;
+            *com_counter = itarget + 1;
+            break;
         }
     }
 }
@@ -169,11 +170,13 @@ void TargetTracker_ComIntegrand(CCTK_ARGUMENTS) {
     DECLARE_CCTK_ARGUMENTS;
     DECLARE_CCTK_PARAMETERS;
 
-    // The targets are processed in the decreasing order of the counter (from the last to the first)
-    const CCTK_INT itarget = nmax_targets - *com_counter;
+    // Decode the current target from the counter: the next target to process is
+    // given by (*com_counter - 1), which is the highest-index target with the
+    // calculation still to be done (see TargetTracker_ComCounter)
+    const CCTK_INT itarget = *com_counter - 1;
 
     // Inactive target: nothing to do (should not happen in normal circumstances)
-    if (!is_computed[itarget]) {
+    if (itarget < 0 || !is_computed[itarget]) {
         CCTK_VWARN(CCTK_WARN_COMPLAIN, "In the center of mass calculation, target %d is marked as computed but is inactive. Skipping it.", itarget);
         return;
     }
@@ -233,6 +236,14 @@ void TargetTracker_ComIntegrand(CCTK_ARGUMENTS) {
 
     // Compute the integrands
     //
+    // These loops cover the interior of the local box, i.e. they are the C-translation
+    // (0-based, half-open) of UAv_Analysis's Fortran loop
+    //     do k = 1+cctk_nghostzones(3), cctk_lsh(3)-cctk_nghostzones(3)
+    // (1-based, inclusive, covering C indices [nghostzones, lsh-nghostzones-1]).
+    // This includes the grid layer exactly on a symmetry plane (e.g. z=0 for a bitant box),
+    // which the reduction weights with 1/2 — necessary for the correct symmetry-normalized
+    // integrals, and consistent with UAv_Analysis.
+    //
     // Note that these loops will also exclude at least one layer of points on the physical boundary
     // (see https://lists.einsteintoolkit.org/pipermail/users/2024-September/009465.html),
     // but as of now we choose to live with that (as in UAv_Analysis)
@@ -240,9 +251,9 @@ void TargetTracker_ComIntegrand(CCTK_ARGUMENTS) {
     // WARNING: This is a loop-local (local) routine: we only have access to the
     //          data of the current refinement level, which is what we want.
 
-    for (int k = 1 + cctk_nghostzones[2] ; k < cctk_lsh[2] - cctk_nghostzones[2] ; k++) {
-    for (int j = 1 + cctk_nghostzones[1] ; j < cctk_lsh[1] - cctk_nghostzones[1] ; j++) {
-    for (int i = 1 + cctk_nghostzones[0] ; i < cctk_lsh[0] - cctk_nghostzones[0] ; i++) {
+    for (int k = cctk_nghostzones[2] ; k < cctk_lsh[2] - cctk_nghostzones[2] ; k++) {
+    for (int j = cctk_nghostzones[1] ; j < cctk_lsh[1] - cctk_nghostzones[1] ; j++) {
+    for (int i = cctk_nghostzones[0] ; i < cctk_lsh[0] - cctk_nghostzones[0] ; i++) {
 
         const CCTK_INT ind = CCTK_GFINDEX3D(cctkGH, i, j, k);
 
@@ -332,8 +343,8 @@ void TargetTracker_ComDoSum(CCTK_ARGUMENTS) {
     DECLARE_CCTK_ARGUMENTS;
     DECLARE_CCTK_PARAMETERS;
 
-    // The targets are processed in the decreasing order of the counter (from the last to the first)
-    const CCTK_INT itarget = nmax_targets - *com_counter;
+    // Decode the current target from the counter (see TargetTracker_ComIntegrand)
+    const CCTK_INT itarget = *com_counter - 1;
 
     // Inactive target: nothing to do (should not happen in normal circumstances)
     if (!is_computed[itarget]) {
