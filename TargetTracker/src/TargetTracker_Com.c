@@ -247,7 +247,7 @@ void TargetTracker_ComIntegrand(CCTK_ARGUMENTS) {
     *
     *
     * The integrands are zeroed outside/inside spheres (i.e. inside a shell if both are set) as
-    *      com_compute_outside_radius < r <= com_compute_inside_radius 
+    *      com_compute_outside_radius < r <= com_compute_inside_radius
     * with the (<=, <) conventions of VolumeIntegrals_GRMHD.
     * The spheres are centered at the (previous) location of the tracker, the point being
     * to be able to feed a new center of mass to the tracker.
@@ -260,7 +260,7 @@ void TargetTracker_ComIntegrand(CCTK_ARGUMENTS) {
     const CCTK_REAL r_min = com_compute_outside_radius[itarget];
 
     if (verbose) {
-        CCTK_VINFO("CoM pass for target %d: center = (%g,%g,%g), inside_radius = %g, outside_radius = %g",
+        CCTK_VINFO("CoM pass for target %d: center = (%g,%g,%g), com_compute_inside_radius = %g, com_compute_outside_radius = %g",
                    itarget, (double)x_c, (double)y_c, (double)z_c, (double)r_max, (double)r_min);
     }
 
@@ -365,7 +365,10 @@ void TargetTracker_ComDoSum(CCTK_ARGUMENTS) {
     // Decode the current target from the counter (see TargetTracker_ComIntegrand)
     const CCTK_INT itarget = *com_counter - 1;
 
-    // Inactive target: nothing to do (should not happen in normal circumstances)
+    // Inactive target: nothing to do.
+    // NOTE: As in TargetTracker_ComIntegrand, the counter iterates over all
+    //       target indices from the highest computed one down to 0, so targets
+    //       in the gaps (not computed) are expected here.
     if (!is_com_computed[itarget]) {
         return;
     }

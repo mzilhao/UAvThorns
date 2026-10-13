@@ -17,7 +17,7 @@ can be fed back into it or into other thorns.
 The targets are configured with per-target parameters (10 targets by
 default, see `nmax_targets`), in the style of `SphericalSurface`.
 
-It is inspired by various thorns from the Einstein Toolkit and out,
+It is inspired by various thorns from the Einstein Toolkit and outside it,
 including `UAv_Analysis`, `NSTracker`, and `VolumeIntegrals_GRMHD`.
 
 
@@ -152,22 +152,53 @@ Schedule placement
 ------------------
 
 The thorn runs at ANALYSIS (as does e.g. `Trigger_Check`, which runs before it).
-The CoM calculation thus runs before the tracking, so that the grid scalars it
-produces can be tracked in the same pass (by this thorn or others). Note the
-one-pass lag for a *self-tracking* restriction window (the sphere is centered on
-the previous pass's tracked point): same feedback design as
-`VolumeIntegrals_GRMHD`'s moving spheres. 
-WARNING: `after AHFinderDirect_maybe_do_masks` is not part of this schedule: 
-with `excise_horizon = yes`, the user must make sure the mask is up to
-date at ANALYSIS (e.g. run `AHFinderDirect` at CCTK_POSTSTEP, as in its default
+The center of mass group is scheduled as `global-early`, and therefore runs
+before the tracking: the grid scalars it produces can be tracked in the same
+pass (by this thorn or others). Note the one-pass lag for a *self-tracking*
+restriction window (the sphere is centered on the previous pass's tracked
+point): same feedback design as `VolumeIntegrals_GRMHD`'s moving spheres.
+
+WARNING: `after AHFinderDirect_maybe_do_masks` is not part of this schedule:
+with `excise_horizon = yes`, the user must make sure the mask is up to date at
+ANALYSIS (e.g. run `AHFinderDirect` at CCTK_POSTSTEP, as in its default
 configuration, or at ANALYSIS before this thorn — see the discussion in the
-schedule.ccl of both thorns).
-(Indeed, `AHFinderDirect_maybe_do_masks` does not seem to be global-early...)
+schedule.ccl of both thorns). In particular, `AHFinderDirect_maybe_do_masks` is
+not scheduled `global-early`, so it does not necessarily run before this group
+at ANALYSIS.
 
 Other schedule locations: `ParamCheck` (parameter checks), `INITIAL`
 and `CCTK_POST_RECOVER_VARIABLES` (initialization, recovery),
 `CCTK_INITIAL`/`CCTK_POST_RECOVER_VARIABLES` (counter safety),
 `BASEGRID` (flags for the CoM: multipatch detection, symmetry factors).
+
+
+Tests
+-----
+
+A small testsuite is provided in `test/` (run with e.g.
+`make <config>-testsuite`). It uses standard ET thorns plus the matter scalar
+field of `Scalar/Scalar*` on a flat background, so that the expected values are
+known analytically:
+
+  - `track_fixed_chain`: fixed target, a target copying another target's
+    stored location, and storage of a tracker into a spherical surface.
+  - `track_adjust_opposite`: affine adjustment (`tracker_adjust`) and
+    tracking the opposite (`track_opposite`) of a target.
+  - `track_surface_roundtrip`: 'surface to tracker' mode reading a location
+    back from a surface.
+  - `track_timing`: `start_tracking_after_time` (and `track_every`).
+  - `com_restrict_identity`: the volume-restriction identities
+    `inside + outside == global` and
+    `inside(r1) + shell(r1,r2] == inside(r2)`, checked to machine precision by
+    the `util/check_restriction` postprocessor.
+  - `com_empty_guard`: an empty integration region keeps the previous values
+    and warns (no NaN/inf).
+  - `com_symmetry_bitant`: a constant scalar on a bitant `z >= 0` box with
+    `com_symmetry = "bitant_z"`; the resulting mass and center of mass agree
+    with the full-box `com_symmetry = "none"` values.
+
+Reference output is `CarpetIOASCII` 0D data, compared with a relative tolerance
+of 1e-10 (comment/header lines are ignored by the test framework).
 
 
 Known limitations
@@ -180,7 +211,7 @@ Known limitations
 
   - The CoM restriction is a sphere centered at the tracked point; the
     radius is a fixed constant parameter (in particular it does not follow a
-    possibly dynamic/non-spherical surface). 
+    possibly dynamic/non-spherical surface).
     Arbitrary integrands are not provided. If this is a wish for
     future development, it would be worth considering outsourcing it to
     a separate thorn (see for instance `VolumeIntegrals_GRMHD`).

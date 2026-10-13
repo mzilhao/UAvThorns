@@ -69,7 +69,7 @@ schedule TargetTracker_ComCounterZeroRec AT CCTK_POST_RECOVER_VARIABLES before T
 # when a horizon is found, etc. (TargetTracker doesn't have native triggers).
 #
 # The center of mass group is scheduled before the tracking as global-early,
-# so that the CoM grid scalars can be tracked (by this thorn or others) 
+# so that the CoM grid scalars can be tracked (by this thorn or others)
 # in the same pass.
 #
 # TODO: If adding schedule bin parameters to run at POSTSTEP, some thoughts
