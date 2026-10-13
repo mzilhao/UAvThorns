@@ -25,7 +25,6 @@ void TargetTracker_ParamCheck(CCTK_ARGUMENTS) {
 
     // For multipatch / Llama grids, we need the volume form computed in Coordinates.
     // This is activated by the parameter Coordinates::store_volume_form = yes.
-    // (adapted from UAv_Analysis)
     if (want_com && com_every > 0) {
         // Trick to check multipatch usage without having to inherit the thorn
         if( CCTK_IsFunctionAliased("MultiPatch_GetDomainSpecification") ) {

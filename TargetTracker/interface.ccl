@@ -17,7 +17,7 @@ CCTK_INT is_opposite[nmax_targets] type=scalar timelevels=1 tags='checkpoint="ye
 
 CCTK_INT is_adjusted[nmax_targets] type=scalar timelevels=1 tags='checkpoint="yes"' "Flag to know which tracker applies the adjustment to the tracked location"
 
-CCTK_INT is_computed[nmax_targets] type=scalar timelevels=1 tags='checkpoint="yes"' "Flag to know for which target the center of mass is computed (reflects parameter compute_com, for recovery)"
+CCTK_INT is_com_computed[nmax_targets] type=scalar timelevels=1 tags='checkpoint="yes"' "Flag to know for which target the center of mass is computed (reflects parameter compute_com, for recovery)"
 
 CCTK_REAL target_loc[nmax_targets] type=scalar timelevels=1 tags='checkpoint="yes"'
 {
@@ -54,8 +54,8 @@ CCTK_INT use_volume_form type=scalar timelevels=1 tags='checkpoint="no"' "Flag t
 CCTK_REAL com_sym_factors type=scalar timelevels=1 tags='checkpoint="no"'
 {
   sym_factor_drho
-  sym_factor_dpx_coM, sym_factor_dpy_coM, sym_factor_dpz_coM
-} "Symmetry factors to apply to the center of mass integrands, depending on the symmetry of the problem (given by parameter 'com_symmetry'). The factor for dCoM^i is called sym_factor_dpX_coM to avoid confusion with the symmetry parameter (parities) of the CoM grid scalar itself."
+  sym_factor_dCoMx, sym_factor_dCoMy, sym_factor_dCoMz
+} "Symmetry factors to apply to the center of mass integrands, depending on the symmetry of the problem (given by parameter 'com_symmetry')."
 
 CCTK_REAL target_com[nmax_targets] type=scalar timelevels=1 tags='checkpoint="yes"'
 {
@@ -63,7 +63,7 @@ CCTK_REAL target_com[nmax_targets] type=scalar timelevels=1 tags='checkpoint="ye
   target_com_y
   target_com_z
   target_com_mass
-} "Center of mass of the matter distribution computed by this thorn, from rho = - n^mu n^nu T_mu_nu, and the corresponding mass integral. Can be tracked itself by other targets (it is computed before the tracking in the schedule)."
+} "Center of mass of the matter distribution computed by this thorn, from rho = n^mu n^nu T_mu_nu, and the corresponding mass integral. Can be tracked itself by other targets (it is computed before the tracking in the schedule)."
 
 CCTK_INT com_counter type=scalar timelevels=1 tags='checkpoint="no"' "Counter for the WHILE schedule group of the center of mass calculation"
 

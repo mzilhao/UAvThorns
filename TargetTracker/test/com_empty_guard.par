@@ -140,7 +140,7 @@ TargetTracker::compute_com                    [0] = yes
 TargetTracker::initial_x                      [0] = 100.0
 TargetTracker::initial_y                      [0] = 0.0
 TargetTracker::initial_z                      [0] = 0.0
-TargetTracker::com_inside_radius              [0] = 1.0
+TargetTracker::com_compute_inside_radius      [0] = 1.0
 
 TargetTracker::com_every                           = 1
 TargetTracker::com_symmetry                        = "none"

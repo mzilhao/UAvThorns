@@ -52,9 +52,9 @@ void InitializeOneTarget (CCTK_ARGUMENTS, CCTK_INT itarget) {
     // but doing it once here allows to avoid triggering the change message.
     is_loc_from_surface[itarget] = loc_from_surface_mode[itarget];
     
-    // Set initial value of is_computed flag for the center of mass calculation.
+    // Set initial value of is_com_computed flag for the center of mass calculation.
     // TargetActivationCondition will repeat it (this avoids a spurious recovery message).
-    is_computed[itarget] = compute_com[itarget];
+    is_com_computed[itarget] = compute_com[itarget];
 
     // Initial position
     // This will be overriden with the correct values in the main function if needed,
@@ -138,20 +138,20 @@ void OutputInfoInitOneTarget (CCTK_ARGUMENTS, CCTK_INT itarget) {
     }
     
     // Center of mass calculation info
-    if (is_computed[itarget]) {
+    if (is_com_computed[itarget]) {
         CCTK_VINFO("The center of mass of the matter distribution is computed for tracker %d.", itarget);
-        if (com_outside_radius[itarget] >= 0 && com_inside_radius[itarget] >= 0
-            && com_outside_radius[itarget] >= com_inside_radius[itarget]) {
-            CCTK_VINFO("WARNING: for tracker %d, 'com_outside_radius' >= 'com_inside_radius': the restricted integration region (a spherical shell) is empty.", itarget);
+        if (com_compute_outside_radius[itarget] >= 0 && com_compute_inside_radius[itarget] >= 0
+            && com_compute_outside_radius[itarget] >= com_compute_inside_radius[itarget]) {
+            CCTK_VINFO("WARNING: for tracker %d, 'com_compute_outside_radius' >= 'com_compute_inside_radius': the restricted integration region (a spherical shell) is empty.", itarget);
         }
         else {
-            if (com_inside_radius[itarget] >= 0) {
-                CCTK_VINFO("It is restricted to the inside of a sphere of radius %g centered at the tracked point.", com_inside_radius[itarget]);
+            if (com_compute_inside_radius[itarget] >= 0) {
+                CCTK_VINFO("It is restricted to the inside of a sphere of radius %g centered at the tracked point.", com_compute_inside_radius[itarget]);
             }
-            if (com_outside_radius[itarget] >= 0) {
-                CCTK_VINFO("It is restricted to the outside of a sphere of radius %g centered at the tracked point.", com_outside_radius[itarget]);
+            if (com_compute_outside_radius[itarget] >= 0) {
+                CCTK_VINFO("It is restricted to the outside of a sphere of radius %g centered at the tracked point.", com_compute_outside_radius[itarget]);
             }
-            if (com_inside_radius[itarget] < 0 && com_outside_radius[itarget] < 0) {
+            if (com_compute_inside_radius[itarget] < 0 && com_compute_outside_radius[itarget] < 0) {
                 CCTK_VINFO("It runs over the whole grid (no restriction).");
             }
         }
@@ -315,12 +315,12 @@ void RecoverOneTarget (CCTK_ARGUMENTS, CCTK_INT itarget) {
      * Controls the center of mass calculation and is always steerable.
      */
     // Info
-    if (compute_com[itarget] != is_computed[itarget]) {
+    if (compute_com[itarget] != is_com_computed[itarget]) {
         char message[1000];
-        sprintf(message, "At recovery of target %d, parameter 'compute_com' is '%s', but the internal flag 'is_computed' is '%s'.\n"
+        sprintf(message, "At recovery of target %d, parameter 'compute_com' is '%s', but the internal flag 'is_com_computed' is '%s'.\n"
                          "    Setting compute_com[%d] = %s.",
-                         itarget, compute_com[itarget] ? "yes" : "no", is_computed[itarget] ? "yes" : "no",
-                         itarget, is_computed[itarget] ? "yes" : "no");
+                         itarget, compute_com[itarget] ? "yes" : "no", is_com_computed[itarget] ? "yes" : "no",
+                         itarget, is_com_computed[itarget] ? "yes" : "no");
         if (verbose) {
             CCTK_VINFO("%s", message);
         }
@@ -330,7 +330,7 @@ void RecoverOneTarget (CCTK_ARGUMENTS, CCTK_INT itarget) {
     }
     // Set
     sprintf(param_name, "compute_com[%d]", itarget);
-    CCTK_ParameterSet(param_name, "TargetTracker", is_computed[itarget] ? "yes" : "no");
+    CCTK_ParameterSet(param_name, "TargetTracker", is_com_computed[itarget] ? "yes" : "no");
 
     //////////////////////////////////////////////
 

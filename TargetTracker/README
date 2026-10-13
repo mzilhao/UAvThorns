@@ -17,6 +17,9 @@ can be fed back into it or into other thorns.
 The targets are configured with per-target parameters (10 targets by
 default, see `nmax_targets`), in the style of `SphericalSurface`.
 
+It is inspired by various thorns from the Einstein Toolkit and out,
+including `UAv_Analysis`, `NSTracker`, and `VolumeIntegrals_GRMHD`.
+
 
 Tracking targets
 ----------------
@@ -88,7 +91,7 @@ center of mass of the matter distribution,
 
     CoM^i = \int x^i rho alpha sqrt(gamma) dV / \int rho alpha sqrt(gamma) dV,
 
-with rho = - n^mu n^nu T_mu_nu built from the stress-energy tensor of
+with rho = n^mu n^nu T_mu_nu built from the stress-energy tensor of
 `TmunuBase`. It is scheduled to run *before* the tracking itself, so that the
 results can be tracked in the same pass. The results are stored in the public,
 checkpointed grid scalars
@@ -99,18 +102,17 @@ checkpointed grid scalars
 and can be output, tracked (with the parameters `target_*[i]`, by this
 thorn or any other), or used to move the corresponding puncture/surface.
 
-Restricting the integral to a spherical shell centered at the tracked
-point is done with `com_inside_radius[i]` and `com_outside_radius[i]`
+Restricting the integral to a spherical domain centered at the tracked
+point is done with `com_compute_inside_radius[i]` and `com_compute_outside_radius[i]`
 (negative = no restriction):
 
-    com_outside_radius[i] < r <= com_inside_radius[i]
+    com_compute_outside_radius[i] < r <= com_compute_inside_radius[i]
 
 with r the coordinate distance to `target_loc_*[i]`. The (inclusive
 inside, exclusive outside) conventions are complementary, so that
 inside + outside integrals add up to the global one. This is useful
-in particular for tracking the matter around a given object (e.g.
-the collapsing scalar cluster of a hairy BH evolution), and the sphere
-moves with the tracker.
+in particular for tracking local lumps of matter independently (e.g.
+in binary systems), and the sphere moves with the tracker.
 
 The integrands are computed on all refinement levels at once (a single
 set of grid functions is recomputed and reduced sequentially for each
@@ -125,12 +127,14 @@ global parameters control the calculation:
     (the user must make sure `TmunuBase` storage is on and the tensor
     is up to date, e.g. with `TmunuBase::stress_energy_at_RHS = yes`).
 
-  - `excise_horizon`: exclude the region inside the (apparent) horizon
+  - `excise_horizon`: exclude the region inside the (apparent) horizons
     from the integration. This relies on the mask set by `AHFinderDirect`
-    (SpaceMask type "mask", state "outside"), similarly to `UAv_Analysis`.
+    (SpaceMask type "mask", state "outside").
 
   - `com_symmetry`: multiply the integrands by the appropriate factors
-    for bitant runs ("none", "bitant_x/y/z"), as in `UAv_Analysis`.
+    for bitant runs ("none", "bitant_x/y/z"). "none" can be used even
+    when the grid has symmetries, but it is then up to the user to
+    tackle the symmetry factors.
 
 If the mass integral vanishes (e.g. an empty sphere), the previous
 values are kept and a warning printed (the calculation becomes trivially
@@ -152,12 +156,13 @@ The CoM calculation thus runs before the tracking, so that the grid scalars it
 produces can be tracked in the same pass (by this thorn or others). Note the
 one-pass lag for a *self-tracking* restriction window (the sphere is centered on
 the previous pass's tracked point): same feedback design as
-`VolumeIntegrals_GRMHD`'s moving spheres. The `after
-AHFinderDirect_maybe_do_masks` (used by `UAv_Analysis`) is not part of this
-schedule: with `excise_horizon = yes`, the user must make sure the mask is up to
+`VolumeIntegrals_GRMHD`'s moving spheres. 
+WARNING: `after AHFinderDirect_maybe_do_masks` is not part of this schedule: 
+with `excise_horizon = yes`, the user must make sure the mask is up to
 date at ANALYSIS (e.g. run `AHFinderDirect` at CCTK_POSTSTEP, as in its default
 configuration, or at ANALYSIS before this thorn — see the discussion in the
 schedule.ccl of both thorns).
+(Indeed, `AHFinderDirect_maybe_do_masks` does not seem to be global-early...)
 
 Other schedule locations: `ParamCheck` (parameter checks), `INITIAL`
 and `CCTK_POST_RECOVER_VARIABLES` (initialization, recovery),
@@ -171,15 +176,14 @@ Known limitations
   - 10 targets maximum (crutch parameter `nmax_targets`).
 
   - The thorn is scheduled at ANALYSIS only (no POSTSTEP option as of
-    yet; see the TODO in schedule.ccl). As with `UAv_Analysis`, care
-    must be taken with schedule bins and MoL substeps if derivatives
-    or reductions are involved.
+    yet; see the TODO in schedule.ccl).
 
   - The CoM restriction is a sphere centered at the tracked point; the
-    radius is a fixed parameter (in particular it does not follow a
-    possibly non-spherical surface). Arbitrary integrands, and other
-    integral quantities (energy, angular momentum, quadrupole...) are
-    not provided: see `UAv_Analysis` and `VolumeIntegrals_GRMHD`.
+    radius is a fixed constant parameter (in particular it does not follow a
+    possibly dynamic/non-spherical surface). 
+    Arbitrary integrands are not provided. If this is a wish for
+    future development, it would be worth considering outsourcing it to
+    a separate thorn (see for instance `VolumeIntegrals_GRMHD`).
 
   - Only Carpet(-style) drivers are supported/relevant (in particular
     for the reduction weights), and no accelerator offloading is done.

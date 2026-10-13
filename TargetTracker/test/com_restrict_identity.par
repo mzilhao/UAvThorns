@@ -145,20 +145,20 @@ TargetTracker::initial_x                      [0] = 0.0
 
 TargetTracker::compute_com                    [1] = yes
 TargetTracker::initial_x                      [1] = 0.0
-TargetTracker::com_inside_radius              [1] = 2.0
+TargetTracker::com_compute_inside_radius      [1] = 2.0
 
 TargetTracker::compute_com                    [2] = yes
 TargetTracker::initial_x                      [2] = 0.0
-TargetTracker::com_outside_radius             [2] = 2.0
+TargetTracker::com_compute_outside_radius     [2] = 2.0
 
 TargetTracker::compute_com                    [3] = yes
 TargetTracker::initial_x                      [3] = 0.0
-TargetTracker::com_inside_radius              [3] = 1.0
+TargetTracker::com_compute_inside_radius      [3] = 1.0
 
 TargetTracker::compute_com                    [4] = yes
 TargetTracker::initial_x                      [4] = 0.0
-TargetTracker::com_inside_radius              [4] = 2.0
-TargetTracker::com_outside_radius             [4] = 1.0
+TargetTracker::com_compute_inside_radius      [4] = 2.0
+TargetTracker::com_compute_outside_radius     [4] = 1.0
 
 TargetTracker::com_every                           = 1
 TargetTracker::com_symmetry                        = "none"

@@ -8,9 +8,7 @@
 #include "SpaceMask.h"
 
 /*
- * Self-contained calculation of the center of mass of the matter distribution,
- * mostly replicating the implementation of UAv_Analysis, as an independent thorn
- * (see the documentation).
+ * Self-contained calculation of the center of mass of the matter distribution.
  *
  * The calculation is done for one target at a time, with a single set of
  * integrand grid functions which are recomputed for each target (a scheme
@@ -35,7 +33,7 @@ void TargetTracker_ComFlags(CCTK_ARGUMENTS) {
 
     // Setting the flags has to be done here, cannot be done in PARAMCHECK
 
-    // Trick to check multipatch usage without having to inherit the thorn (similarly to UAv_Analysis)
+    // Trick to check multipatch usage without having to inherit the thorn
     *is_multipatch = CCTK_IsFunctionAliased("MultiPatch_GetDomainSpecification");
 
     // default (non Llama grid): don't use volume form
@@ -75,40 +73,40 @@ void TargetTracker_ComFlags(CCTK_ARGUMENTS) {
 
     // Factors to apply to the integrands, depending on the symmetry of the problem.
     // Since the integrand grid functions are private to this thorn, there is no
-    // need to set parities on them (unlike in UAv_Analysis): the factors are
-    // internal to this thorn.
+    // need to declare parities on them through `SetCartSymVN` or similar functions.
+    // This is handled internally by the thorn.
 
     if (CCTK_Equals(com_symmetry, "none")) {
-        *sym_factor_drho      = 1;
-        *sym_factor_dpx_coM   = 1;
-        *sym_factor_dpy_coM   = 1;
-        *sym_factor_dpz_coM   = 1;
+        *sym_factor_drho  = 1;
+        *sym_factor_dCoMx = 1;
+        *sym_factor_dCoMy = 1;
+        *sym_factor_dCoMz = 1;
     }
     else if (CCTK_Equals(com_symmetry, "bitant_x")) {
-        *sym_factor_drho      = 2;
-        *sym_factor_dpx_coM   = 0;
-        *sym_factor_dpy_coM   = 2;
-        *sym_factor_dpz_coM   = 2;
+        *sym_factor_drho  = 2;
+        *sym_factor_dCoMx = 0;
+        *sym_factor_dCoMy = 2;
+        *sym_factor_dCoMz = 2;
     }
     else if (CCTK_Equals(com_symmetry, "bitant_y")) {
-        *sym_factor_drho      = 2;
-        *sym_factor_dpx_coM   = 2;
-        *sym_factor_dpy_coM   = 0;
-        *sym_factor_dpz_coM   = 2;
+        *sym_factor_drho  = 2;
+        *sym_factor_dCoMx = 2;
+        *sym_factor_dCoMy = 0;
+        *sym_factor_dCoMz = 2;
     }
     else if (CCTK_Equals(com_symmetry, "bitant_z")) {
-        *sym_factor_drho      = 2;
-        *sym_factor_dpx_coM   = 2;
-        *sym_factor_dpy_coM   = 2;
-        *sym_factor_dpz_coM   = 0;
+        *sym_factor_drho  = 2;
+        *sym_factor_dCoMx = 2;
+        *sym_factor_dCoMy = 2;
+        *sym_factor_dCoMz = 0;
     }
     else {
-        // Should not happen thanks to the parameter checks
+        // Should not happen if this function is properly kept consistent with the parameters.
         CCTK_VWARN(CCTK_WARN_ALERT, "Unknown symmetry for the center of mass integrands: '%s'. Defaulting to 'com_symmetry=none'.", com_symmetry);
-        *sym_factor_drho      = 1;
-        *sym_factor_dpx_coM   = 1;
-        *sym_factor_dpy_coM   = 1;
-        *sym_factor_dpz_coM   = 1;
+        *sym_factor_drho  = 1;
+        *sym_factor_dCoMx = 1;
+        *sym_factor_dCoMy = 1;
+        *sym_factor_dCoMz = 1;
     }
 }
 
@@ -147,7 +145,7 @@ void TargetTracker_ComCounter(CCTK_ARGUMENTS) {
     // last one to the first one (iterating on '*com_counter' as 1 + target index).
     *com_counter = 0;
     for (CCTK_INT itarget = nmax_targets - 1 ; itarget >= 0 ; itarget--) {
-        if (is_computed[itarget]) {
+        if (is_com_computed[itarget]) {
             *com_counter = itarget + 1;
             break;
         }
@@ -178,13 +176,12 @@ void TargetTracker_ComIntegrand(CCTK_ARGUMENTS) {
     // Inactive target: nothing to do.
     // NOTE: The counter iterates over all target indices from the highest computed
     //       one down to 0, so targets in the gaps (not computed) are expected here.
-    if (itarget < 0 || !is_computed[itarget]) {
+    if (itarget < 0 || !is_com_computed[itarget]) {
         return;
     }
 
 
     // Get the mask type and state bits if we need to excise the horizon
-    // (adapted from UAv_Analysis_gfs)
 
     CCTK_INT type_bits     = -1;
     CCTK_INT state_outside = -1;
@@ -205,7 +202,6 @@ void TargetTracker_ComIntegrand(CCTK_ARGUMENTS) {
 
     // Volume element: with multipatch we need to multiply by the volume form,
     // else just use the standard Cartesian one
-    // (adapted from UAv_Analysis_gfs)
 
     CCTK_REAL dV_cart = cctk_delta_space[0] * cctk_delta_space[1] * cctk_delta_space[2];
 
@@ -234,44 +230,38 @@ void TargetTracker_ComIntegrand(CCTK_ARGUMENTS) {
     }
     }
 
-
-    // Compute the integrands
-    //
-    // These loops cover the interior of the local box, i.e. they are the C-translation
-    // (0-based, half-open) of UAv_Analysis's Fortran loop
-    //     do k = 1+cctk_nghostzones(3), cctk_lsh(3)-cctk_nghostzones(3)
-    // (1-based, inclusive, covering C indices [nghostzones, lsh-nghostzones-1]).
-    // This includes the grid layer exactly on a symmetry plane (e.g. z=0 for a bitant box),
-    // which the reduction weights with 1/2 — necessary for the correct symmetry-normalized
-    // integrals, and consistent with UAv_Analysis.
-    //
-    // Note that these loops will also exclude at least one layer of points on the physical boundary
-    // (see https://lists.einsteintoolkit.org/pipermail/users/2024-September/009465.html),
-    // but as of now we choose to live with that (as in UAv_Analysis)
-    //
-    // WARNING: This is a loop-local (local) routine: we only have access to the
-    //          data of the current refinement level, which is what we want.
-    //
-    // The integrands are also zeroed outside/inside spheres centered at the tracking
-    // location of the target, following the scheme of VolumeIntegrals_GRMHD.
-    // The restriction radii are given by 'com_inside_radius' and 'com_outside_radius'
-    // (negative values = disabled); setting both integrates over a spherical shell.
-    // Note that the sphere is centered on the *tracked point* ('target_loc'), which moves
-    // with the tracker (in particular when it tracks the corresponding spherical surface),
-    // and that the current value is read in a global-early fashion (before the tracking
-    // updates it at this iteration). The integrand of each grid point is zeroed out unless
-    // com_outside_radius < r <= com_inside_radius, with the (<=, <) conventions of
-    // VolumeIntegrals_GRMHD.
+    /*
+    * Compute the integrands
+    *
+    * These loops cover the interior of the local box, i.e. they are the C-translation
+    * (0-based, half-open) of the Fortran loop
+    *     do k = 1+cctk_nghostzones(3), cctk_lsh(3)-cctk_nghostzones(3)
+    * (1-based, inclusive, covering C indices [nghostzones, lsh-nghostzones-1]).
+    * This includes the grid layer exactly on a symmetry plane (e.g. z=0 for a bitant box),
+    * which the reduction weights with 1/2 — necessary for the correct symmetry-normalized
+    * integrals.
+    *
+    * Note that these loops will also exclude at least one layer of points on the physical boundary
+    * (see https://lists.einsteintoolkit.org/pipermail/users/2024-September/009465.html),
+    * but as of now we choose to live with that.
+    *
+    *
+    * The integrands are zeroed outside/inside spheres (i.e. inside a shell if both are set) as
+    *      com_compute_outside_radius < r <= com_compute_inside_radius 
+    * with the (<=, <) conventions of VolumeIntegrals_GRMHD.
+    * The spheres are centered at the (previous) location of the tracker, the point being
+    * to be able to feed a new center of mass to the tracker.
+    */
 
     const CCTK_REAL x_c   = target_loc_x[itarget];
     const CCTK_REAL y_c   = target_loc_y[itarget];
     const CCTK_REAL z_c   = target_loc_z[itarget];
-    const CCTK_REAL r_in  = com_inside_radius[itarget];
-    const CCTK_REAL r_out = com_outside_radius[itarget];
+    const CCTK_REAL r_max = com_compute_inside_radius[itarget];
+    const CCTK_REAL r_min = com_compute_outside_radius[itarget];
 
     if (verbose) {
         CCTK_VINFO("CoM pass for target %d: center = (%g,%g,%g), inside_radius = %g, outside_radius = %g",
-                   itarget, (double)x_c, (double)y_c, (double)z_c, (double)r_in, (double)r_out);
+                   itarget, (double)x_c, (double)y_c, (double)z_c, (double)r_max, (double)r_min);
     }
 
     for (int k = cctk_nghostzones[2] ; k < cctk_lsh[2] - cctk_nghostzones[2] ; k++) {
@@ -295,8 +285,8 @@ void TargetTracker_ComIntegrand(CCTK_ARGUMENTS) {
         const CCTK_REAL dy_c = y[ind] - y_c;
         const CCTK_REAL dz_c = z[ind] - z_c;
         const CCTK_REAL r2_c = dx_c*dx_c + dy_c*dy_c + dz_c*dz_c;
-        docalc = docalc && (r_in  <= 0 || r2_c <= r_in *r_in )
-                         && (r_out <= 0 || r2_c >  r_out*r_out);
+        docalc = docalc && (r_max  <= 0 || r2_c <= r_max*r_max )
+                         && (r_min <= 0 || r2_c >  r_min*r_min);
 
 
         // ----- Metric determinant -----
@@ -323,8 +313,7 @@ void TargetTracker_ComIntegrand(CCTK_ARGUMENTS) {
 
 
         // ----- Density -----
-        // Eulerian energy density rho = - n^mu n^nu T_mu_nu
-        // (from TmunuBase, replicated from UAv_Analysis)
+        // Eulerian energy density rho = n^mu n^nu T_mu_nu
 
         const CCTK_REAL alph    = alp[ind];
         const CCTK_REAL betax_l = betax[ind];
@@ -350,14 +339,13 @@ void TargetTracker_ComIntegrand(CCTK_ARGUMENTS) {
         // dCoM^i = rho * x^i * alpha * sqrt(detgd) dV
         // The division by the integral of the density is done after the reduction.
         // We don't use x1 = x - x_track (and add the tracking location back after
-        // the reduction), so that the integrand grid functions can be compared
-        // with the ones of UAv_Analysis directly.
+        // the reduction), for simplicity.
 
         if (docalc) {
             com_integrand_rho[ind] = rho_vol4 * (*sym_factor_drho);
-            com_integrand_x[ind]   = x[ind] * rho_vol4 * (*sym_factor_dpx_coM);
-            com_integrand_y[ind]   = y[ind] * rho_vol4 * (*sym_factor_dpy_coM);
-            com_integrand_z[ind]   = z[ind] * rho_vol4 * (*sym_factor_dpz_coM);
+            com_integrand_x[ind]   = x[ind] * rho_vol4 * (*sym_factor_dCoMx);
+            com_integrand_y[ind]   = y[ind] * rho_vol4 * (*sym_factor_dCoMy);
+            com_integrand_z[ind]   = z[ind] * rho_vol4 * (*sym_factor_dCoMz);
         }
 
     }
@@ -378,7 +366,7 @@ void TargetTracker_ComDoSum(CCTK_ARGUMENTS) {
     const CCTK_INT itarget = *com_counter - 1;
 
     // Inactive target: nothing to do (should not happen in normal circumstances)
-    if (!is_computed[itarget]) {
+    if (!is_com_computed[itarget]) {
         return;
     }
 
