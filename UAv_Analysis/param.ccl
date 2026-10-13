@@ -2,7 +2,7 @@
 
 # exclude horizon from integration
 
-BOOLEAN excise_horizon "excise the region inside the AH from the volume integrations?" STEERABLE=ALWAYS
+BOOLEAN excise_horizon "excise the region inside the AH from the volume integrations?" STEERABLE=RECOVER
 {
 } "no"
 

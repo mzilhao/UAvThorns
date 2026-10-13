@@ -46,7 +46,7 @@ CCTK_REAL center_of_mass type=scalar timelevels=1 tags='checkpoint="yes"'
   center_of_mass_x
   center_of_mass_y
   center_of_mass_z
-} "Center of mass computed from $\rho = - n^\mu n^\nu T_{\mu\nu}$ and $\int (x^i \rho \alpha \sqrt(\gamma) dV)/$\int (\rho \alpha \sqrt(\gamma) dV). Note that we use x, and not x-x0, so that the density GF can be safely used in other thorns."
+} "Center of mass computed from $\rho = n^\mu n^\nu T_{\mu\nu}$ and $\int (x^i \rho \alpha \sqrt(\gamma) dV)/$\int (\rho \alpha \sqrt(\gamma) dV). Note that we use x, and not x-x0, so that the density GF can be safely used in other thorns."
 
 CCTK_REAL drho_gf_volume type=gf timelevels=3 tags='Prolongation="none" tensortypealias="Scalar" checkpoint="no"' "density gridfunction for volume integration"
 
