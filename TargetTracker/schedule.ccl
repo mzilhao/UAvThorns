@@ -41,25 +41,11 @@ schedule TargetTracker_Recovery at CCTK_POST_RECOVER_VARIABLES
 } "(Partial) recovery of parameters from checkpointed internal variables"
 
 # Initialize flags for the center of mass calculation (multipatch, volume form, symmetry factors)
-schedule TargetTracker_ComFlags at BASEGRID after MultiPatch_SpatialCoordinates
+schedule TargetTracker_InitializeComFlags at BASEGRID after MultiPatch_SpatialCoordinates
 {
   LANG: C
   OPTIONS: global
 } "Initialize quantities used in the center of mass calculation"
-
-# Make sure the counter has a sane value at startup and at recovery
-# (in case the group was not run completely and the counter is left at a nonzero value)
-schedule TargetTracker_ComCounterZero at CCTK_INITIAL
-{
-  LANG: C
-  OPTIONS: global
-} "Initialize the center of mass counter to zero"
-
-schedule TargetTracker_ComCounterZeroRec AT CCTK_POST_RECOVER_VARIABLES before TargetTracker_Recovery
-{
-  LANG: C
-  OPTIONS: global
-} "Initialize the center of mass counter to zero (at recovery)"
 
 ###############################################################################
 # WARNING: schedule bins

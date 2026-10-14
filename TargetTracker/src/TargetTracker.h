@@ -105,9 +105,6 @@ static inline void TargetActivationCondition(CCTK_ARGUMENTS, CCTK_INT itarget) {
     // based on track_opposite and tracker_adjust parameters (which are STEERABLE=ALWAYS)
     UpdateAdjustment(CCTK_PASS_CTOC, itarget);
 
-    // Update value of is_com_computed flag based on compute_com parameter (which is STEERABLE=ALWAYS)
-    is_com_computed[itarget] = compute_com[itarget];
-
     is_active[itarget] = ( 
         is_tracked[itarget]
         && !loc_from_surface_mode[itarget]
