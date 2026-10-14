@@ -133,19 +133,15 @@ void TargetTracker_ComCounter(CCTK_ARGUMENTS) {
     DECLARE_CCTK_ARGUMENTS;
     DECLARE_CCTK_PARAMETERS;
 
-    // Do the calculation only if asked for and on the right iteration
-    if (com_every <= 0 || cctk_iteration % com_every != 0) {
-        // Make sure the counter is zero: it gates the WHILE loop of the group
-        *com_counter = 0;
-        return;
-    }
-
+    // Make sure the counter is zero by default: it gates the WHILE loop of the group
+    *com_counter = 0;
+    
     // Register the index of the last (highest-index) target with the calculation
     // activated, so that the WHILE group processes the computed targets from the
     // last one to the first one (iterating on '*com_counter' as 1 + target index).
-    *com_counter = 0;
     for (CCTK_INT itarget = nmax_targets - 1 ; itarget >= 0 ; itarget--) {
-        if (is_com_computed[itarget]) {
+        // com_every should be > 0 by construction
+        if (is_com_computed[itarget] && cctk_iteration % com_every[itarget] == 0) {
             *com_counter = itarget + 1;
             break;
         }
@@ -156,6 +152,7 @@ void TargetTracker_ComDecrementCounter(CCTK_ARGUMENTS) {
     DECLARE_CCTK_ARGUMENTS;
     DECLARE_CCTK_PARAMETERS;
 
+    // We need to decrement in any case, even if the current target is not computed.
     (*com_counter)--;
 }
 
@@ -173,10 +170,10 @@ void TargetTracker_ComIntegrand(CCTK_ARGUMENTS) {
     // calculation still to be done (see TargetTracker_ComCounter)
     const CCTK_INT itarget = *com_counter - 1;
 
-    // Inactive target: nothing to do.
+    // Inactive computation or unneeded iteration: nothing to do.
     // NOTE: The counter iterates over all target indices from the highest computed
     //       one down to 0, so targets in the gaps (not computed) are expected here.
-    if (itarget < 0 || !is_com_computed[itarget]) {
+    if (!is_com_computed[itarget] || cctk_iteration % com_every[itarget] != 0) {
         return;
     }
 
@@ -365,11 +362,11 @@ void TargetTracker_ComDoSum(CCTK_ARGUMENTS) {
     // Decode the current target from the counter (see TargetTracker_ComIntegrand)
     const CCTK_INT itarget = *com_counter - 1;
 
-    // Inactive target: nothing to do.
+    // Inactive target or unneeded iteration: nothing to do.
     // NOTE: As in TargetTracker_ComIntegrand, the counter iterates over all
     //       target indices from the highest computed one down to 0, so targets
     //       in the gaps (not computed) are expected here.
-    if (!is_com_computed[itarget]) {
+    if (!is_com_computed[itarget] || cctk_iteration % com_every[itarget] != 0) {
         return;
     }
 

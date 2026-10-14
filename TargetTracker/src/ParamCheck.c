@@ -11,44 +11,35 @@ void TargetTracker_ParamCheck(CCTK_ARGUMENTS) {
     // CENTER OF MASS CALCULATION
     // -------------------------------
 
-    // See if the calculation could be requested at all
-    CCTK_INT want_com = 0;
     for (CCTK_INT itarget = 0; itarget < nmax_targets; itarget++) {
-        if (compute_com[itarget]) {
-            want_com = 1;
+        // Check non-empty shell
+        if (com_compute_outside_radius[itarget] > 0 && com_compute_inside_radius[itarget] > 0
+            && com_compute_outside_radius[itarget] >= com_compute_inside_radius[itarget]) {
+            CCTK_VPARAMWARN("For tracker %d, 'com_compute_outside_radius' >= 'com_compute_inside_radius' > 0: the restricted integration region (a spherical shell) is empty.", itarget);
         }
-    }
-
-    if (want_com && com_every <= 0) {
-        CCTK_VPARAMWARN("'com_every' is <= 0, but some 'compute_com' parameter is set to yes: the center of mass will not be computed.");
     }
 
     // For multipatch / Llama grids, we need the volume form computed in Coordinates.
     // This is activated by the parameter Coordinates::store_volume_form = yes.
-    if (want_com && com_every > 0) {
-        // Trick to check multipatch usage without having to inherit the thorn
-        if( CCTK_IsFunctionAliased("MultiPatch_GetDomainSpecification") ) {
 
-            // -1 is the "error" return value of ParameterGetType() (see the flesh)
-            CCTK_INT type = -1;
-            const CCTK_INT* store_volume_form_ptr = CCTK_ParameterGet("store_volume_form", "Coordinates", &type);
+    // Trick to check multipatch usage without having to inherit the thorn
+    if( CCTK_IsFunctionAliased("MultiPatch_GetDomainSpecification") ) {
 
-            if (store_volume_form_ptr == NULL || type != PARAMETER_BOOLEAN) {
-                CCTK_ERROR("Problem acquiring pointer to Coordinates::store_volume_form parameter.");
-            }
-            else if (!(*store_volume_form_ptr)) {
-                CCTK_VPARAMWARN("You are using a multipatch system, and the center of mass is computed, but you set Coordinates::store_volume_form = no. "
-                                "TargetTracker will not be able to use the volume form for the integration. "
-                                "Please set Coordinates::store_volume_form = yes.");
-            }
-            // else, we're good to go
+        // -1 is the "error" return value of ParameterGetType() (see the flesh)
+        CCTK_INT type = -1;
+        const CCTK_INT* store_volume_form_ptr = CCTK_ParameterGet("store_volume_form", "Coordinates", &type);
+
+        if (store_volume_form_ptr == NULL || type != PARAMETER_BOOLEAN) {
+            CCTK_ERROR("Problem acquiring pointer to Coordinates::store_volume_form parameter.");
         }
+        else if (!(*store_volume_form_ptr)) {
+            CCTK_VPARAMWARN("You are using a multipatch system, and the center of mass is computed, but you set Coordinates::store_volume_form = no. "
+                            "TargetTracker will not be able to use the volume form for the integration. "
+                            "Please set Coordinates::store_volume_form = yes.");
+        }
+        // else, we're good to go
     }
 
-    // Check the excision parameter (runtime check in the computation:
-    // it is fatal there if the mask type is not registered by e.g. AHFinderDirect.)
-    // WARNING: CCTK_IsFunctionAliased is not usable here (SpaceMask functions are
-    //          plain C symbols, not schedule aliases)
 
     // -------------------------------
     // TRACKING

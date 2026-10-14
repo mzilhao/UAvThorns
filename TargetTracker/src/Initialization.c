@@ -19,9 +19,9 @@ void InitializeOneTarget (CCTK_ARGUMENTS, CCTK_INT itarget) {
     // WARNING: Since the parameters are steerable, make sure the rest is robust.
     
     
-    // x source
     // WARNING: CCTK_VarIndex makes the flesh warn for invalid names (e.g. the empty string of a fixed target),
     //          so we only call it for non-empty names (validity of non-empty names has been checked in ParamCheck)
+    // x source
     target_id_x[itarget] = CCTK_Equals(target_x[itarget], "") ? -1 : CCTK_VarIndex (target_x[itarget]);
     // y source
     target_id_y[itarget] = CCTK_Equals(target_y[itarget], "") ? -1 : CCTK_VarIndex (target_y[itarget]);
@@ -56,18 +56,9 @@ void InitializeOneTarget (CCTK_ARGUMENTS, CCTK_INT itarget) {
     // TargetActivationCondition will repeat it (this avoids a spurious recovery message).
     is_com_computed[itarget] = compute_com[itarget];
 
-    // Initial position
-    // This will be overriden with the correct values in the main function if needed,
-    // but initially fixed trackers get their initial values here.
-    // No adjustment on fixed trackers.
-    target_loc_x[itarget] = initial_x[itarget];
-    target_loc_y[itarget] = initial_y[itarget];
-    target_loc_z[itarget] = initial_z[itarget];
-
     // Initial center of mass values
     // They will be computed in the first center of mass integration (if any),
     // but this gives sensible values in the meantime
-    // (in particular the position of the sphere used for the integration)
     target_com_x[itarget]    = initial_x[itarget];
     target_com_y[itarget]    = initial_y[itarget];
     target_com_z[itarget]    = initial_z[itarget];
@@ -140,20 +131,21 @@ void OutputInfoInitOneTarget (CCTK_ARGUMENTS, CCTK_INT itarget) {
     // Center of mass calculation info
     if (is_com_computed[itarget]) {
         CCTK_VINFO("The center of mass of the matter distribution is computed for tracker %d.", itarget);
-        if (com_compute_outside_radius[itarget] >= 0 && com_compute_inside_radius[itarget] >= 0
-            && com_compute_outside_radius[itarget] >= com_compute_inside_radius[itarget]) {
-            CCTK_VINFO("WARNING: for tracker %d, 'com_compute_outside_radius' >= 'com_compute_inside_radius': the restricted integration region (a spherical shell) is empty.", itarget);
-        }
-        else {
-            if (com_compute_inside_radius[itarget] >= 0) {
-                CCTK_VINFO("It is restricted to the inside of a sphere of radius %g centered at the tracked point.", com_compute_inside_radius[itarget]);
-            }
-            if (com_compute_outside_radius[itarget] >= 0) {
-                CCTK_VINFO("It is restricted to the outside of a sphere of radius %g centered at the tracked point.", com_compute_outside_radius[itarget]);
-            }
-            if (com_compute_inside_radius[itarget] < 0 && com_compute_outside_radius[itarget] < 0) {
-                CCTK_VINFO("It runs over the whole grid (no restriction).");
-            }
+        // Validity of parameters has been checked in ParamCheck.
+                if (com_compute_inside_radius[itarget] <= 0 && com_compute_outside_radius[itarget] <= 0) {
+            CCTK_VINFO("It runs over the whole grid (no restriction).");
+        
+        } else  if (com_compute_inside_radius[itarget] >  0 && com_compute_outside_radius[itarget] >  0) {
+            CCTK_VINFO("It is restricted to a spherical shell between radii %g and %g centered at the tracked point.",
+                        com_compute_outside_radius[itarget], com_compute_inside_radius[itarget]);
+        
+        } else  if (com_compute_inside_radius[itarget] >  0 && com_compute_outside_radius[itarget] <= 0) {
+            CCTK_VINFO("It is restricted to the inside of a sphere of radius %g centered at the tracked point.",
+                        com_compute_inside_radius[itarget]);
+
+        } else  if (com_compute_inside_radius[itarget] <= 0 && com_compute_outside_radius[itarget] >  0) {
+            CCTK_VINFO("It is restricted to the outside of a sphere of radius %g centered at the tracked point.",
+                    com_compute_outside_radius[itarget]);
         }
     }
 }
@@ -354,8 +346,7 @@ void RecoverOneTarget (CCTK_ARGUMENTS, CCTK_INT itarget) {
      * - start/stop_tracking_after_time: STEERABLE=RECOVER
      * - which_surface_to_store_info: STEERABLE=RECOVER
      * - initial_x/y/z: STEERABLE=RECOVER, and they are ignored anyway if force_params_at_recovery = no
-     * - center of mass related parameters (com_every, com_symmetry, excise_horizon):
-     *   STEERABLE=RECOVER, taken from the param file as such
+     * - center of mass related parameters (com_every, com_symmetry, excise_horizon): STEERABLE=RECOVER
      * - verbose: STEERABLE=ALWAYS, but it's not critical (and the user should know if they try to steer it mid-run)
      */
 

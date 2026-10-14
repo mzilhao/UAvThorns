@@ -160,7 +160,6 @@ TargetTracker::initial_x                      [4] = 0.0
 TargetTracker::com_compute_inside_radius      [4] = 2.0
 TargetTracker::com_compute_outside_radius     [4] = 1.0
 
-TargetTracker::com_every                           = 1
 TargetTracker::com_symmetry                        = "none"
 TargetTracker::verbose                             = yes
 
