@@ -67,6 +67,9 @@ CCTK_REAL target_com[nmax_targets] type=scalar timelevels=1 tags='checkpoint="ye
 
 CCTK_INT com_counter type=scalar timelevels=1 tags='checkpoint="no"' "Counter for the WHILE schedule group of the center of mass calculation"
 
+# Sensibly, the values shouldn't have changed between each tracker calculation
+CCTK_INT unrestricted_com_highest_index type=scalar timelevels=1 tags='checkpoint="no"' "Index of the earliest tracker that computes the center of mass in the whole domain at this iteration, so that the value can be reused directly."
+
 CCTK_REAL com_integrand type=gf timelevels=1 tags='Prolongation="none" InterpNumTimelevels=1 checkpoint="no"'
 {
   com_integrand_rho

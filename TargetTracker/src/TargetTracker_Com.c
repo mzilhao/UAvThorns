@@ -29,6 +29,8 @@ void TargetTracker_InitializeComFlags(CCTK_ARGUMENTS) {
 
     // Initialize the counter to 0 for sanity.
     *com_counter = 0;
+    // Initialize the flag to -1 for sanity.
+    *unrestricted_com_highest_index = -1;
 
     // -------------------------------
     // MULTIPATCH
@@ -127,8 +129,9 @@ void TargetTracker_ComSetupIteration(CCTK_ARGUMENTS) {
         is_com_computed[itarget] = compute_com[itarget];
     }
 
-    // Make sure the counter is zero by default: it gates the WHILE loop of the group
+    // Setup the counter and flag for this iteration
     *com_counter = 0;
+    *unrestricted_com_highest_index = -1;
     
     // Register the index of the last (highest-index) target with the calculation
     // activated, so that the WHILE group processes the computed targets from the
@@ -169,6 +172,19 @@ void TargetTracker_ComIntegrand(CCTK_ARGUMENTS) {
     //       one down to 0, so targets in the gaps (not computed) are expected here.
     if (!is_com_computed[itarget] || cctk_iteration % com_every[itarget] != 0) {
         return;
+    }
+
+    // Avoid re-computing the CoM in the whole domain if a previous tracker already did it 
+    // (the value can be reused in TargetTracker_ComDoSum).
+    if (com_compute_inside_radius[itarget] <= 0 && com_compute_outside_radius[itarget] <= 0) {
+        if (itarget < *unrestricted_com_highest_index) {
+            // This target is not the first one to compute the CoM in the whole domain, so we can skip it.
+            return;
+        }
+        else {
+            // This target is the first one to compute the CoM in the whole domain, so we register its index for later targets to skip this.
+            *unrestricted_com_highest_index = itarget;
+        }
     }
 
 
@@ -250,20 +266,6 @@ void TargetTracker_ComIntegrand(CCTK_ARGUMENTS) {
     const CCTK_REAL r_max = com_compute_inside_radius[itarget];
     const CCTK_REAL r_min = com_compute_outside_radius[itarget];
 
-    if (verbose) {
-        char dist_str[100];
-        if (r_max > 0 && r_min > 0) {
-            sprintf(dist_str, "%g < r <= %g", r_min, r_max);
-        } else if (r_max > 0) {
-            sprintf(dist_str, "r <= %g", r_max);
-        } else if (r_min > 0) {
-            sprintf(dist_str, "%g < r", r_min);
-        } else {
-            sprintf(dist_str, "with no restriction");
-        }
-        CCTK_VINFO("CoM pass for tracker %d: center = (%g,%g,%g), distance from the center %s",
-                   itarget, (double)x_c, (double)y_c, (double)z_c, dist_str);
-    }
 
     for (int k = cctk_nghostzones[2] ; k < cctk_lsh[2] - cctk_nghostzones[2] ; k++) {
     for (int j = cctk_nghostzones[1] ; j < cctk_lsh[1] - cctk_nghostzones[1] ; j++) {
@@ -379,6 +381,48 @@ void TargetTracker_ComDoSum(CCTK_ARGUMENTS) {
         return;
     }
 
+    const CCTK_REAL x_c   = target_loc_x[itarget];
+    const CCTK_REAL y_c   = target_loc_y[itarget];
+    const CCTK_REAL z_c   = target_loc_z[itarget];
+    const CCTK_REAL r_max = com_compute_inside_radius[itarget];
+    const CCTK_REAL r_min = com_compute_outside_radius[itarget];
+
+    // This INFO output used to be in TargetTracker_ComIntegrand, but it was thus printed once
+    // per level. Checking `cctk_level==0` does not seem to work, maybe because of the 
+    // `global-early loop-local` option in the schedule. Here it should be printed only once.
+    // This avoid the use of an extra flag.
+    if (verbose) {
+        char dist_str[100];
+        if (r_max > 0 && r_min > 0) {
+            sprintf(dist_str, "%g < r <= %g", r_min, r_max);
+        } else if (r_max > 0) {
+            sprintf(dist_str, "r <= %g", r_max);
+        } else if (r_min > 0) {
+            sprintf(dist_str, "%g < r", r_min);
+        } else {
+            sprintf(dist_str, "with no restriction");
+        }
+        CCTK_VINFO("CoM calculation for tracker %d: center = (%g,%g,%g), distance from the center %s",
+                   itarget, (double)x_c, (double)y_c, (double)z_c, dist_str);
+    }
+
+    // Avoid re-computing the CoM in the whole domain if a previous tracker already did it 
+    if (itarget < *unrestricted_com_highest_index && r_max <= 0 && r_min <= 0) {
+        // This tracker is not the first one to compute the CoM in the whole domain, so we can reuse it.
+        target_com_x[itarget]    = target_com_x[*unrestricted_com_highest_index];
+        target_com_y[itarget]    = target_com_y[*unrestricted_com_highest_index];
+        target_com_z[itarget]    = target_com_z[*unrestricted_com_highest_index];
+        target_com_mass[itarget] = target_com_mass[*unrestricted_com_highest_index];
+        
+        if (verbose) {
+        CCTK_VINFO("Center of mass of tracker %d reused from tracker %d: (x,y,z) = (%g,%g,%g), mass = %g",
+                   itarget, *unrestricted_com_highest_index,
+                   (double)target_com_x[itarget], (double)target_com_y[itarget], (double)target_com_z[itarget],
+                   (double)target_com_mass[itarget]);
+    }
+        
+        return;
+    }
 
     // ----- Reduction -----
 
@@ -438,22 +482,22 @@ void TargetTracker_ComDoSum(CCTK_ARGUMENTS) {
 
     if (com_ok) {
         // Don't forget to add back the center of the integration volume
-        target_com_x[itarget]    = (out_vals[1] / mass) + target_loc_x[itarget];
-        target_com_y[itarget]    = (out_vals[2] / mass) + target_loc_y[itarget];
-        target_com_z[itarget]    = (out_vals[3] / mass) + target_loc_z[itarget];
+        target_com_x[itarget]    = (out_vals[1] / mass) + x_c;
+        target_com_y[itarget]    = (out_vals[2] / mass) + y_c;
+        target_com_z[itarget]    = (out_vals[3] / mass) + z_c;
         target_com_mass[itarget] = mass;
     }
     // Failure: keep the previous values
     else {
         CCTK_VWARN(CCTK_WARN_COMPLAIN,
-                   "Invalid center of mass integral for target %d (mass = %g). Keeping the previous values (x,y,z) = (%g,%g,%g).",
+                   "Invalid center of mass integral for tracker %d (mass = %g). Keeping the previous values (x,y,z) = (%g,%g,%g).",
                    itarget, (double)mass,
                    (double)target_com_x[itarget], (double)target_com_y[itarget], (double)target_com_z[itarget]);
     }
 
 
     if (verbose) {
-        CCTK_VINFO("Center of mass of target %d: (x,y,z) = (%g,%g,%g), mass = %g",
+        CCTK_VINFO("Center of mass of tracker %d: (x,y,z) = (%g,%g,%g), mass = %g",
                    itarget,
                    (double)target_com_x[itarget], (double)target_com_y[itarget], (double)target_com_z[itarget],
                    (double)target_com_mass[itarget]);

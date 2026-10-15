@@ -15,6 +15,7 @@ storage: is_multipatch[1]
 storage: use_volume_form[1]
 storage: com_sym_factors[1]
 storage: com_counter[1]
+storage: unrestricted_com_highest_index[1]
 # Grid Function integrands for the center of mass
 storage: com_integrand[1]
 # Integrated quantities
