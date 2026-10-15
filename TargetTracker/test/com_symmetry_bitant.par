@@ -143,8 +143,8 @@ SphericalSurface::nghostsphi          [0] = 2
 
 TargetTracker::compute_com                    [0] = yes
 TargetTracker::initial_x                      [0] = 0.0
+TargetTracker::com_every                      [0] = 1
 
-TargetTracker::com_every                           = 1
 TargetTracker::com_symmetry                        = "bitant_z"
 TargetTracker::verbose                             = yes
 

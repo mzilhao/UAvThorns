@@ -123,7 +123,7 @@ void TargetChangeOneDim (CCTK_ARGUMENTS, struct TargetInfoBundleOneDim bundle) {
     const char* dim_name      = bundle.dim_name;
 
     // "New" target
-    CCTK_INT tgt_id = CCTK_VarIndex(tgt_name);
+    const CCTK_INT tgt_id = CCTK_Equals(tgt_name, "") ? -1 : CCTK_VarIndex(tgt_name);
     if (tgt_id != *ptr_current_id) { // Target has changed
     
         // Check if target is fixed

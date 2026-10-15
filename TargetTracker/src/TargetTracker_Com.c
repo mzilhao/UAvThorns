@@ -23,9 +23,14 @@
 // Initialization of flags and quantities for the center of mass calculation
 ///////////////////////////////////////////////////////////////////////////////
 
-void TargetTracker_ComFlags(CCTK_ARGUMENTS) {
+void TargetTracker_InitializeComFlags(CCTK_ARGUMENTS) {
     DECLARE_CCTK_ARGUMENTS;
     DECLARE_CCTK_PARAMETERS;
+
+    // Initialize the counter to 0 for sanity.
+    *com_counter = 0;
+    // Initialize the flag to -1 for sanity.
+    *unrestricted_com_highest_index = -1;
 
     // -------------------------------
     // MULTIPATCH
@@ -102,7 +107,7 @@ void TargetTracker_ComFlags(CCTK_ARGUMENTS) {
     }
     else {
         // Should not happen if this function is properly kept consistent with the parameters.
-        CCTK_VWARN(CCTK_WARN_ALERT, "Unknown symmetry for the center of mass integrands: '%s'. Defaulting to 'com_symmetry=none'.", com_symmetry);
+        CCTK_VWARN(CCTK_WARN_ALERT, "Unknown symmetry for the center of mass integrands: '%s'. Defaulting to 'com_symmetry = none'.", com_symmetry);
         *sym_factor_drho  = 1;
         *sym_factor_dCoMx = 1;
         *sym_factor_dCoMy = 1;
@@ -115,37 +120,25 @@ void TargetTracker_ComFlags(CCTK_ARGUMENTS) {
 // Counter management
 ///////////////////////////////////////////////////////////////////////////////
 
-void TargetTracker_ComCounterZero(CCTK_ARGUMENTS) {
+void TargetTracker_ComSetupIteration(CCTK_ARGUMENTS) {
     DECLARE_CCTK_ARGUMENTS;
     DECLARE_CCTK_PARAMETERS;
 
-    *com_counter = 0;
-}
-
-void TargetTracker_ComCounterZeroRec(CCTK_ARGUMENTS) {
-    DECLARE_CCTK_ARGUMENTS;
-    DECLARE_CCTK_PARAMETERS;
-
-    *com_counter = 0;
-}
-
-void TargetTracker_ComCounter(CCTK_ARGUMENTS) {
-    DECLARE_CCTK_ARGUMENTS;
-    DECLARE_CCTK_PARAMETERS;
-
-    // Do the calculation only if asked for and on the right iteration
-    if (com_every <= 0 || cctk_iteration % com_every != 0) {
-        // Make sure the counter is zero: it gates the WHILE loop of the group
-        *com_counter = 0;
-        return;
+    // Update value of is_com_computed flag based on compute_com parameter (which is STEERABLE=ALWAYS)
+    for (CCTK_INT itarget = 0; itarget < nmax_targets; itarget++) {
+        is_com_computed[itarget] = compute_com[itarget];
     }
 
+    // Setup the counter and flag for this iteration
+    *com_counter = 0;
+    *unrestricted_com_highest_index = -1;
+    
     // Register the index of the last (highest-index) target with the calculation
     // activated, so that the WHILE group processes the computed targets from the
     // last one to the first one (iterating on '*com_counter' as 1 + target index).
-    *com_counter = 0;
     for (CCTK_INT itarget = nmax_targets - 1 ; itarget >= 0 ; itarget--) {
-        if (is_com_computed[itarget]) {
+        // com_every should be > 0 by construction
+        if (is_com_computed[itarget] && cctk_iteration % com_every[itarget] == 0) {
             *com_counter = itarget + 1;
             break;
         }
@@ -156,6 +149,7 @@ void TargetTracker_ComDecrementCounter(CCTK_ARGUMENTS) {
     DECLARE_CCTK_ARGUMENTS;
     DECLARE_CCTK_PARAMETERS;
 
+    // We need to decrement in any case, even if the current target is not computed.
     (*com_counter)--;
 }
 
@@ -173,11 +167,24 @@ void TargetTracker_ComIntegrand(CCTK_ARGUMENTS) {
     // calculation still to be done (see TargetTracker_ComCounter)
     const CCTK_INT itarget = *com_counter - 1;
 
-    // Inactive target: nothing to do.
+    // Inactive computation or unneeded iteration: nothing to do.
     // NOTE: The counter iterates over all target indices from the highest computed
     //       one down to 0, so targets in the gaps (not computed) are expected here.
-    if (itarget < 0 || !is_com_computed[itarget]) {
+    if (!is_com_computed[itarget] || cctk_iteration % com_every[itarget] != 0) {
         return;
+    }
+
+    // Avoid re-computing the CoM in the whole domain if a previous tracker already did it 
+    // (the value can be reused in TargetTracker_ComDoSum).
+    if (com_compute_inside_radius[itarget] <= 0 && com_compute_outside_radius[itarget] <= 0) {
+        if (itarget < *unrestricted_com_highest_index) {
+            // This target is not the first one to compute the CoM in the whole domain, so we can skip it.
+            return;
+        }
+        else {
+            // This target is the first one to compute the CoM in the whole domain, so we register its index for later targets to skip this.
+            *unrestricted_com_highest_index = itarget;
+        }
     }
 
 
@@ -259,10 +266,6 @@ void TargetTracker_ComIntegrand(CCTK_ARGUMENTS) {
     const CCTK_REAL r_max = com_compute_inside_radius[itarget];
     const CCTK_REAL r_min = com_compute_outside_radius[itarget];
 
-    if (verbose) {
-        CCTK_VINFO("CoM pass for target %d: center = (%g,%g,%g), com_compute_inside_radius = %g, com_compute_outside_radius = %g",
-                   itarget, (double)x_c, (double)y_c, (double)z_c, (double)r_max, (double)r_min);
-    }
 
     for (int k = cctk_nghostzones[2] ; k < cctk_lsh[2] - cctk_nghostzones[2] ; k++) {
     for (int j = cctk_nghostzones[1] ; j < cctk_lsh[1] - cctk_nghostzones[1] ; j++) {
@@ -288,6 +291,9 @@ void TargetTracker_ComIntegrand(CCTK_ARGUMENTS) {
         docalc = docalc && (r_max  <= 0 || r2_c <= r_max*r_max )
                          && (r_min <= 0 || r2_c >  r_min*r_min);
 
+        if (!docalc) {
+            continue;
+        }
 
         // ----- Metric determinant -----
 
@@ -320,16 +326,20 @@ void TargetTracker_ComIntegrand(CCTK_ARGUMENTS) {
         const CCTK_REAL betay_l = betay[ind];
         const CCTK_REAL betaz_l = betaz[ind];
 
+        // (T_00
         CCTK_REAL rho = eTtt[ind];
+        // ... - 2 beta^i T_0i
         rho = rho - 2 * betax_l * eTtx[ind];
         rho = rho - 2 * betay_l * eTty[ind];
         rho = rho - 2 * betaz_l * eTtz[ind];
+        // ... + beta^i beta^j T_ij)
         rho = rho + betax_l * betax_l * eTxx[ind];
         rho = rho + betay_l * betay_l * eTyy[ind];
         rho = rho + betaz_l * betaz_l * eTzz[ind];
         rho = rho + 2 * betax_l * betay_l * eTxy[ind];
         rho = rho + 2 * betax_l * betaz_l * eTxz[ind];
         rho = rho + 2 * betay_l * betaz_l * eTyz[ind];
+        // .../alpha^2
         rho = rho / (alph * alph);
 
         const CCTK_REAL rho_vol4 = rho * alph * vol3;
@@ -338,15 +348,13 @@ void TargetTracker_ComIntegrand(CCTK_ARGUMENTS) {
         // ----- Integrands -----
         // dCoM^i = rho * x^i * alpha * sqrt(detgd) dV
         // The division by the integral of the density is done after the reduction.
-        // We don't use x1 = x - x_track (and add the tracking location back after
-        // the reduction), for simplicity.
+        // We use dx_c = x - x_c (and add it back after the reduction),
+        // to have better adapted coordinates for the integration.
 
-        if (docalc) {
-            com_integrand_rho[ind] = rho_vol4 * (*sym_factor_drho);
-            com_integrand_x[ind]   = x[ind] * rho_vol4 * (*sym_factor_dCoMx);
-            com_integrand_y[ind]   = y[ind] * rho_vol4 * (*sym_factor_dCoMy);
-            com_integrand_z[ind]   = z[ind] * rho_vol4 * (*sym_factor_dCoMz);
-        }
+        com_integrand_rho[ind] =        rho_vol4 * (*sym_factor_drho);
+        com_integrand_x[ind]   = dx_c * rho_vol4 * (*sym_factor_dCoMx);
+        com_integrand_y[ind]   = dy_c * rho_vol4 * (*sym_factor_dCoMy);
+        com_integrand_z[ind]   = dz_c * rho_vol4 * (*sym_factor_dCoMz);
 
     }
     }
@@ -365,14 +373,56 @@ void TargetTracker_ComDoSum(CCTK_ARGUMENTS) {
     // Decode the current target from the counter (see TargetTracker_ComIntegrand)
     const CCTK_INT itarget = *com_counter - 1;
 
-    // Inactive target: nothing to do.
+    // Inactive target or unneeded iteration: nothing to do.
     // NOTE: As in TargetTracker_ComIntegrand, the counter iterates over all
     //       target indices from the highest computed one down to 0, so targets
     //       in the gaps (not computed) are expected here.
-    if (!is_com_computed[itarget]) {
+    if (!is_com_computed[itarget] || cctk_iteration % com_every[itarget] != 0) {
         return;
     }
 
+    const CCTK_REAL x_c   = target_loc_x[itarget];
+    const CCTK_REAL y_c   = target_loc_y[itarget];
+    const CCTK_REAL z_c   = target_loc_z[itarget];
+    const CCTK_REAL r_max = com_compute_inside_radius[itarget];
+    const CCTK_REAL r_min = com_compute_outside_radius[itarget];
+
+    // This INFO output used to be in TargetTracker_ComIntegrand, but it was thus printed once
+    // per level. Checking `cctk_level==0` does not seem to work, maybe because of the 
+    // `global-early loop-local` option in the schedule. Here it should be printed only once.
+    // This avoid the use of an extra flag.
+    if (verbose) {
+        char dist_str[100];
+        if (r_max > 0 && r_min > 0) {
+            sprintf(dist_str, "%g < r <= %g", r_min, r_max);
+        } else if (r_max > 0) {
+            sprintf(dist_str, "r <= %g", r_max);
+        } else if (r_min > 0) {
+            sprintf(dist_str, "%g < r", r_min);
+        } else {
+            sprintf(dist_str, "with no restriction");
+        }
+        CCTK_VINFO("CoM calculation for tracker %d: center = (%g,%g,%g), distance from the center %s",
+                   itarget, (double)x_c, (double)y_c, (double)z_c, dist_str);
+    }
+
+    // Avoid re-computing the CoM in the whole domain if a previous tracker already did it 
+    if (itarget < *unrestricted_com_highest_index && r_max <= 0 && r_min <= 0) {
+        // This tracker is not the first one to compute the CoM in the whole domain, so we can reuse it.
+        target_com_x[itarget]    = target_com_x[*unrestricted_com_highest_index];
+        target_com_y[itarget]    = target_com_y[*unrestricted_com_highest_index];
+        target_com_z[itarget]    = target_com_z[*unrestricted_com_highest_index];
+        target_com_mass[itarget] = target_com_mass[*unrestricted_com_highest_index];
+        
+        if (verbose) {
+        CCTK_VINFO("Center of mass of tracker %d reused from tracker %d: (x,y,z) = (%g,%g,%g), mass = %g",
+                   itarget, *unrestricted_com_highest_index,
+                   (double)target_com_x[itarget], (double)target_com_y[itarget], (double)target_com_z[itarget],
+                   (double)target_com_mass[itarget]);
+    }
+        
+        return;
+    }
 
     // ----- Reduction -----
 
@@ -398,7 +448,7 @@ void TargetTracker_ComDoSum(CCTK_ARGUMENTS) {
     for (int i = 0 ; i < num_fields ; i++) {
         varid[i] = CCTK_VarIndex(varnames[i]);
         if (varid[i] < 0) {
-            CCTK_VWARN(CCTK_WARN_ABORT, "Could not get index to grid function %s", varnames[i]);
+            CCTK_VWARN(0, "Could not get index to grid function %s", varnames[i]);
         }
     }
 
@@ -431,22 +481,23 @@ void TargetTracker_ComDoSum(CCTK_ARGUMENTS) {
     }
 
     if (com_ok) {
-        target_com_x[itarget]    = out_vals[1] / mass;
-        target_com_y[itarget]    = out_vals[2] / mass;
-        target_com_z[itarget]    = out_vals[3] / mass;
+        // Don't forget to add back the center of the integration volume
+        target_com_x[itarget]    = (out_vals[1] / mass) + x_c;
+        target_com_y[itarget]    = (out_vals[2] / mass) + y_c;
+        target_com_z[itarget]    = (out_vals[3] / mass) + z_c;
         target_com_mass[itarget] = mass;
     }
     // Failure: keep the previous values
     else {
         CCTK_VWARN(CCTK_WARN_COMPLAIN,
-                   "Invalid center of mass integral for target %d (mass = %g). Keeping the previous values (x,y,z) = (%g,%g,%g).",
+                   "Invalid center of mass integral for tracker %d (mass = %g). Keeping the previous values (x,y,z) = (%g,%g,%g).",
                    itarget, (double)mass,
                    (double)target_com_x[itarget], (double)target_com_y[itarget], (double)target_com_z[itarget]);
     }
 
 
     if (verbose) {
-        CCTK_VINFO("Center of mass of target %d: (x,y,z) = (%g,%g,%g), mass = %g",
+        CCTK_VINFO("Center of mass of tracker %d: (x,y,z) = (%g,%g,%g), mass = %g",
                    itarget,
                    (double)target_com_x[itarget], (double)target_com_y[itarget], (double)target_com_z[itarget],
                    (double)target_com_mass[itarget]);

@@ -35,9 +35,11 @@ provide the grid scalars to track with `target_x/y/z[i]`, e.g.
     TargetTracker::target_z            [0] = "PunctureTracker::pt_loc_z[0]"
     TargetTracker::which_surface_to_store_info[0] = 0
 
-The tracked coordinates are stored in the public grid scalars
+The tracked coordinates are stored and updated in the public grid scalars
 `TargetTracker::target_loc_x/y/z[i]` at every tracking iteration
 (see `track_every`, `start_tracking_after_time`, `stop_tracking_after_time`).
+Mid-run (de)activation is done through the `track` parameter, not these
+complementary parameters (they can be steered at recovery).
 If `which_surface_to_store_info[i]` is set, the centroid of the given
 spherical surface is set to the tracked location, and the surface is
 marked as active/valid. This, in particular, moves `SphericalSurface`s
@@ -47,7 +49,7 @@ updated. (The user must ensure the surface resolutions `ntheta`/`nphi`
 etc. are set.)
 
 A target with `target_*` set to "" is "fixed": it does not move
-(its location is set by `initial_x/y/z[i]`).
+(its location is set by `initial_x/y/z[i]` or the latest computed location).
 
 ### Surface-following mode ('surface to tracker')
 
@@ -101,6 +103,7 @@ checkpointed grid scalars
 
 and can be output, tracked (with the parameters `target_*[i]`, by this
 thorn or any other), or used to move the corresponding puncture/surface.
+The center of mass computation is done independently of the status of the tracker.
 
 Restricting the integral to a spherical domain centered at the tracked
 point is done with `com_compute_inside_radius[i]` and `com_compute_outside_radius[i]`
@@ -120,9 +123,9 @@ target, in the spirit of `VolumeIntegrals_GRMHD`), and reduced with the
 driver's sum reduction, which handles mesh refinement. The following
 global parameters control the calculation:
 
-  - `com_every`: do the calculation every N iterations (for all
-    targets together; 0 disables). Note that the results are stored in
-    the grid scalars between calculations (checkpointed), and that the
+  - `com_every`: do the calculation every N iterations (for each tracker
+    independently). Like for `track_every`, mid-run (de)activation is
+    controlled by the `compute_com` parameter. Note that the
     calculation requires the stress-energy tensor of the current pass
     (the user must make sure `TmunuBase` storage is on and the tensor
     is up to date, e.g. with `TmunuBase::stress_energy_at_RHS = yes`).

@@ -15,6 +15,7 @@ storage: is_multipatch[1]
 storage: use_volume_form[1]
 storage: com_sym_factors[1]
 storage: com_counter[1]
+storage: unrestricted_com_highest_index[1]
 # Grid Function integrands for the center of mass
 storage: com_integrand[1]
 # Integrated quantities
@@ -41,25 +42,11 @@ schedule TargetTracker_Recovery at CCTK_POST_RECOVER_VARIABLES
 } "(Partial) recovery of parameters from checkpointed internal variables"
 
 # Initialize flags for the center of mass calculation (multipatch, volume form, symmetry factors)
-schedule TargetTracker_ComFlags at BASEGRID after MultiPatch_SpatialCoordinates
+schedule TargetTracker_InitializeComFlags at BASEGRID after MultiPatch_SpatialCoordinates
 {
   LANG: C
   OPTIONS: global
 } "Initialize quantities used in the center of mass calculation"
-
-# Make sure the counter has a sane value at startup and at recovery
-# (in case the group was not run completely and the counter is left at a nonzero value)
-schedule TargetTracker_ComCounterZero at CCTK_INITIAL
-{
-  LANG: C
-  OPTIONS: global
-} "Initialize the center of mass counter to zero"
-
-schedule TargetTracker_ComCounterZeroRec AT CCTK_POST_RECOVER_VARIABLES before TargetTracker_Recovery
-{
-  LANG: C
-  OPTIONS: global
-} "Initialize the center of mass counter to zero (at recovery)"
 
 ###############################################################################
 # WARNING: schedule bins
@@ -78,13 +65,13 @@ schedule TargetTracker_ComCounterZeroRec AT CCTK_POST_RECOVER_VARIABLES before T
 
 # Center of mass
 
-schedule TargetTracker_ComCounter at ANALYSIS after Trigger_Check before TargetTracker_SetSurfaces before CarpetLib_printtimestats
+schedule TargetTracker_ComSetupIteration at ANALYSIS after Trigger_Check before TargetTracker_SetSurfaces before CarpetLib_printtimestats
 {
   LANG: C
   OPTIONS: global-early
 } "Initialize the center of mass counter for this iteration"
 
-schedule GROUP TargetTracker_ComGroup AT ANALYSIS after TargetTracker_ComCounter before TargetTracker_SetSurfaces before CarpetLib_printtimestats WHILE TargetTracker::com_counter
+schedule GROUP TargetTracker_ComGroup AT ANALYSIS after TargetTracker_ComSetupIteration before TargetTracker_SetSurfaces before CarpetLib_printtimestats WHILE TargetTracker::com_counter
 {
 } "Compute the centers of mass of the matter distribution for all targets"
 
