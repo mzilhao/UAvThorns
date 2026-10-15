@@ -64,13 +64,13 @@ schedule TargetTracker_InitializeComFlags at BASEGRID after MultiPatch_SpatialCo
 
 # Center of mass
 
-schedule TargetTracker_ComCounter at ANALYSIS after Trigger_Check before TargetTracker_SetSurfaces before CarpetLib_printtimestats
+schedule TargetTracker_ComSetupIteration at ANALYSIS after Trigger_Check before TargetTracker_SetSurfaces before CarpetLib_printtimestats
 {
   LANG: C
   OPTIONS: global-early
 } "Initialize the center of mass counter for this iteration"
 
-schedule GROUP TargetTracker_ComGroup AT ANALYSIS after TargetTracker_ComCounter before TargetTracker_SetSurfaces before CarpetLib_printtimestats WHILE TargetTracker::com_counter
+schedule GROUP TargetTracker_ComGroup AT ANALYSIS after TargetTracker_ComSetupIteration before TargetTracker_SetSurfaces before CarpetLib_printtimestats WHILE TargetTracker::com_counter
 {
 } "Compute the centers of mass of the matter distribution for all targets"
 

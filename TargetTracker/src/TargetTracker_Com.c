@@ -118,7 +118,7 @@ void TargetTracker_InitializeComFlags(CCTK_ARGUMENTS) {
 // Counter management
 ///////////////////////////////////////////////////////////////////////////////
 
-void TargetTracker_ComCounter(CCTK_ARGUMENTS) {
+void TargetTracker_ComSetupIteration(CCTK_ARGUMENTS) {
     DECLARE_CCTK_ARGUMENTS;
     DECLARE_CCTK_PARAMETERS;
 

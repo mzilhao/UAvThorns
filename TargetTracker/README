@@ -103,6 +103,7 @@ checkpointed grid scalars
 
 and can be output, tracked (with the parameters `target_*[i]`, by this
 thorn or any other), or used to move the corresponding puncture/surface.
+The center of mass computation is done independently of the status of the tracker.
 
 Restricting the integral to a spherical domain centered at the tracked
 point is done with `com_compute_inside_radius[i]` and `com_compute_outside_radius[i]`
