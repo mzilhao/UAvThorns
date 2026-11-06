@@ -102,7 +102,7 @@ Time::dtfac                           = 0.25
 # Spherical surfaces
 #------------------------------------------------------------------------------
 
-SphericalSurface::nsurfaces           = 2
+SphericalSurface::nsurfaces           = 1
 SphericalSurface::maxntheta           = 10
 SphericalSurface::maxnphi             = 20
 SphericalSurface::verbose             = no
@@ -111,13 +111,6 @@ SphericalSurface::ntheta              [0] = 10
 SphericalSurface::nphi                [0] = 20
 SphericalSurface::nghoststheta        [0] = 2
 SphericalSurface::nghostsphi          [0] = 2
-
-### TODO: Is the second surface here really needed? It's not used and yields NaNs in the output.
-###       I guess it just checks that tracker 1 does not write to surface 1 indeed
-SphericalSurface::ntheta              [1] = 10
-SphericalSurface::nphi                [1] = 20
-SphericalSurface::nghoststheta        [1] = 2
-SphericalSurface::nghostsphi          [1] = 2
 
 # Target tracking
 #------------------------------------------------------------------------------
@@ -129,7 +122,9 @@ TargetTracker::initial_y                      [0] = 3.0
 TargetTracker::initial_z                      [0] = 4.0
 TargetTracker::which_surface_to_store_info    [0] = 0
 
-# Target 1: copies target 0's location (chained tracker)
+# Target 1: copies target 0's location (chained tracker). It has no associated
+# surface on purpose: its own location must be stored in target_loc, but must
+# not leak into surface 0 (which is only written by target 0).
 TargetTracker::track                          [1] = yes
 TargetTracker::target_x                       [1] = "TargetTracker::target_loc_x[0]"
 TargetTracker::target_y                       [1] = "TargetTracker::target_loc_y[0]"

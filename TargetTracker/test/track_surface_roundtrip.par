@@ -1,14 +1,12 @@
-# TargetTracker test: 'surface to tracker' mode
+# TargetTracker test: surface <-> tracker roundtrip
 #
-# Target 0 is fixed at (2,0,0) and stores its location into spherical surface
-# 0. Target 1 is in 'loc_from_surface_mode', so it reads its location back from
-# surface 0's centroid. After the first tracking pass, target 1 should equal
-# (2,0,0).
-
-### TODO: That's cool but a better check would be with something that actually moves.
-###       Either something else moves the surface and we need only one tracker.
-###       or the first tracker moves, sets a surface, and the second tracker reads it back.
-###       This can be combined with steerability of `loc_from_surface_mode`.
+# Target 0 stores its location into spherical surface 0 and is moved by a
+# trigger from x = 2 to x = 5 (t > 0.25). Target 1 starts in
+# 'loc_from_surface_mode', so it reads the (moving) centroid back from surface
+# 0. At t > 0.75 a trigger switches that mode off, and target 1 goes back to
+# tracking a grid scalar (target 2, fixed at x = 9). This tests both
+# directions of the data flow on something that actually moves, and the
+# runtime steerability of 'loc_from_surface_mode'.
 
 ActiveThorns = "
   ADMBase
@@ -37,6 +35,7 @@ ActiveThorns = "
   SymBase
   TargetTracker
   Time
+  Trigger
   TmunuBase
 "
 
@@ -121,19 +120,51 @@ SphericalSurface::nghostsphi          [0] = 2
 # Target tracking
 #------------------------------------------------------------------------------
 
-# Target 0: fixed at (2,0,0), stored into surface 0
+# Target 0: starts fixed at (2,0,0), stored into surface 0. It is moved to
+# x = 5 at t > 0.25 (trigger), so that the surface (and target 1) follow
+# something that actually moves.
 TargetTracker::track                          [0] = yes
 TargetTracker::initial_x                      [0] = 2.0
-TargetTracker::initial_y                      [0] = 0.0
+TargetTracker::initial_y                      [0] = 5.0
 TargetTracker::initial_z                      [0] = 0.0
 TargetTracker::which_surface_to_store_info    [0] = 0
 
-# Target 1: 'surface to tracker' mode, reads surface 0
+# Target 1: starts in 'surface to tracker' mode, reading surface 0 (i.e. the
+# location of target 0). At t > 0.75 a trigger switches this mode off, so that
+# it goes back to tracking a grid scalar (target 2, fixed at x = 9). This
+# exercises both directions of the surface <-> tracker data flow.
 TargetTracker::track                          [1] = yes
 TargetTracker::loc_from_surface_mode          [1] = yes
 TargetTracker::which_surface_to_store_info    [1] = 0
+TargetTracker::target_x                       [1] = "TargetTracker::target_loc_x[2]"
+
+# Target 2: fixed at (9,0,0), used as the grid scalar tracked by target 1 once
+# it leaves the 'surface to tracker' mode.
+TargetTracker::track                          [2] = yes
+TargetTracker::initial_x                      [2] = 9.0
 
 TargetTracker::verbose                             = yes
+
+# Move target 0, and switch target 1 back to scalar tracking.
+Trigger::Trigger_Number                       = 2
+
+Trigger::Trigger_Checked_Variable         [0] = "Trigger::trigger_cctk_time"
+Trigger::Trigger_Reduction                [0] = "minimum"
+Trigger::Trigger_Relation                 [0] = ">"
+Trigger::Trigger_Checked_Value            [0] = 0.25
+Trigger::Trigger_Reaction                 [0] = "steerparam"
+Trigger::Trigger_Steered_Parameter_Thorn  [0] = "TargetTracker"
+Trigger::Trigger_Steered_Parameter_Name   [0] = "target_x[0]"
+Trigger::Trigger_Steered_Parameter_Value  [0] = "TargetTracker::target_loc_y[0]"
+
+Trigger::Trigger_Checked_Variable         [1] = "Trigger::trigger_cctk_time"
+Trigger::Trigger_Reduction                [1] = "minimum"
+Trigger::Trigger_Relation                 [1] = ">"
+Trigger::Trigger_Checked_Value            [1] = 0.75
+Trigger::Trigger_Reaction                 [1] = "steerparam"
+Trigger::Trigger_Steered_Parameter_Thorn  [1] = "TargetTracker"
+Trigger::Trigger_Steered_Parameter_Name   [1] = "loc_from_surface_mode[1]"
+Trigger::Trigger_Steered_Parameter_Value  [1] = "no"
 
 # Output
 #------------------------------------------------------------------------------
@@ -156,4 +187,4 @@ IOASCII::out0D_vars          = "
 #------------------------------------------------------------------------------
 
 Cactus::terminate            = "iteration"
-Cactus::cctk_itlast          = 4
+Cactus::cctk_itlast          = 6

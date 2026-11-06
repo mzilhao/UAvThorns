@@ -415,12 +415,12 @@ void TargetTracker_ComDoSum(CCTK_ARGUMENTS) {
         target_com_mass[itarget] = target_com_mass[*unrestricted_com_highest_index];
         
         if (verbose) {
-        CCTK_VINFO("Center of mass of tracker %d reused from tracker %d: (x,y,z) = (%g,%g,%g), mass = %g",
-                   itarget, *unrestricted_com_highest_index,
-                   (double)target_com_x[itarget], (double)target_com_y[itarget], (double)target_com_z[itarget],
-                   (double)target_com_mass[itarget]);
-    }
-        
+            CCTK_VINFO("Center of mass of tracker %d reused from tracker %d: (x,y,z) = (%g,%g,%g), mass = %g",
+                       itarget, *unrestricted_com_highest_index,
+                       (double)target_com_x[itarget], (double)target_com_y[itarget], (double)target_com_z[itarget],
+                       (double)target_com_mass[itarget]);
+        }
+
         return;
     }
 

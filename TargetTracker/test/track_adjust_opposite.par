@@ -1,10 +1,9 @@
 # TargetTracker test: affine adjustment and tracking the opposite of a target
 #
-# Target 0 is fixed at (3,0,0). Target 1 tracks target 0 with an affine
-# adjustment loc = 2*target + 1 (x only), giving x=7. Target 2 tracks the
-# opposite of target 0, giving x=-3.
-
-### TODO: That's cool but a better check would be with something that actually moves.
+# Target 0 is moved by triggers from x = 3 to x = 7 (t > 0.25) and then to
+# x = -4 (t > 0.75). Target 1 tracks it with an affine adjustment
+# loc = 2*target + 1, and target 2 tracks its opposite, loc = -target. Since
+# the source actually moves, both derived locations change over time.
 
 ActiveThorns = "
   ADMBase
@@ -33,6 +32,7 @@ ActiveThorns = "
   SymBase
   TargetTracker
   Time
+  Trigger
   TmunuBase
 "
 
@@ -117,11 +117,13 @@ SphericalSurface::nghostsphi          [0] = 2
 # Target tracking
 #------------------------------------------------------------------------------
 
-# Target 0: fixed at (3,0,0)
+# Target 0: starts fixed at (3,7,-4); its x coordinate is then driven by
+# triggers to 7 (t > 0.25) and to -4 (t > 0.75), so that targets 1 and 2
+# follow something that actually moves.
 TargetTracker::track                          [0] = yes
 TargetTracker::initial_x                      [0] = 3.0
-TargetTracker::initial_y                      [0] = 0.0
-TargetTracker::initial_z                      [0] = 0.0
+TargetTracker::initial_y                      [0] = 7.0
+TargetTracker::initial_z                      [0] = -4.0
 
 # Target 1: affine adjustment of target 0: loc = 2*x + 1
 TargetTracker::track                          [1] = yes
@@ -140,6 +142,29 @@ TargetTracker::target_z                       [2] = "TargetTracker::target_loc_z
 TargetTracker::track_opposite                 [2] = yes
 
 TargetTracker::verbose                             = yes
+
+# Make target 0 move: steer its x source between two of its own (fixed)
+# coordinates once the given time has passed. Both conditions stay true after
+# they fire; triggers are applied in index order, so the last one wins.
+Trigger::Trigger_Number                       = 2
+
+Trigger::Trigger_Checked_Variable         [0] = "Trigger::trigger_cctk_time"
+Trigger::Trigger_Reduction                [0] = "minimum"
+Trigger::Trigger_Relation                 [0] = ">"
+Trigger::Trigger_Checked_Value            [0] = 0.25
+Trigger::Trigger_Reaction                 [0] = "steerparam"
+Trigger::Trigger_Steered_Parameter_Thorn  [0] = "TargetTracker"
+Trigger::Trigger_Steered_Parameter_Name   [0] = "target_x[0]"
+Trigger::Trigger_Steered_Parameter_Value  [0] = "TargetTracker::target_loc_y[0]"
+
+Trigger::Trigger_Checked_Variable         [1] = "Trigger::trigger_cctk_time"
+Trigger::Trigger_Reduction                [1] = "minimum"
+Trigger::Trigger_Relation                 [1] = ">"
+Trigger::Trigger_Checked_Value            [1] = 0.75
+Trigger::Trigger_Reaction                 [1] = "steerparam"
+Trigger::Trigger_Steered_Parameter_Thorn  [1] = "TargetTracker"
+Trigger::Trigger_Steered_Parameter_Name   [1] = "target_x[0]"
+Trigger::Trigger_Steered_Parameter_Value  [1] = "TargetTracker::target_loc_z[0]"
 
 # Output
 #------------------------------------------------------------------------------
@@ -161,4 +186,4 @@ IOASCII::out0D_vars          = "
 #------------------------------------------------------------------------------
 
 Cactus::terminate            = "iteration"
-Cactus::cctk_itlast          = 4
+Cactus::cctk_itlast          = 6

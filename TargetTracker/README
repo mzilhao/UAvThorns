@@ -199,19 +199,6 @@ See the discussion in `TODO.md` for details.
 Tests
 -----
 
-> TODO: See TODOs in individual test parameter files
-
-> Generically, some tests are not really relevant with fixed targets, it would be better to have them with moving targets
-
-> Tests (preferably with moving targets) for the following features are still missing (can be grouped or added to existing tests):
-> - steerability of `track`
-> - steerability of `target_*` (changing to "fixed", changing to another valid grid scalar, changing to invalid targets),
-> - steerability of `loc_from_surface_mode`.
-> - self tracking of a restricted CoM
-> - `com_every` > 1, and `track_every` > 1
-> - `excise_horizon` 
-> - recovery from checkpoint, `force_params_at_recovery` (I suppose the checkpoint needs to be given to the testsuite)
-
 A small testsuite is provided in `test/` (run with e.g.
 `make <config>-testsuite`). It uses standard ET thorns plus the matter scalar
 field of `Scalar/Scalar*` on a flat background, so that the expected values are
@@ -220,22 +207,45 @@ known analytically:
   - `track_fixed_chain`: fixed target, a target copying another target's
     stored location, and storage of a tracker into a spherical surface.
   - `track_adjust_opposite`: affine adjustment (`tracker_adjust`) and
-    tracking the opposite (`track_opposite`) of a target.
-  - `track_surface_roundtrip`: 'surface to tracker' mode reading a location
-    back from a surface.
-  - `track_timing`: `start_tracking_after_time` and `stop_tracking_after_time` (and `track_every`).
+    tracking the opposite (`track_opposite`) of a target that is moved by
+    `Trigger`.
+  - `track_surface_roundtrip`: a moving tracker writing a surface, a
+    'surface to tracker' target reading it back, and the mode switched off
+    at runtime with `Trigger`.
+  - `track_timing`: `start_tracking_after_time`, `stop_tracking_after_time`,
+    steering `track` off, and `track_every > 1`, all on a target that moves
+    (so that delays and skipped updates are observable).
   - `com_restrict_identity`: the volume-restriction identities
     `inside + outside == global` and
     `inside(r1) + shell(r1,r2] == inside(r2)`, checked to machine precision by
-    the `util/check_restriction` postprocessor.
-  - `com_empty_guard`: an empty integration region keeps the previous values
-    and warns (no NaN/inf).
+    the `util/check_restriction` postprocessor; also exercises `com_every > 1`.
+  - `com_empty_guard`: a region that contains matter and is then moved to an
+    empty region; the code keeps the previously computed values (not the
+    initial ones) and warns (no NaN/inf).
+  - `com_self_tracking`: a tracker that follows the (restricted) center of
+    mass it computes; the window converges over a few passes, exercising the
+    feedback loop and the one-pass lag.
   - `com_symmetry_bitant`: a constant scalar on a bitant `z >= 0` box with
     `com_symmetry = "bitant_z"`; the resulting mass and center of mass agree
     with the full-box `com_symmetry = "none"` values.
 
+Targets that have to move are driven by `Trigger` (steering `target_*` to
+another grid scalar or to "", `track` and `loc_from_surface_mode`, which are
+STEERABLE=ALWAYS); no extra test-only thorn is needed. Runtime steering to an
+*invalid* target name is not tested: by design it deactivates the target and
+terminates the run.
+
 Reference output is `CarpetIOASCII` 0D data, compared with a relative tolerance
 of 1e-10 (comment/header lines are ignored by the test framework).
+
+Not covered by the testsuite:
+
+  - `excise_horizon`: it needs a `SpaceMask` "mask"/"outside" mask, which in
+    practice comes from `AHFinderDirect` (it was verified manually against
+    `UAv_Analysis` in excised HairyBH runs).
+  - checkpoint recovery: it needs a two-run sequence (or committed binary
+    checkpoints), which the testsuite does not support. It was verified
+    manually, see the note below.
 
 
 Known limitations
@@ -262,9 +272,13 @@ Known limitations
     are taken from the parameter file. The tracker grid scalars
     (`target_loc`, `target_com`) are checkpointed as well.
 
-  - The testsuite deliberately does not cover checkpoint recovery: at the
-    time of writing, restarting any evolution run with this configuration
-    (even a plain `ScalarEvolve` run, with this thorn disabled) aborts in
-    `CarpetIOHDF5::Recover` (a `CarpetLib` timelevel assertion), i.e. a
-    pre-existing driver issue rather than a TargetTracker one.
-    > TODO. Not sure what problem the agent encountered, but I doubt there are bugs on this.
+  - Checkpoint recovery (verified manually, not in the testsuite): restarting
+    with `IO::recover = "autoprobe"` aborts in `CarpetIOHDF5::Recover` (a
+    `CarpetLib` timelevel assertion) *unless* `Carpet::max_timelevels` is set
+    explicitly (its automatic value, `prolongation_order_time+1`, can be
+    smaller than the number of time levels of some group, and Carpet then
+    asserts while synchronising the recovered variables). For example
+    `Carpet::max_timelevels = 5` makes recovery work, including for runs with
+    this thorn active. This is a driver/configuration issue, not a
+    TargetTracker one, and it is reproducible with a plain `ScalarEvolve`
+    parameter file.

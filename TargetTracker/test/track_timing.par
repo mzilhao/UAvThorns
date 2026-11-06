@@ -1,20 +1,15 @@
-# TargetTracker test: timing controls (start_tracking_after_time, track_every)
+# TargetTracker test: timing controls
 #
-# Target 0 is fixed at (1,0,0). Target 1 copies target 0's tracked location but
-# only starts tracking at t >= 0.5, so target_loc[1] must stay at its initial
-# value (-2) for t < 0.5 and become 1 afterwards. Target 2 copies target 0 only
-# every 2 iterations (track_every = 2).
-
-### TODO: I added a test for stop_tracking after time (see below).
-###       There is an additional tracker that tracks target-loc 1 
-###       and stops after t > 0.25, so that it does not
-###       see the change in target-loc 1 at t=0.5.
-###       (or just test with something that actually moves)
-
-### TODO: Despite the claim, this does not test the track_every parameter
-###       Obviously, that's also better checked with something that moves,
-###       whether it's done here or in a separate test.
-###       If done here, we probably need more iterations and adapt accordingly.
+# Target 0 starts fixed at x = 1 and is moved by triggers to x = 2
+# (iteration 1) and x = 3 (iteration 3), so that all the timing controls below
+# are checked against a source that actually moves:
+#
+#   - target 1: start_tracking_after_time (delayed start)
+#   - target 2: stop_tracking_after_time  (freezes after t = 0.5)
+#   - target 3: track_every = 2           (skips the odd iterations)
+#   - target 4: 'track' steered off at runtime
+#
+# See the comment block in the target section for the expected values.
 
 ActiveThorns = "
   ADMBase
@@ -43,6 +38,7 @@ ActiveThorns = "
   SymBase
   TargetTracker
   Time
+  Trigger
   TmunuBase
 "
 
@@ -127,23 +123,95 @@ SphericalSurface::nghostsphi          [0] = 2
 # Target tracking
 #------------------------------------------------------------------------------
 
-# Target 0: fixed at (1,0,0)
+# Target 0: starts fixed at x = 1, and is then moved by triggers to x = 2
+# (t > 0.2, i.e. iteration 1) and to x = 3 (t > 0.6, i.e. iteration 3). The
+# updates at *odd* iterations are what makes track_every observable below.
 TargetTracker::track                          [0] = yes
 TargetTracker::initial_x                      [0] = 1.0
+TargetTracker::initial_y                      [0] = 2.0
+TargetTracker::initial_z                      [0] = 3.0
 
-# Target 1: delayed start at t >= 0.5
+# Target 1: delayed start at t >= 0.5 (should be -2 before, then follow x0).
 TargetTracker::track                          [1] = yes
 TargetTracker::initial_x                      [1] = -2.0
 TargetTracker::target_x                       [1] = "TargetTracker::target_loc_x[0]"
 TargetTracker::start_tracking_after_time      [1] = 0.5
 
-### TODO: check stop_tracking_after_time parameter
-# Target 2: stops tracking after t > 0.25, so that it does not see the change in target-loc 1 at t=0.5.
+# Target 2: stops tracking after t > 0.5, so it freezes at the value of x0 at
+# that time (2) and does not see the later jump to 3.
 TargetTracker::track                          [2] = yes
-TargetTracker::target_x                       [2] = "TargetTracker::target_loc_x[1]"
-TargetTracker::stop_tracking_after_time       [2] = 0.25
+TargetTracker::initial_x                      [2] = -5.0
+TargetTracker::target_x                       [2] = "TargetTracker::target_loc_x[0]"
+TargetTracker::stop_tracking_after_time       [2] = 0.5
+
+# Target 3: updated only every 2 iterations, so it lags behind x0 (updated at
+# iterations 0, 2 and 4 only, while x0 jumps at iterations 1 and 3).
+TargetTracker::track                          [3] = yes
+TargetTracker::initial_x                      [3] = -9.0
+TargetTracker::target_x                       [3] = "TargetTracker::target_loc_x[0]"
+TargetTracker::track_every                    [3] = 2
+
+# Target 4: steered from 'track = yes' to 'track = no' at t > 0.6
+# (iteration 3), so it freezes at the value it had at iteration 2 (2).
+TargetTracker::track                          [4] = yes
+TargetTracker::initial_x                      [4] = -7.0
+TargetTracker::target_x                       [4] = "TargetTracker::target_loc_x[0]"
+
+# Target 5: its x source is steered to "" (a fixed target) at t > 0.6
+# (iteration 3), so it keeps the location it had at iteration 2 (2).
+TargetTracker::track                          [5] = yes
+TargetTracker::initial_x                      [5] = -8.0
+TargetTracker::target_x                       [5] = "TargetTracker::target_loc_x[0]"
 
 TargetTracker::verbose                             = yes
+
+# Expected target_loc_x per iteration (0..6), with x0 = 1, 2, 2, 3, 3, 3, 3:
+#
+#   target 0: 1  2  2  3  3  3  3
+#   target 1: -2 -2  2  3  3  3  3   (delayed start)
+#   target 2: 1  2  2  2  2  2  2   (frozen after t = 0.5)
+#   target 3: 1  1  2  2  3  3  3   (track_every = 2)
+#   target 4: 1  2  2  2  2  2  2   (track steered off at iteration 3)
+#   target 5: 1  2  2  2  2  2  2   (target_x steered to "" at iteration 3)
+
+# Move target 0, and steer targets 4 and 5.
+Trigger::Trigger_Number                       = 4
+
+Trigger::Trigger_Checked_Variable         [0] = "Trigger::trigger_cctk_time"
+Trigger::Trigger_Reduction                [0] = "minimum"
+Trigger::Trigger_Relation                 [0] = ">"
+Trigger::Trigger_Checked_Value            [0] = 0.2
+Trigger::Trigger_Reaction                 [0] = "steerparam"
+Trigger::Trigger_Steered_Parameter_Thorn  [0] = "TargetTracker"
+Trigger::Trigger_Steered_Parameter_Name   [0] = "target_x[0]"
+Trigger::Trigger_Steered_Parameter_Value  [0] = "TargetTracker::target_loc_y[0]"
+
+Trigger::Trigger_Checked_Variable         [1] = "Trigger::trigger_cctk_time"
+Trigger::Trigger_Reduction                [1] = "minimum"
+Trigger::Trigger_Relation                 [1] = ">"
+Trigger::Trigger_Checked_Value            [1] = 0.6
+Trigger::Trigger_Reaction                 [1] = "steerparam"
+Trigger::Trigger_Steered_Parameter_Thorn  [1] = "TargetTracker"
+Trigger::Trigger_Steered_Parameter_Name   [1] = "target_x[0]"
+Trigger::Trigger_Steered_Parameter_Value  [1] = "TargetTracker::target_loc_z[0]"
+
+Trigger::Trigger_Checked_Variable         [2] = "Trigger::trigger_cctk_time"
+Trigger::Trigger_Reduction                [2] = "minimum"
+Trigger::Trigger_Relation                 [2] = ">"
+Trigger::Trigger_Checked_Value            [2] = 0.6
+Trigger::Trigger_Reaction                 [2] = "steerparam"
+Trigger::Trigger_Steered_Parameter_Thorn  [2] = "TargetTracker"
+Trigger::Trigger_Steered_Parameter_Name   [2] = "track[4]"
+Trigger::Trigger_Steered_Parameter_Value  [2] = "no"
+
+Trigger::Trigger_Checked_Variable         [3] = "Trigger::trigger_cctk_time"
+Trigger::Trigger_Reduction                [3] = "minimum"
+Trigger::Trigger_Relation                 [3] = ">"
+Trigger::Trigger_Checked_Value            [3] = 0.6
+Trigger::Trigger_Reaction                 [3] = "steerparam"
+Trigger::Trigger_Steered_Parameter_Thorn  [3] = "TargetTracker"
+Trigger::Trigger_Steered_Parameter_Name   [3] = "target_x[5]"
+Trigger::Trigger_Steered_Parameter_Value  [3] = ""
 
 # Output
 #------------------------------------------------------------------------------
@@ -165,4 +233,4 @@ IOASCII::out0D_vars          = "
 #------------------------------------------------------------------------------
 
 Cactus::terminate            = "iteration"
-Cactus::cctk_itlast          = 4
+Cactus::cctk_itlast          = 6

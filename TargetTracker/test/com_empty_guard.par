@@ -1,14 +1,12 @@
-# TargetTracker test: empty integration region keeps previous values
+# TargetTracker test: an integration region that becomes empty
 #
-# Target 0 computes the center of mass inside a sphere of radius 1 centered at
-# (100,0,0), which contains no matter. The mass integral vanishes, so the code
-# must keep the previous values (the initial ones) and print a warning, instead
-# of dividing by zero or producing NaNs.
-
-### TODO: In a way it's worse than an empty aka vacuum region, here it's an empty set region.
-###       I guess it still technically tests that pipeline, but something more interesting
-###       would be to have a volume with matter, and then later on no matter anymore (or no grid points).
-###       Sure in this version it keeps the previous value, but nothing is changing anyway.
+# Target 0 starts with a sphere of radius 3 centered at (1.5,0,0), which
+# contains matter, and is then moved (by a trigger) to (100,0,0), where there
+# is none. The mass integral then vanishes, so the code must keep the
+# previously computed values (which differ from the initial ones) and print a
+# warning, instead of dividing by zero or producing NaNs. Target 2 is empty
+# from the very first pass, which additionally checks that the initial values
+# are kept in that case.
 
 ActiveThorns = "
   ADMBase
@@ -43,6 +41,7 @@ ActiveThorns = "
   SymBase
   TargetTracker
   Time
+  Trigger
   TmunuBase
 "
 
@@ -141,14 +140,44 @@ SphericalSurface::nghostsphi          [0] = 2
 # Center of mass in an empty region
 #------------------------------------------------------------------------------
 
+# Target 0: a sphere of radius 3 centered at (1.5,0,0), i.e. it is cut by the
+# x = 4 boundary, so the constant-density matter inside it is *not* symmetric
+# about its center: the first computed CoM differs from the initial position
+# (1.5,0,0). At t > 0.25 a trigger moves the sphere to (100,0,0), where there
+# is no matter; the code must then keep the *previously computed* CoM (not the
+# initial one) and warn.
+TargetTracker::track                          [0] = yes
 TargetTracker::compute_com                    [0] = yes
-TargetTracker::initial_x                      [0] = 100.0
+TargetTracker::initial_x                      [0] = 1.5
 TargetTracker::initial_y                      [0] = 0.0
 TargetTracker::initial_z                      [0] = 0.0
-TargetTracker::com_compute_inside_radius      [0] = 1.0
+TargetTracker::com_compute_inside_radius      [0] = 3.0
+
+# Target 1: fixed at (100,0,0), only used as the source for the trigger below.
+TargetTracker::track                          [1] = yes
+TargetTracker::initial_x                      [1] = 100.0
+
+# Target 2: empty region from the very first pass, so the guard keeps the
+# initial value (and a zero mass).
+TargetTracker::compute_com                    [2] = yes
+TargetTracker::initial_x                      [2] = 100.0
+TargetTracker::initial_y                      [2] = 0.0
+TargetTracker::initial_z                      [2] = 0.0
+TargetTracker::com_compute_inside_radius      [2] = 1.0
 
 TargetTracker::com_symmetry                        = "none"
 TargetTracker::verbose                             = yes
+
+# Move the sphere of target 0 into an empty region.
+Trigger::Trigger_Number                       = 1
+Trigger::Trigger_Checked_Variable         [0] = "Trigger::trigger_cctk_time"
+Trigger::Trigger_Reduction                [0] = "minimum"
+Trigger::Trigger_Relation                 [0] = ">"
+Trigger::Trigger_Checked_Value            [0] = 0.25
+Trigger::Trigger_Reaction                 [0] = "steerparam"
+Trigger::Trigger_Steered_Parameter_Thorn  [0] = "TargetTracker"
+Trigger::Trigger_Steered_Parameter_Name   [0] = "target_x[0]"
+Trigger::Trigger_Steered_Parameter_Value  [0] = "TargetTracker::target_loc_x[1]"
 
 # Output
 #------------------------------------------------------------------------------
@@ -170,4 +199,4 @@ IOASCII::out0D_vars          = "
 #------------------------------------------------------------------------------
 
 Cactus::terminate            = "iteration"
-Cactus::cctk_itlast          = 2
+Cactus::cctk_itlast          = 4
