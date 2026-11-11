@@ -129,6 +129,7 @@ void UAv_Analysis_IntegrateVol(CCTK_ARGUMENTS)
   *Izz = out_vals[9];
 
   if (*early_CoM == 0) {
+    *center_of_mass_M = out_vals[10];
     *center_of_mass_x = out_vals[11] / out_vals[10];
     *center_of_mass_y = out_vals[12] / out_vals[10];
     *center_of_mass_z = out_vals[13] / out_vals[10];
@@ -206,6 +207,7 @@ void UAv_Analysis_early_CoM_reduce(CCTK_ARGUMENTS)
     return;
   }
 
+  *center_of_mass_M = out_vals[0];
   *center_of_mass_x = out_vals[1] / out_vals[0];
   *center_of_mass_y = out_vals[2] / out_vals[0];
   *center_of_mass_z = out_vals[3] / out_vals[0];
