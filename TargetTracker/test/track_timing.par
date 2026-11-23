@@ -1,13 +1,19 @@
-# TargetTracker test: timing controls
+# TargetTracker test: timing controls and steerability
 #
-# Target 0 starts fixed at x = 1 and is moved by triggers to x = 2
-# (iteration 1) and x = 3 (iteration 3), so that all the timing controls below
-# are checked against a source that actually moves:
+# Target 0 is an untracked value carrier, which triggers set to x = 1, 2
+# (iteration 2) and 3 (iteration 3); it is the moving source that all the
+# other targets follow (movement is synthetic, but sufficient to make the
+# timing controls observable):
 #
 #   - target 1: start_tracking_after_time (delayed start)
 #   - target 2: stop_tracking_after_time  (freezes after t = 0.5)
 #   - target 3: track_every = 2           (skips the odd iterations)
 #   - target 4: 'track' steered off at runtime
+#   - target 5: target_x steered to ""   (becomes a fixed target)
+#   - target 6: 'track' steered on at runtime
+#   - target 7: starts fixed, then target_x steered onto another grid scalar
+#   - target 8: target_x steered to an invalid name; the run terminates by
+#     design shortly after, which the reference output also checks
 #
 # See the comment block in the target section for the expected values.
 
@@ -123,13 +129,11 @@ SphericalSurface::nghostsphi          [0] = 2
 # Target tracking
 #------------------------------------------------------------------------------
 
-# Target 0: starts fixed at x = 1, and is then moved by triggers to x = 2
-# (t > 0.2, i.e. iteration 1) and to x = 3 (t > 0.6, i.e. iteration 3). The
-# updates at *odd* iterations are what makes track_every observable below.
-TargetTracker::track                          [0] = yes
+# Target 0: untracked value carrier, set by the triggers below to 1, then 2
+# (t > 0.25, i.e. iteration 2) and 3 (t > 0.5, i.e. iteration 3). It is the
+# moving source that all the other targets follow.
+TargetTracker::track                          [0] = no
 TargetTracker::initial_x                      [0] = 1.0
-TargetTracker::initial_y                      [0] = 2.0
-TargetTracker::initial_z                      [0] = 3.0
 
 # Target 1: delayed start at t >= 0.5 (should be -2 before, then follow x0).
 TargetTracker::track                          [1] = yes
@@ -157,61 +161,105 @@ TargetTracker::track                          [4] = yes
 TargetTracker::initial_x                      [4] = -7.0
 TargetTracker::target_x                       [4] = "TargetTracker::target_loc_x[0]"
 
-# Target 5: its x source is steered to "" (a fixed target) at t > 0.6
+# Target 5: its x source is steered to "" (a fixed target) at t > 0.5
 # (iteration 3), so it keeps the location it had at iteration 2 (2).
 TargetTracker::track                          [5] = yes
 TargetTracker::initial_x                      [5] = -8.0
 TargetTracker::target_x                       [5] = "TargetTracker::target_loc_x[0]"
 
+# Target 6: starts with 'track = no' (inactive, frozen at -13), and is steered
+# on at t > 0.5 (iteration 3); it then follows x0 (3).
+TargetTracker::track                          [6] = no
+TargetTracker::initial_x                      [6] = -13.0
+TargetTracker::target_x                       [6] = "TargetTracker::target_loc_x[0]"
+
+# Target 7: starts fixed (empty target name, at -11) and is steered onto x0 at
+# t > 0.5 (iteration 3), so it jumps from -11 to 3.
+TargetTracker::track                          [7] = yes
+TargetTracker::initial_x                      [7] = -11.0
+TargetTracker::target_x                       [7] = ""
+
+# Target 8: its x source is steered to an *invalid* grid scalar at
+# t > 1.0 (iteration 5). By design this deactivates the target and terminates
+# the run, so the output ends at that iteration (the reference file reflects
+# that: 6 rows instead of 7).
+TargetTracker::track                          [8] = yes
+TargetTracker::initial_x                      [8] = -17.0
+TargetTracker::target_x                       [8] = "TargetTracker::target_loc_x[0]"
+
 TargetTracker::verbose                             = yes
 
-# Expected target_loc_x per iteration (0..6), with x0 = 1, 2, 2, 3, 3, 3, 3:
+# Expected target_loc_x per iteration (0..6, or 0..5 for the terminating run),
+# with x0 = 1, 1, 2, 3, 3, 3, 3:
 #
-#   target 0: 1  2  2  3  3  3  3
+#   target 0: 1  1  2  3  3  3  3   (driven value carrier)
 #   target 1: -2 -2  2  3  3  3  3   (delayed start)
-#   target 2: 1  2  2  2  2  2  2   (frozen after t = 0.5)
+#   target 2: 1  1  2  2  2  2  2   (frozen after t = 0.5)
 #   target 3: 1  1  2  2  3  3  3   (track_every = 2)
-#   target 4: 1  2  2  2  2  2  2   (track steered off at iteration 3)
-#   target 5: 1  2  2  2  2  2  2   (target_x steered to "" at iteration 3)
+#   target 4: 1  1  2  2  2  2  2   (track steered off at iteration 3)
+#   target 5: 1  1  2  2  2  2  2   (target_x steered to "" at iteration 3)
+#   target 6: -13 -13 -13  3  3  3  3   (track steered on at iteration 3)
+#   target 7: -11 -11 -11  3  3  3  3   (fixed, then steered onto x0)
+#   target 8: 1  1  2  3  3   (run terminates at iteration 5)
 
-# Move target 0, and steer targets 4 and 5.
-Trigger::Trigger_Number                       = 4
+# Drive the value carrier, and steer the targets.
+Trigger::Trigger_Number                       = 7
 
 Trigger::Trigger_Checked_Variable         [0] = "Trigger::trigger_cctk_time"
-Trigger::Trigger_Reduction                [0] = "minimum"
 Trigger::Trigger_Relation                 [0] = ">"
-Trigger::Trigger_Checked_Value            [0] = 0.2
-Trigger::Trigger_Reaction                 [0] = "steerparam"
-Trigger::Trigger_Steered_Parameter_Thorn  [0] = "TargetTracker"
-Trigger::Trigger_Steered_Parameter_Name   [0] = "target_x[0]"
-Trigger::Trigger_Steered_Parameter_Value  [0] = "TargetTracker::target_loc_y[0]"
+Trigger::Trigger_Checked_Value            [0] = 0.25
+Trigger::Trigger_Reaction                 [0] = "steerscalar"
+Trigger::Trigger_Steered_Scalar           [0] = "TargetTracker::target_loc_x[0]"
+Trigger::Trigger_Steered_Scalar_Index     [0] = 0
+Trigger::Trigger_Steered_Scalar_Value     [0] = "2"
 
 Trigger::Trigger_Checked_Variable         [1] = "Trigger::trigger_cctk_time"
-Trigger::Trigger_Reduction                [1] = "minimum"
 Trigger::Trigger_Relation                 [1] = ">"
-Trigger::Trigger_Checked_Value            [1] = 0.6
-Trigger::Trigger_Reaction                 [1] = "steerparam"
-Trigger::Trigger_Steered_Parameter_Thorn  [1] = "TargetTracker"
-Trigger::Trigger_Steered_Parameter_Name   [1] = "target_x[0]"
-Trigger::Trigger_Steered_Parameter_Value  [1] = "TargetTracker::target_loc_z[0]"
+Trigger::Trigger_Checked_Value            [1] = 0.5
+Trigger::Trigger_Reaction                 [1] = "steerscalar"
+Trigger::Trigger_Steered_Scalar           [1] = "TargetTracker::target_loc_x[0]"
+Trigger::Trigger_Steered_Scalar_Index     [1] = 0
+Trigger::Trigger_Steered_Scalar_Value     [1] = "3"
 
 Trigger::Trigger_Checked_Variable         [2] = "Trigger::trigger_cctk_time"
-Trigger::Trigger_Reduction                [2] = "minimum"
 Trigger::Trigger_Relation                 [2] = ">"
-Trigger::Trigger_Checked_Value            [2] = 0.6
+Trigger::Trigger_Checked_Value            [2] = 0.5
 Trigger::Trigger_Reaction                 [2] = "steerparam"
 Trigger::Trigger_Steered_Parameter_Thorn  [2] = "TargetTracker"
 Trigger::Trigger_Steered_Parameter_Name   [2] = "track[4]"
 Trigger::Trigger_Steered_Parameter_Value  [2] = "no"
 
 Trigger::Trigger_Checked_Variable         [3] = "Trigger::trigger_cctk_time"
-Trigger::Trigger_Reduction                [3] = "minimum"
 Trigger::Trigger_Relation                 [3] = ">"
-Trigger::Trigger_Checked_Value            [3] = 0.6
+Trigger::Trigger_Checked_Value            [3] = 0.5
 Trigger::Trigger_Reaction                 [3] = "steerparam"
 Trigger::Trigger_Steered_Parameter_Thorn  [3] = "TargetTracker"
 Trigger::Trigger_Steered_Parameter_Name   [3] = "target_x[5]"
 Trigger::Trigger_Steered_Parameter_Value  [3] = ""
+
+Trigger::Trigger_Checked_Variable         [4] = "Trigger::trigger_cctk_time"
+Trigger::Trigger_Relation                 [4] = ">"
+Trigger::Trigger_Checked_Value            [4] = 0.5
+Trigger::Trigger_Reaction                 [4] = "steerparam"
+Trigger::Trigger_Steered_Parameter_Thorn  [4] = "TargetTracker"
+Trigger::Trigger_Steered_Parameter_Name   [4] = "track[6]"
+Trigger::Trigger_Steered_Parameter_Value  [4] = "yes"
+
+Trigger::Trigger_Checked_Variable         [5] = "Trigger::trigger_cctk_time"
+Trigger::Trigger_Relation                 [5] = ">"
+Trigger::Trigger_Checked_Value            [5] = 0.5
+Trigger::Trigger_Reaction                 [5] = "steerparam"
+Trigger::Trigger_Steered_Parameter_Thorn  [5] = "TargetTracker"
+Trigger::Trigger_Steered_Parameter_Name   [5] = "target_x[7]"
+Trigger::Trigger_Steered_Parameter_Value  [5] = "TargetTracker::target_loc_x[0]"
+
+Trigger::Trigger_Checked_Variable         [6] = "Trigger::trigger_cctk_time"
+Trigger::Trigger_Relation                 [6] = ">"
+Trigger::Trigger_Checked_Value            [6] = 1.0
+Trigger::Trigger_Reaction                 [6] = "steerparam"
+Trigger::Trigger_Steered_Parameter_Thorn  [6] = "TargetTracker"
+Trigger::Trigger_Steered_Parameter_Name   [6] = "target_x[8]"
+Trigger::Trigger_Steered_Parameter_Value  [6] = "NoSuchThorn::no_such_variable"
 
 # Output
 #------------------------------------------------------------------------------

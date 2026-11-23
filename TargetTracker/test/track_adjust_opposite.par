@@ -1,9 +1,10 @@
 # TargetTracker test: affine adjustment and tracking the opposite of a target
 #
+# The motion is synthetic (driven by Trigger) to keep the test lightweight.
 # Target 0 is moved by triggers from x = 3 to x = 7 (t > 0.25) and then to
 # x = -4 (t > 0.75). Target 1 tracks it with an affine adjustment
 # loc = 2*target + 1, and target 2 tracks its opposite, loc = -target. Since
-# the source actually moves, both derived locations change over time.
+# the source moves, both derived locations change over time.
 
 ActiveThorns = "
   ADMBase
@@ -117,13 +118,11 @@ SphericalSurface::nghostsphi          [0] = 2
 # Target tracking
 #------------------------------------------------------------------------------
 
-# Target 0: starts fixed at (3,7,-4); its x coordinate is then driven by
-# triggers to 7 (t > 0.25) and to -4 (t > 0.75), so that targets 1 and 2
-# follow something that actually moves.
+# Target 0: follows the value carrier target 5, which triggers set to 3, then
+# 7 (t > 0.25) and -4 (t > 0.75). Targets 1 and 2 follow it.
 TargetTracker::track                          [0] = yes
 TargetTracker::initial_x                      [0] = 3.0
-TargetTracker::initial_y                      [0] = 7.0
-TargetTracker::initial_z                      [0] = -4.0
+TargetTracker::target_x                       [0] = "TargetTracker::target_loc_x[5]"
 
 # Target 1: affine adjustment of target 0: loc = 2*x + 1
 TargetTracker::track                          [1] = yes
@@ -141,30 +140,32 @@ TargetTracker::target_y                       [2] = "TargetTracker::target_loc_y
 TargetTracker::target_z                       [2] = "TargetTracker::target_loc_z[0]"
 TargetTracker::track_opposite                 [2] = yes
 
+# Target 5: untracked value carrier, driven by the triggers below.
+TargetTracker::track                          [5] = no
+TargetTracker::initial_x                      [5] = 3.0
+
 TargetTracker::verbose                             = yes
 
-# Make target 0 move: steer its x source between two of its own (fixed)
-# coordinates once the given time has passed. Both conditions stay true after
-# they fire; triggers are applied in index order, so the last one wins.
+# Make target 0 move by writing literal values into the carrier target 5.
+# Both conditions stay true after they fire; triggers are applied in index
+# order, so the last one wins.
 Trigger::Trigger_Number                       = 2
 
 Trigger::Trigger_Checked_Variable         [0] = "Trigger::trigger_cctk_time"
-Trigger::Trigger_Reduction                [0] = "minimum"
 Trigger::Trigger_Relation                 [0] = ">"
 Trigger::Trigger_Checked_Value            [0] = 0.25
-Trigger::Trigger_Reaction                 [0] = "steerparam"
-Trigger::Trigger_Steered_Parameter_Thorn  [0] = "TargetTracker"
-Trigger::Trigger_Steered_Parameter_Name   [0] = "target_x[0]"
-Trigger::Trigger_Steered_Parameter_Value  [0] = "TargetTracker::target_loc_y[0]"
+Trigger::Trigger_Reaction                 [0] = "steerscalar"
+Trigger::Trigger_Steered_Scalar           [0] = "TargetTracker::target_loc_x[5]"
+Trigger::Trigger_Steered_Scalar_Index     [0] = 0
+Trigger::Trigger_Steered_Scalar_Value     [0] = "7"
 
 Trigger::Trigger_Checked_Variable         [1] = "Trigger::trigger_cctk_time"
-Trigger::Trigger_Reduction                [1] = "minimum"
 Trigger::Trigger_Relation                 [1] = ">"
 Trigger::Trigger_Checked_Value            [1] = 0.75
-Trigger::Trigger_Reaction                 [1] = "steerparam"
-Trigger::Trigger_Steered_Parameter_Thorn  [1] = "TargetTracker"
-Trigger::Trigger_Steered_Parameter_Name   [1] = "target_x[0]"
-Trigger::Trigger_Steered_Parameter_Value  [1] = "TargetTracker::target_loc_z[0]"
+Trigger::Trigger_Reaction                 [1] = "steerscalar"
+Trigger::Trigger_Steered_Scalar           [1] = "TargetTracker::target_loc_x[5]"
+Trigger::Trigger_Steered_Scalar_Index     [1] = 0
+Trigger::Trigger_Steered_Scalar_Value     [1] = "-4"
 
 # Output
 #------------------------------------------------------------------------------

@@ -200,52 +200,70 @@ Tests
 -----
 
 A small testsuite is provided in `test/` (run with e.g.
-`make <config>-testsuite`). It uses standard ET thorns plus the matter scalar
-field of `Scalar/Scalar*` on a flat background, so that the expected values are
-known analytically:
+`make <config>-testsuite`). It uses standard ET thorns only (plus the matter
+scalar field of `Scalar/Scalar*`, evolved with `ScalarEvolve` on a static exact
+flat metric), so that the expected values are known analytically:
 
-  - `track_fixed_chain`: fixed target, a target copying another target's
-    stored location, and storage of a tracker into a spherical surface.
   - `track_adjust_opposite`: affine adjustment (`tracker_adjust`) and
-    tracking the opposite (`track_opposite`) of a target that is moved by
-    `Trigger`.
-  - `track_surface_roundtrip`: a moving tracker writing a surface, a
-    'surface to tracker' target reading it back, and the mode switched off
-    at runtime with `Trigger`.
+    tracking the opposite (`track_opposite`) of a moving target.
+  - `track_surface_roundtrip`: a surface handover, as when a horizon forms: a
+    tracker following a grid scalar writes a surface, then a second tracker is
+    activated and takes the surface over, while the first one switches to
+    'loc_from_surface_mode' and follows it. The new owner is then moved, and
+    the first tracker has to follow it.
   - `track_timing`: `start_tracking_after_time`, `stop_tracking_after_time`,
-    steering `track` off, and `track_every > 1`, all on a target that moves
-    (so that delays and skipped updates are observable).
+    `track_every > 1`, steering `track` on and off, steering `target_*` to
+    another grid scalar and to "" (fixed), and (at the end of the run)
+    steering `target_*` to an invalid name, which deactivates the target and
+    terminates the run by design (the reference output ends there).
   - `com_restrict_identity`: the volume-restriction identities
     `inside + outside == global` and
     `inside(r1) + shell(r1,r2] == inside(r2)`, checked to machine precision by
     the `util/check_restriction` postprocessor; also exercises `com_every > 1`.
   - `com_empty_guard`: a region that contains matter and is then moved to an
     empty region; the code keeps the previously computed values (not the
-    initial ones) and warns (no NaN/inf).
+    initial ones) and warns (no NaN/inf). A mirror tracker follows the frozen
+    CoM and keeps computing its own.
   - `com_self_tracking`: a tracker that follows the (restricted) center of
     mass it computes; the window converges over a few passes, exercising the
     feedback loop and the one-pass lag.
   - `com_symmetry_bitant`: a constant scalar on a bitant `z >= 0` box with
     `com_symmetry = "bitant_z"`; the resulting mass and center of mass agree
     with the full-box `com_symmetry = "none"` values.
+  - `com_recover_tracker`: recovers from a committed checkpoint and checks
+    the continuation of the trackers and of `force_params_at_recovery`.
 
-Targets that have to move are driven by `Trigger` (steering `target_*` to
-another grid scalar or to "", `track` and `loc_from_surface_mode`, which are
-STEERABLE=ALWAYS); no extra test-only thorn is needed. Runtime steering to an
-*invalid* target name is not tested: by design it deactivates the target and
-terminates the run.
+`Trigger` is used to drive the tests: it can steer `target_*` (to another
+grid-scalar name, to "", or to an invalid name), `track`,
+`loc_from_surface_mode`, `compute_com`, and (through `steerscalar`) write
+literal values into grid scalars. Since a target only moves because its source
+does, the tests use a few untracked "value carrier" targets whose
+`target_loc_*` is written by `Trigger`, and which the moving targets follow;
+this keeps the tests lightweight but the motion is synthetic. A fully
+dynamical setting (e.g. tracking punctures, which needs BSSN and actual
+punctures) would be much heavier and is not part of the unit tests.
+
+Note: `target_*` is validated as a grid-scalar *name* (or ""), so a literal
+value cannot be steered into it; that is why the `steerscalar` trick is used
+to make a target move.
+
+Note that the CoM calculation lags the tracking by one pass: the CoM group
+runs before `TargetTracker_SetSurfaces`, so it uses the `target_loc` from the
+previous pass. In particular, after a target is moved by a trigger, the CoM
+restriction window only follows it on the next iteration (and the matter field
+itself evolves, so the masses also change slightly from pass to pass).
 
 Reference output is `CarpetIOASCII` 0D data, compared with a relative tolerance
 of 1e-10 (comment/header lines are ignored by the test framework).
 
 Not covered by the testsuite:
 
-  - `excise_horizon`: it needs a `SpaceMask` "mask"/"outside" mask, which in
-    practice comes from `AHFinderDirect` (it was verified manually against
-    `UAv_Analysis` in excised HairyBH runs).
-  - checkpoint recovery: it needs a two-run sequence (or committed binary
-    checkpoints), which the testsuite does not support. It was verified
-    manually, see the note below.
+  - `excise_horizon`: it needs a `SpaceMask` "mask"/"outside" mask. Among the
+    standard ET thorns, only `AHFinderDirect` registers that mask type/state
+    (`GRHydro` only reads/writes its own excision mask), so a cheap test would
+    require either a helper thorn or a BH initial-data/evolution configuration
+    (e.g. a wave on a Kerr-Schild background from the Gallery). It was verified
+    manually against `UAv_Analysis` in excised HairyBH runs.
 
 
 Known limitations
@@ -272,13 +290,18 @@ Known limitations
     are taken from the parameter file. The tracker grid scalars
     (`target_loc`, `target_com`) are checkpointed as well.
 
-  - Checkpoint recovery (verified manually, not in the testsuite): restarting
-    with `IO::recover = "autoprobe"` aborts in `CarpetIOHDF5::Recover` (a
-    `CarpetLib` timelevel assertion) *unless* `Carpet::max_timelevels` is set
-    explicitly (its automatic value, `prolongation_order_time+1`, can be
-    smaller than the number of time levels of some group, and Carpet then
-    asserts while synchronising the recovered variables). For example
-    `Carpet::max_timelevels = 5` makes recovery work, including for runs with
-    this thorn active. This is a driver/configuration issue, not a
-    TargetTracker one, and it is reproducible with a plain `ScalarEvolve`
-    parameter file.
+  - Checkpoint recovery and `Carpet::max_timelevels`: with the default
+    `Carpet::prolongation_order_time = 1`, the automatic
+    `Carpet::max_timelevels = prolongation_order_time+1 = 2` is smaller than
+    the 3 time levels requested, e.g., by `ADMBase` and `ScalarBase`.
+    Evolution still runs, but restarting such a run with `IO::recover`
+    aborts in `CarpetIOHDF5::Recover` (a `CarpetLib` timelevel assertion)
+    while synchronising the recovered variables. Setting
+    `Carpet::max_timelevels` (or `prolongation_order_time`) explicitly avoids
+    this; for example `Carpet::max_timelevels = 3` (or
+    `Carpet::prolongation_order_time = 2`, as in most BH parameter files)
+    makes recovery work. This is a driver/configuration issue, not a
+    TargetTracker one, and it is reproducible with the plain
+    `Scalar/ScalarEvolve/test/SF_constantID_test.par` parameter file (no
+    TargetTracker active). The `com_recover_tracker` test sets
+    `Carpet::max_timelevels` explicitly for this reason.

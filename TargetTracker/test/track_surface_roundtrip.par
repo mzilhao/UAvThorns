@@ -1,12 +1,13 @@
-# TargetTracker test: surface <-> tracker roundtrip
+# TargetTracker test: surface <-> tracker handover
 #
-# Target 0 stores its location into spherical surface 0 and is moved by a
-# trigger from x = 2 to x = 5 (t > 0.25). Target 1 starts in
-# 'loc_from_surface_mode', so it reads the (moving) centroid back from surface
-# 0. At t > 0.75 a trigger switches that mode off, and target 1 goes back to
-# tracking a grid scalar (target 2, fixed at x = 9). This tests both
-# directions of the data flow on something that actually moves, and the
-# runtime steerability of 'loc_from_surface_mode'.
+# This mimics the formation of a horizon: target 0 first follows a grid scalar
+# and stores its location into spherical surface 0. At t > 0.25 a second
+# tracker (target 1) is activated and takes over surface 0, while target 0
+# switches to 'loc_from_surface_mode' and follows the surface from then on.
+# Target 1 is then moved (by a trigger), and target 0 has to follow it. This
+# tests both directions of the surface <-> tracker data flow, the runtime
+# steerability of 'loc_from_surface_mode' and 'track', and a clean handover
+# (no iteration has two trackers writing the same surface).
 
 ActiveThorns = "
   ADMBase
@@ -120,51 +121,67 @@ SphericalSurface::nghostsphi          [0] = 2
 # Target tracking
 #------------------------------------------------------------------------------
 
-# Target 0: starts fixed at (2,0,0), stored into surface 0. It is moved to
-# x = 5 at t > 0.25 (trigger), so that the surface (and target 1) follow
-# something that actually moves.
+# Horizon-formation pattern: a tracker first follows a grid scalar (and sets a
+# surface), then hands the surface over to a second tracker and switches to
+# following that surface instead.
+#
+# Target 0: fixed at (2,0,0), writes its location into surface 0. At t > 0.25 a
+# trigger switches it to 'surface to tracker' mode: it stops writing surface 0
+# and follows it from then on.
 TargetTracker::track                          [0] = yes
 TargetTracker::initial_x                      [0] = 2.0
-TargetTracker::initial_y                      [0] = 5.0
+TargetTracker::initial_y                      [0] = 0.0
 TargetTracker::initial_z                      [0] = 0.0
 TargetTracker::which_surface_to_store_info    [0] = 0
 
-# Target 1: starts in 'surface to tracker' mode, reading surface 0 (i.e. the
-# location of target 0). At t > 0.75 a trigger switches this mode off, so that
-# it goes back to tracking a grid scalar (target 2, fixed at x = 9). This
-# exercises both directions of the surface <-> tracker data flow.
-TargetTracker::track                          [1] = yes
-TargetTracker::loc_from_surface_mode          [1] = yes
+# Target 1: inactive and parked at (9,0,0) until t > 0.25, when a trigger
+# activates it. It then tracks the value carrier target 5 and writes surface 0,
+# taking over from target 0.
+TargetTracker::track                          [1] = no
+TargetTracker::initial_x                      [1] = 9.0
+TargetTracker::initial_y                      [1] = 0.0
+TargetTracker::initial_z                      [1] = 0.0
+TargetTracker::target_x                       [1] = "TargetTracker::target_loc_x[5]"
+TargetTracker::target_y                       [1] = "TargetTracker::target_loc_y[5]"
+TargetTracker::target_z                       [1] = "TargetTracker::target_loc_z[5]"
 TargetTracker::which_surface_to_store_info    [1] = 0
-TargetTracker::target_x                       [1] = "TargetTracker::target_loc_x[2]"
 
-# Target 2: fixed at (9,0,0), used as the grid scalar tracked by target 1 once
-# it leaves the 'surface to tracker' mode.
-TargetTracker::track                          [2] = yes
-TargetTracker::initial_x                      [2] = 9.0
+# Target 5: untracked value carrier, driven by the triggers below.
+TargetTracker::track                          [5] = no
+TargetTracker::initial_x                      [5] = 5.0
+TargetTracker::initial_y                      [5] = 0.0
+TargetTracker::initial_z                      [5] = 0.0
 
 TargetTracker::verbose                             = yes
 
-# Move target 0, and switch target 1 back to scalar tracking.
-Trigger::Trigger_Number                       = 2
+Trigger::Trigger_Number                       = 3
 
+# Hand the surface over: target 0 switches to following surface 0, and target
+# 1 starts writing it in the same pass (no iteration with two writers).
 Trigger::Trigger_Checked_Variable         [0] = "Trigger::trigger_cctk_time"
-Trigger::Trigger_Reduction                [0] = "minimum"
 Trigger::Trigger_Relation                 [0] = ">"
 Trigger::Trigger_Checked_Value            [0] = 0.25
 Trigger::Trigger_Reaction                 [0] = "steerparam"
 Trigger::Trigger_Steered_Parameter_Thorn  [0] = "TargetTracker"
-Trigger::Trigger_Steered_Parameter_Name   [0] = "target_x[0]"
-Trigger::Trigger_Steered_Parameter_Value  [0] = "TargetTracker::target_loc_y[0]"
+Trigger::Trigger_Steered_Parameter_Name   [0] = "loc_from_surface_mode[0]"
+Trigger::Trigger_Steered_Parameter_Value  [0] = "yes"
 
 Trigger::Trigger_Checked_Variable         [1] = "Trigger::trigger_cctk_time"
-Trigger::Trigger_Reduction                [1] = "minimum"
 Trigger::Trigger_Relation                 [1] = ">"
-Trigger::Trigger_Checked_Value            [1] = 0.75
+Trigger::Trigger_Checked_Value            [1] = 0.25
 Trigger::Trigger_Reaction                 [1] = "steerparam"
 Trigger::Trigger_Steered_Parameter_Thorn  [1] = "TargetTracker"
-Trigger::Trigger_Steered_Parameter_Name   [1] = "loc_from_surface_mode[1]"
-Trigger::Trigger_Steered_Parameter_Value  [1] = "no"
+Trigger::Trigger_Steered_Parameter_Name   [1] = "track[1]"
+Trigger::Trigger_Steered_Parameter_Value  [1] = "yes"
+
+# Move the new surface owner, so that target 0 has to follow it.
+Trigger::Trigger_Checked_Variable         [2] = "Trigger::trigger_cctk_time"
+Trigger::Trigger_Relation                 [2] = ">"
+Trigger::Trigger_Checked_Value            [2] = 0.75
+Trigger::Trigger_Reaction                 [2] = "steerscalar"
+Trigger::Trigger_Steered_Scalar           [2] = "TargetTracker::target_loc_x[5]"
+Trigger::Trigger_Steered_Scalar_Index     [2] = 0
+Trigger::Trigger_Steered_Scalar_Value     [2] = "7"
 
 # Output
 #------------------------------------------------------------------------------

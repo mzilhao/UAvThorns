@@ -1,8 +1,22 @@
-# TargetTracker test: fixed target, chained target, and surface storage
+# TargetTracker test: continuation after checkpoint recovery
 #
-# A fixed target 0 stays at its 'initial_*' position; target 1 uses target 0's
-# stored location as its source. This exercises the tracker-to-surface path and
-# the chaining of trackers without requiring any matter or evolution.
+# This test recovers from a checkpoint (shipped as test/com_recover_tracker.tar.gz)
+# and checks that the trackers continue correctly, and that
+# force_params_at_recovery re-initializes a target from the parameter file.
+#
+# Target 1 follows the value carrier target 0, which keeps being moved after
+# the checkpoint. Target 2 is recovered but explicitly re-initialized from
+# this parameter file (track = no, initial_x = -9), so it must stop following
+# and sit at -9, while target 1 continues to follow the carrier.
+#
+# Carpet::max_timelevels is set explicitly: with its automatic value (one more
+# than prolongation_order_time, whose default is 1) recovery aborts in
+# CarpetIOHDF5 because some groups use 3 time levels (see the README).
+#
+# NOTE: the committed checkpoint is not portable across changes of the set of
+# checkpointed variables. If such variables are added to or removed from the
+# thorns used here (including TargetTracker), regenerate the tarball:
+# test/com_recover_tracker.tar.gz.
 
 ActiveThorns = "
   ADMBase
@@ -12,6 +26,7 @@ ActiveThorns = "
   CarpetInterp
   CarpetIOASCII
   CarpetIOBasic
+  CarpetIOHDF5
   CarpetLib
   CarpetReduce
   CartGrid3D
@@ -31,6 +46,7 @@ ActiveThorns = "
   SymBase
   TargetTracker
   Time
+  Trigger
   TmunuBase
 "
 
@@ -41,12 +57,12 @@ CartGrid3D::type                     = "coordbase"
 Carpet::domain_from_coordbase        = yes
 CoordBase::domainsize                = "minmax"
 
-CoordBase::xmin                      = -8.0
-CoordBase::ymin                      = -8.0
-CoordBase::zmin                      = -8.0
-CoordBase::xmax                      = +8.0
-CoordBase::ymax                      = +8.0
-CoordBase::zmax                      = +8.0
+CoordBase::xmin                      = -4.0
+CoordBase::ymin                      = -4.0
+CoordBase::zmin                      = -4.0
+CoordBase::xmax                      = +4.0
+CoordBase::ymax                      = +4.0
+CoordBase::zmax                      = +4.0
 CoordBase::dx                        =  1.0
 CoordBase::dy                        =  1.0
 CoordBase::dz                        =  1.0
@@ -115,28 +131,59 @@ SphericalSurface::nghostsphi          [0] = 2
 # Target tracking
 #------------------------------------------------------------------------------
 
-# Target 0: fixed at (2,3,4), stored into surface 0
-TargetTracker::track                          [0] = yes
-TargetTracker::initial_x                      [0] = 2.0
-TargetTracker::initial_y                      [0] = 3.0
-TargetTracker::initial_z                      [0] = 4.0
-TargetTracker::which_surface_to_store_info    [0] = 0
+# Target 0: untracked value carrier, moved by the triggers below (1, 2, 3, 4).
+TargetTracker::track                          [0] = no
+TargetTracker::initial_x                      [0] = 1.0
 
-# Target 1: copies target 0's location (chained tracker). It has no associated
-# surface on purpose: its own location must be stored in target_loc, but must
-# not leak into surface 0 (which is only written by target 0).
+# Target 1: follows the carrier; must continue to do so after recovery.
 TargetTracker::track                          [1] = yes
+TargetTracker::initial_x                      [1] = -2.0
 TargetTracker::target_x                       [1] = "TargetTracker::target_loc_x[0]"
-TargetTracker::target_y                       [1] = "TargetTracker::target_loc_y[0]"
-TargetTracker::target_z                       [1] = "TargetTracker::target_loc_z[0]"
-TargetTracker::track_every                    [1] = 1
+
+# Target 2: would also follow the carrier, but is re-initialized from this
+# parameter file at recovery (track = no, fixed at -9).
+TargetTracker::track                          [2] = no
+TargetTracker::initial_x                      [2] = -9.0
+TargetTracker::force_params_at_recovery       [2] = yes
+TargetTracker::target_x                       [2] = "TargetTracker::target_loc_x[0]"
 
 TargetTracker::verbose                             = yes
+
+# Move the carrier: 1 -> 2 (iteration 2), 3 (iteration 4), 4 (iteration 6).
+Trigger::Trigger_Number                       = 3
+
+Trigger::Trigger_Checked_Variable         [0] = "Trigger::trigger_cctk_time"
+Trigger::Trigger_Relation                 [0] = ">"
+Trigger::Trigger_Checked_Value            [0] = 0.25
+Trigger::Trigger_Reaction                 [0] = "steerscalar"
+Trigger::Trigger_Steered_Scalar           [0] = "TargetTracker::target_loc_x[0]"
+Trigger::Trigger_Steered_Scalar_Index     [0] = 0
+Trigger::Trigger_Steered_Scalar_Value     [0] = "2"
+
+Trigger::Trigger_Checked_Variable         [1] = "Trigger::trigger_cctk_time"
+Trigger::Trigger_Relation                 [1] = ">"
+Trigger::Trigger_Checked_Value            [1] = 0.75
+Trigger::Trigger_Reaction                 [1] = "steerscalar"
+Trigger::Trigger_Steered_Scalar           [1] = "TargetTracker::target_loc_x[0]"
+Trigger::Trigger_Steered_Scalar_Index     [1] = 0
+Trigger::Trigger_Steered_Scalar_Value     [1] = "3"
+
+Trigger::Trigger_Checked_Variable         [2] = "Trigger::trigger_cctk_time"
+Trigger::Trigger_Relation                 [2] = ">"
+Trigger::Trigger_Checked_Value            [2] = 1.25
+Trigger::Trigger_Reaction                 [2] = "steerscalar"
+Trigger::Trigger_Steered_Scalar           [2] = "TargetTracker::target_loc_x[0]"
+Trigger::Trigger_Steered_Scalar_Index     [2] = 0
+Trigger::Trigger_Steered_Scalar_Value     [2] = "4"
 
 # Output
 #------------------------------------------------------------------------------
 
 Cactus::cctk_run_title       = $parfile
+Carpet::max_timelevels       = 3
+IO::recover                  = "autoprobe"
+IO::recover_dir              = "com_recover_tracker.orig"
+IO::checkpoint_on_terminate  = no
 IO::out_dir                  = $parfile
 IO::out_fileinfo             = "none"
 
@@ -147,11 +194,10 @@ IOASCII::out0D_point_x       = 4.0
 IOASCII::out0D_point_y       = 4.0
 IOASCII::out0D_vars          = "
   TargetTracker::target_loc
-  SphericalSurface::sf_info
 "
 
 # Run termination
 #------------------------------------------------------------------------------
 
 Cactus::terminate            = "iteration"
-Cactus::cctk_itlast          = 4
+Cactus::cctk_itlast          = 7

@@ -58,10 +58,12 @@ void InitializeOneTarget (CCTK_ARGUMENTS, CCTK_INT itarget) {
 
     // Initial center of mass values
     // They will be computed in the first center of mass integration (if any),
-    // but this gives sensible values in the meantime
-    target_com_x[itarget]    = initial_x[itarget];
-    target_com_y[itarget]    = initial_y[itarget];
-    target_com_z[itarget]    = initial_z[itarget];
+    // but this gives sensible values in the meantime.
+    // For targets that do not compute it, use zero: their initial location is
+    // not a center of mass, and could be misleading.
+    target_com_x[itarget]    = is_com_computed[itarget] ? initial_x[itarget] : 0.0;
+    target_com_y[itarget]    = is_com_computed[itarget] ? initial_y[itarget] : 0.0;
+    target_com_z[itarget]    = is_com_computed[itarget] ? initial_z[itarget] : 0.0;
     target_com_mass[itarget] = 0.0;
     
     // Set initial active status of the target based on the current parameters.

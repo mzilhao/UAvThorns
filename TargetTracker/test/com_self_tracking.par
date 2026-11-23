@@ -1,11 +1,12 @@
 # TargetTracker test: self-tracking of a restricted center of mass
 #
 # The same constant scalar field as in com_empty_guard is used (flat space,
-# uniform density). A single tracker computes the center of mass inside a
+# uniform density), evolved with ScalarEvolve (mu = 1) on a static exact-flat
+# metric. A single tracker computes the center of mass inside a
 # sphere of radius 3, and then tracks that center of mass (one-pass feedback):
 # the restriction window follows the computed CoM. Since the initial window at
 # (1.5,0,0) is cut by the x = 4 boundary, the CoM differs from the window
-# center, so the iteration actually moves and converges (towards the origin),
+# center, so the iteration moves and converges (towards the origin),
 # exercising the feedback loop, the one-pass lag and the add-back of the
 # window center.
 
